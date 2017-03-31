@@ -57,8 +57,7 @@ class transactionsCollection extends Mongo.Collection {
   forceInsert(txs) { return transactions.batchInsert(txs, (err) => { if(err) { throwError(err.message); } else { } }); }
   forceRemove() { return super.remove({}); }
   formatOrder(order, thirdParty){
-    console.log('yoooo');
-    console.log('hello');
+    console.log('HELLO');
     if(!thirdParty){
       return order.length === 0 ? order : order.map(order =>
          _.extend(order, {
