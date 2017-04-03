@@ -1,2 +1,0 @@
-# habitat-core
-Packages
