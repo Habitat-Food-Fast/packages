@@ -59,10 +59,23 @@ class transactionsCollection extends Mongo.Collection {
   formatOrder(order, thirdParty){
     console.log(`is third party ${thirdParty}`);
     if(!thirdParty){
+      let arr = [];
+      _.each(order.modidfiers, (modId) => {
+        var mod = Modifiers.findOne(modId);
+        var subCat = modCategories.findOne(mod.subcategory).name;
+        arr.push({
+          name: mod.name,
+          category: subCat,
+          price: mod.price
+        });
+      });
       return order.length === 0 ? order : order.map(order =>
          _.extend(order, {
           orderId: this.pin(),
           itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
+          itemName: saleItems.findOne(order.saleItemId).name,
+          itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
+          modifiers: arr
         })
       );
     } else {
