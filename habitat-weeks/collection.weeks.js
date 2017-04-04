@@ -15,8 +15,9 @@ class weeksCollection extends Mongo.Collection {
   }
   getWeekCounts(){
     weeks.find({}, { sort: {week: 1}}).forEach((w) => {
-      completed = transactions.find({ _id: { $in: w.transactions }, status: { $in: transactions.completedAndArchived() } });
-      const allTxs = w.transactions.length;
+      completed = transactions.find({week: w.week, status: { $in: transactions.completedAndArchived() } });
+      allTxs = transactions.find({week: w.week}).count();
+
       percent = (completed.count() / allTxs) * 100;
       console.log(`week ending: ${w.endTime} completed ${completed.count()} / ${allTxs} ${percent}%`);
     });
