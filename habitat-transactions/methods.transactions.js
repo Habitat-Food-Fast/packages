@@ -56,7 +56,7 @@ transactions.methods = {
         createdAt: Date.now(),
         partnerName: args.thirdParty ? args.partnerName : false,
         createdAtHuman: new Date(),
-        DaaS: false,
+        DaaS: true,
         sellerId: biz._id,
         habitat: biz.habitat[0],
         company_name: biz.company_name,
@@ -65,6 +65,8 @@ transactions.methods = {
         orderNumber: transactions.pin(),
         order: args.order || [],
         acceptUrl: args.acceptUrl,
+        customerPhone: args.customerPhone,
+        customerName: args.customerName,
         customer: {
           phone: args.customerPhone,
           name: args.customerName,
@@ -101,7 +103,7 @@ transactions.methods = {
           if(err) { throwError(err.message); }
           if(!this.isSimulation) {
             DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
-              if(err) { throwError(err.message); }
+              if(err) { console.log(err); throwError(err.message); }
             });
           } else { as.trackRunnerAccept(txId, runnerId, this.userId); }
         });
@@ -264,7 +266,7 @@ sendReceiptImage: new ValidatedMethod({
     image: { type: String, },
     runnerId: { type: String, },
   }).validator(),
-  run({ txId, image, runnerId}) {
+  run({ txId, image, runnerId, tip}) {
     if(Meteor.isServer) {
       const tx = transactions.findOne(txId);
       runner.sendReceipt(req=false, tx, tx.orderNumber, image, tx.runnerId, tip);
@@ -727,7 +729,8 @@ Meteor.methods({
             deliveryAddress: res.features[0].place_name,
             loc: res.features[0].geometry,
             sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
-            DaaSType: obj.type
+            DaaSType: obj.type,
+            isDelivery: true,
           }, (err, id) => {
             if (err) {
               throw new Meteor.Error(err);

@@ -57,6 +57,7 @@ class transactionsCollection extends Mongo.Collection {
   forceInsert(txs) { return transactions.batchInsert(txs, (err) => { if(err) { throwError(err.message); } else { } }); }
   forceRemove() { return super.remove({}); }
   formatOrder(order, thirdParty){
+    console.log(`is third party ${thirdParty}`);
     if(!thirdParty){
       return order.length === 0 ? order : order.map(order =>
          _.extend(order, {
@@ -72,7 +73,7 @@ class transactionsCollection extends Mongo.Collection {
           itemName: order.itemName,
           modifiers: order.modifiers,
         })
-      )
+      );
     }
   }
   remove(id, callback){ return super.remove(id, callback); }
@@ -97,7 +98,6 @@ class transactionsCollection extends Mongo.Collection {
   requestItems(txId, prepTime) {
     const isDaaS = transactions.findOne(txId) ? transactions.findOne(txId).DaaS : true;
     const timeReq = Date.now();
-    debugger;
     return {
       week: weeks.find().count(),
       status: !isDaaS ? 'pending_vendor' :
@@ -141,7 +141,6 @@ class transactionsCollection extends Mongo.Collection {
     }
   }
   request(id, fields, callback){
-    console.log(`id inside of request ${id}`)
     const trans = transactions.findOne(id);
 
     if (trans && trans.payRef &&trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }

@@ -163,7 +163,6 @@ calc = {
        return query;
     },
     _completed(bizId, weekNum){
-      console.log(weekNum);
       txs = transactions.find(this._weekQuery(bizId, weekNum), {sort: { timeRequested: 1 }}).fetch()
         .filter(tx => !tx.missedByVendor)
         .filter(tx => !tx.cancelledByVendor)
@@ -184,11 +183,7 @@ calc = {
     },
     getWeek(bizId, weekNum, counts){
       //always filter what vendor sees by these
-      console.log(weekNum);
-      console.log(typeof weekNum);
-
       const week = weeks.findOne({week: parseInt(weekNum)});
-      console.log(week._id);
       return {
         transactions: !counts ? this._all(bizId, weekNum) : this._all(bizId, weekNum).length,
         potentialTransactions: !counts ? this._missed(bizId, weekNum) :
