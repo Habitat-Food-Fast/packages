@@ -205,31 +205,41 @@ staffJoy = {
     return res;
   },
   //default to all habitats for tod
-  getShifts (start, end, habitats=this.allHabitats()) {
-      return _.flatten(habitats.map((id) => {
-        const habitat = Habitats.findOne(id);
-        start = moment(Habitats.openedAtToday(habitat._id)).subtract(Meteor.settings.devMode ? 0 : 5, 'hours').toISOString() || start; console.log(start);
-        end = moment(Habitats.closedAtToday(habitat._id)).subtract(Meteor.settings.devMode ? 0 : 5, 'hours').toISOString() || end; console.log(end);
-        try {
-          return HTTP.call(`GET`,
-            staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${habitat.staffJoyRunnerRole}/shifts`),
-            { auth: staffJoy._auth, params: { start: start, end: end, include_summary: true, } }
-          ).data.data.map((shift) => {
-            try {
-              console.log(shift);
-              newUrl = this._getUrl(`locations/${habitat.staffJoyId}/roles/${habitat.staffJoyRunnerRole}/users/${shift.user_id}`); console.log(newUrl);
-              const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
-              const workerId = userShift.data.data.internal_id;
-              return {
-                shift: shift,
-                staffJoyUser: userShift.data.data,
-                user: Meteor.users.findOne(workerId ? workerId : {username: userShift.data.data.email}),
-              };
-            } catch (e) { console.log(`error geting usershift data ${e.message}`); }
-          });
-        } catch(e) { console.log( "Cannot get shift data..." + e.message); }
-      }));
-  },
+  getShifts (start, end, habitats=this.allHabitats(), role='runner') {
+
+        console.log(`getshifts role is ${role}`);
+        return _.compact(_.flatten(habitats.map((id) => {
+          habitat = Habitats.findOne(id);
+          role = role === 'runner' ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
+          start = moment(Habitats.openedAtToday(habitat._id)).subtract(
+            // Meteor.settings.devMode ? 0 :
+            5, 'hours').toISOString() || start; console.log(start);
+          end = moment(Habitats.closedAtToday(habitat._id)).subtract(
+            // Meteor.settings.devMode ? 0 :
+            5, 'hours').toISOString() || end; console.log(end);
+          try {
+            return HTTP.call(`GET`,
+              staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`),
+              { auth: staffJoy._auth, params: { start: start, end: end, include_summary: true, } }
+            ).data.data.map((shift) => {
+              try {
+                if(shift.user_id !== 0){
+                  newUrl = this._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
+                  const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
+                  const workerId = userShift.data.data.internal_id;
+                  return {
+                    shift: shift,
+                    staffJoyUser: userShift.data.data,
+                    user: Meteor.users.findOne(workerId ? workerId : {username: userShift.data.data.email}),
+                  };
+                }
+              } catch (e) {
+                          console.log(`error geting usershift data ${e.message}`); }
+            });
+          } catch(e) {
+            console.log( "Cannot get shift data..." + e.message); }
+        })));
+    },
 };
 
 runnerPayout = {
