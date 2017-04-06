@@ -2,7 +2,7 @@ Router.route( '/api/v1/support', function() {
   console.log('hit support route');
   Meteor.call('getShiftedAdmin', (err, res) => {
     if(err) { console.warn(err.message); } else {
-      console.log(res[0]);
+      console.log(res[0].shift.user.profile.phone);
     }
   });
 }, { where: 'server' } );

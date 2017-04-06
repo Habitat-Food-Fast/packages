@@ -207,10 +207,10 @@ staffJoy = {
   //default to all habitats for tod
   getShifts (start, end, habitats=this.allHabitats(), role='runner') {
 
-        console.log(`getshifts role is ${role}`);
+        console.log(`getshifts on dispatch role is ${role}`);
         return _.compact(_.flatten(habitats.map((id) => {
           habitat = Habitats.findOne(id);
-          role = role === 'runner' ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
+          role = !role ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
           start = moment(Habitats.openedAtToday(habitat._id)).subtract(
             // Meteor.settings.devMode ? 0 :
             5, 'hours').toISOString() || start; console.log(start);
