@@ -17,5 +17,5 @@ Package.onUse(function(api) {
 
   api.addFiles('users.js');
 
-  api.export('Meteor.users');
+  api.export('Meteor');
 });
