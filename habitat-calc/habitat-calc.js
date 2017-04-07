@@ -184,40 +184,41 @@ calc = {
     getWeek(bizId, weekNum, counts){
       //always filter what vendor sees by these
       const week = weeks.findOne({week: parseInt(weekNum)});
+      const allComplete = this._completed(bizId, weekNum);
       return {
         transactions: !counts ? this._all(bizId, weekNum) : this._all(bizId, weekNum).length,
         potentialTransactions: !counts ? this._missed(bizId, weekNum) :
           this._missed(bizId, weekNum) ? this._missed(bizId, weekNum).length : 0,
-        completedTransactions: !counts ? this._completed(bizId, weekNum) : this._completed(bizId, weekNum).length,
+        completedTransactions: !counts ? allComplete : allComplete.length,
         subtotal: {
-          deliveryOrders: this._completed(bizId, weekNum)
+          deliveryOrders: allComplete
             .filter(t => !t.DaaS)
             .filter(t => t.method === 'Delivery')
             .reduce((total, tx) => { return total + tx.vendorPayRef.totalPrice; }, 0),
-          pickupOrders: this._completed(bizId, weekNum)
+          pickupOrders: allComplete
             .filter(t => !t.DaaS)
             .filter(t => t.method === 'Pickup')
             .reduce((total, tx) => { return total + tx.vendorPayRef.totalPrice; }, 0),
-          orders: this._completed(bizId, weekNum)
+          orders: allComplete
             .filter(t => !t.DaaS)
             .reduce((total, tx) => { return total + tx.vendorPayRef.totalPrice; }, 0),
-          DaaS: this._completed(bizId, weekNum)
+          DaaS: allComplete
             .filter(t => t.DaaS)
             .reduce((total, tx) => { return total + tx.vendorPayRef.totalPrice; }, 0),
         },
         payout: {
-          deliveryOrders: this._completed(bizId, weekNum)
+          deliveryOrders: allComplete
             .filter(t => !t.DaaS)
             .filter(t => t.method === 'Delivery')
             .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
-          pickupOrders: this._completed(bizId, weekNum)
+          pickupOrders: allComplete
             .filter(t => !t.DaaS)
             .filter(t => t.method === 'Pickup')
             .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
-          orders: this._completed(bizId, weekNum)
+          orders: allComplete
             .filter(t => !t.DaaS)
             .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
-          DaaS: this._completed(bizId, weekNum)
+          DaaS: allComplete
             .filter(t => t.DaaS)
             .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
         },
