@@ -5,7 +5,6 @@ import convert from 'json-2-csv';
 if (Meteor.isServer) {
   Twilio = require('twilio');
   twilio = new Twilio(Meteor.settings.twilio.pub, Meteor.settings.twilio.priv);
-  console.log(twilio);
 }
 
 
@@ -29,12 +28,67 @@ runner = {
       });
     });
   },
-  getShifted() {
-    return staffJoy.getShifts().filter((shift) => {
+  getRole(role, habitat){
+    return !role ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
+  },
+  getHours(start, end, habitat) {
+    start = moment(Habitats.openedAtToday(habitat._id))
+      .subtract(4, 'hours')
+      .toISOString() || start;
+    end = moment(Habitats.closedAtToday(habitat._id))
+      .subtract(4, 'hours')
+      .toISOString() || end;
+    console.log(`${habitat.name} opening at: ` + start);
+    console.log(`${habitat.name} closing at: ` + end);
+    return { start, end };
+  },
+  _shifts(start, end, habitat, role){
+    return HTTP.call(`GET`,
+      staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`),
+      {
+        auth: staffJoy._auth,
+        params: {
+          start: this.getHours(start, end, habitat).start,
+          end: this.getHours(start, end, habitat).end,
+          include_summary: true,
+        }
+      }
+    ).data.data;
+  },
+  getShifts (start, end, habitats, role) {
+        console.log(role);
+        return _.compact(_.flatten(habitats.map((id) => {
+          habitat = Habitats.findOne(id);
+          role = this.getRole(role, habitat);
+          try {
+            return this._shifts(start, end, habitat, role).map((shift) => {
+              try {
+                  newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
+                  const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
+                  const workerId = userShift.data.data.internal_id;
+                  return {
+                    shift: shift,
+                    staffJoyUser: userShift.data.data,
+                    user: Meteor.users.findOne(workerId ? workerId : {username: userShift.data.data.email}),
+                  };
+              } catch (e) {
+                console.warn(`error geting usershift data ${e.message}`);
+              }
+            });
+          } catch(e) {
+            console.warn( "Cannot get shift data..." + e.message);
+          }
+        })));
+    },
+  getShifted(start, end, habitats, role) {
+    return this.getShifts(start, end, habitats, role).filter((shift) => {
+      console.log(`now = ${moment(Date.now()).subtract(4, 'hours').toISOString()}`);
+      console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(4, 'hours').toISOString()}`);
+      console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(4, 'hours').toISOString()}`);
       return !shift || !shift.shift ? {} :
-        moment(Date.now()).isBetween(
-          moment(new Date(shift.shift.start)),
-          moment(new Date(shift.shift.stop))
+        moment(Date.now()).subtract(4, 'hours').isBetween(
+          moment(new Date(shift.shift.start)).subtract(4, 'hours'),
+          moment(new Date(shift.shift.stop)).subtract(4, 'hours')
       );
     });
   },
@@ -204,42 +258,6 @@ staffJoy = {
     // .filter(w => Meteor.users.findOne({username: w.email}) ? true : false);
     return res;
   },
-  //default to all habitats for tod
-  getShifts (start, end, habitats=this.allHabitats(), role='runner') {
-
-        console.log(`getshifts on dispatch role is ${role}`);
-        return _.compact(_.flatten(habitats.map((id) => {
-          habitat = Habitats.findOne(id);
-          role = !role ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
-          start = moment(Habitats.openedAtToday(habitat._id)).subtract(
-            // Meteor.settings.devMode ? 0 :
-            5, 'hours').toISOString() || start; console.log(start);
-          end = moment(Habitats.closedAtToday(habitat._id)).subtract(
-            // Meteor.settings.devMode ? 0 :
-            5, 'hours').toISOString() || end; console.log(end);
-          try {
-            return HTTP.call(`GET`,
-              staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`),
-              { auth: staffJoy._auth, params: { start: start, end: end, include_summary: true, } }
-            ).data.data.map((shift) => {
-              try {
-                if(shift.user_id !== 0){
-                  newUrl = this._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
-                  const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
-                  const workerId = userShift.data.data.internal_id;
-                  return {
-                    shift: shift,
-                    staffJoyUser: userShift.data.data,
-                    user: Meteor.users.findOne(workerId ? workerId : {username: userShift.data.data.email}),
-                  };
-                }
-              } catch (e) {
-                          console.log(`error geting usershift data ${e.message}`); }
-            });
-          } catch(e) {
-            console.log( "Cannot get shift data..." + e.message); }
-        })));
-    },
 };
 
 runnerPayout = {
@@ -416,184 +434,7 @@ Meteor.methods({
               "g77XEv8LqxJKjTT8k",
               "zfY5SkgFSjXcjXbgW"
             ],
-            "transactions": [
-              "oMpyCcJuBDGosvK2s",
-              "4rAAcZXiFwYkAP7gP",
-              "EkmWXEgqRQt2bGpen",
-              "8xgaA5a95TGStRtLB",
-              "Rupu5e66ccyM9tjg4",
-              "udD8sffkTzsD3iKF5",
-              "ACCu4GEGnN2wCrdDa",
-              "dCGNNwXvvmr72iEgq",
-              "EoLwwJ4AR3XcDzYxY",
-              "MHRLN7g3TqysjKCvH",
-              "En9CpXYRzomcsTJGi",
-              "edc5d7NmD8wewhRoC",
-              "6NtGkWfWdFuZGmcQK",
-              "En7oN4mbsswguQFXa",
-              "g5qkptanomNBh6q3N",
-              "2H68AXenfeArHDZaP",
-              "PjYSPGof2TcxbnyPX",
-              "wKhfsGwgr4pS4awh8",
-              "NAeLT2myBphrAZFL4",
-              "Bbbb7EfvxNcL952Ra",
-              "CTKYwf7q6WKeHafKT",
-              "wwCHh7ggXAHHfY5Dr",
-              "j7f7BEGCaxTqd5nhr",
-              "JXhZPc8X6LEFG9DzR",
-              "zhLxSH3QNwtcRisDK",
-              "4xmvhLcZABuyaT6rZ",
-              "QdFnvCNnSLh5JPX58",
-              "xP7TMhMB5KFBFQvuf",
-              "XNRyRAaD3aBrPj6zi",
-              "m8Qmim3nhXKPSjjYp",
-              "6i6bDptjHSPSABTs4",
-              "tMLPjkgeXbjYDe7t8",
-              "RJuy3bFaqZg3nNAkn",
-              "D8wvYrYewTNwCnzEo",
-              "TcjEGsSnzMdGjupGu",
-              "CAYossMvz8QzAZkcX",
-              "jTLPufSQkWtzhRa5p",
-              "6bxmGkjxSxkKGrT7t",
-              "N2ScqBZujbe466DQF",
-              "gpieHJjqGDbNTah5H",
-              "JqMa2eT6HF2tr6chM",
-              "ZzsZJWuvGW2SiTAhf",
-              "sJaH3RoXdvRyhNjcx",
-              "G92xrpsBxg9fL2cn2",
-              "fXwbcYSBDTAM6oy8d",
-              "38Ws5Wgs8m6yDi7NK",
-              "qxaQMK4NN5i7LwE9m",
-              "b4nf3Jiy5oZMThk4y",
-              "aFkZjcvuwNEBvx9Z3",
-              "FBqzCLmCoAYr5D5rN",
-              "tSTuqXskKWaWzcYby",
-              "Wb95v6g2y9QGQEMdb",
-              "vX6TaWSXDkaX4PokG",
-              "rGYGdnLXurjqqtTvz",
-              "9HWBm3moHQ9oetnvi",
-              "pu6TroaNyqBD96vdr",
-              "23LR3qNYhJoFXznhn",
-              "97nbQps9j3buQyW7K",
-              "sLAbkvm2Y4Xs7Cdo6",
-              "oXFXetQNjKtscNXXQ",
-              "RNqxiov2n7WekXXME",
-              "mEz3ooHRoruR46kkh",
-              "aJW6FHz6ybtPovi8B",
-              "Jhd7r7XRkAZuMMMD3",
-              "yBYH5HkX6Jn8qoqM4",
-              "w5uN3nQJbkEN3S6kz",
-              "NtGF3nucQRgpsdBib",
-              "HmyLBtLdyRkLREjCD",
-              "om5SqqRjTx5TKKkjG",
-              "r8tQcfTsDQdjwTJvj",
-              "2JdumZAXGzyheGqzL",
-              "WasKmqG3DcBCioLNd",
-              "4jaYitNeWKYegXLwD",
-              "2T3jt7nssdFGxJNwE",
-              "q6cZGf22JbL4STX4Z",
-              "C2x5N7xEeZnNJAdAr",
-              "C2x5N7xEeZnNJAdAr",
-              "mL3JvmFiEnkiphuL9",
-              "uTZCxMxDuyrqETWG2",
-              "ApZsRofQTven8SeWv",
-              "ez2wdmxkrtTrXpT8Q",
-              "9MabNZQb977raQywn",
-              "9MabNZQb977raQywn",
-              "3s2QAuSu3QYQLaMfs",
-              "bwfXjbZ5o7cAeXsNK",
-              "yd9SkugRn5PAmgWE4",
-              "RBNK5E6RSibgFto5H",
-              "XwmAXvPEmn2Lw4guP",
-              "XwBBHvna3MBPmxb3z",
-              "fyM6dwZ67FTNuQZ7r",
-              "y2p6vzNS8jTfDBCq3",
-              "K2mKYPDZXzEGpKhhf",
-              "4MErBKsNzrZzNBtvv",
-              "ZWxaGrGuBn8pfW5RP",
-              "ka9ZujqSuoodAkPm6",
-              "4stHFZjii4b9Fctes",
-              "oQ7p9sB3patR6Z7R3",
-              "7quDdTEF8ZHpQW7XD",
-              "fLJdzNn5omrn3wWHC",
-              "gX63NCMy6Yv9gAABz",
-              "6dtdccDSYHEfkLfnP",
-              "Xd9ht8LKxwbmTTNDq",
-              "CL58apqky8tTptQek",
-              "fKs8waE4iuPC9DtuL",
-              "9jjDg6tF4tc4pfREZ",
-              "p7N6ZeRXNtPDMaL9N",
-              "ana4e5T4AgwYfXg2d",
-              "hxj6f6CaeeLMcXCGb",
-              "CE9NwEYFPttCSdywJ",
-              "i3CmvNJs523Y3RiSL",
-              "n2zo767GxaebaAJyu",
-              "MjsrS4ahHNZpzoA8e",
-              "RbFk7bWo7toKgfFj6",
-              "AKFddwz2P2ZEbTCq5",
-              "nEobzwWJgm3NYyQMt",
-              "SZ8JS8y9TdsNkZGAN",
-              "TfR3wkLnxAis9KcQn",
-              "5ekd8pX6vdeuj9W9r",
-              "82sWxqBLAMBCh4ccY",
-              "QheBQ4SXgN3JuursZ",
-              "BAxFCmox7Nc4xnw9K",
-              "S2cjLjxguQh4FgjYT",
-              "T7bGA9sCP7KJGwgcd",
-              "cdCMGR4egBY3WeZjN",
-              "caAkuGXnFdcmFwqPn",
-              "c6YsMReP9y2hvWeBB",
-              "q4tq54fMMcKfmat7a",
-              "NZkA9Gp98RqH8ni9T",
-              "ZpHZsj3Mz8rLYxv95",
-              "q8ExvxDQeLWX7pPe3",
-              "QZdHZFSAWMPphkR7v",
-              "yFqcrcbZZ4WJnigrZ",
-              "Q6YC6BN7kyL7M3JND",
-              "yvuLcapa24s3kxf9H",
-              "iFm8YTHoit2nkS7ao",
-              "Q7oeXjbMsDyH3AH8t",
-              "FAcjyHJuxajWNuzNT",
-              "cvmf3h6QySpyGxftc",
-              "XFQaEESTBDqKBA4sA",
-              "wkrJTSYihreZxoQ7z",
-              "yCfP6ppDWEHzGkmga",
-              "762tLiFPPArSyq8e3",
-              "t2gfYCZTiqriBxAou",
-              "xZ4PwTKZ5HanuLwAS",
-              "phGpaoxJaPkPf94hs",
-              "3649s2X6xumRJjLqK",
-              "pHQbHJmi9nLhx85TL",
-              "dcp4Yy7r6fySy64d6",
-              "SmKLeZ7F48pjckoii",
-              "JFXXh9AJedHMi6eRN",
-              "s3DyreduTrEsEFxwu",
-              "bmh6TpLu3iK9hAvMs",
-              "r4q3WecFSAQt2isEW",
-              "jz7aEMSiugHJuSrhA",
-              "jByWL4bPM6QiGCFqz",
-              "P8o27vLHE3Kpwtrig",
-              "SNBtPmkZeFRmojePw",
-              "dMuoH5diZfTGjGaSr",
-              "99BZdwQpsYX5t49EQ",
-              "kMShKJnsva9Yq5EXb",
-              "4k3GZTGBzg9ztYwmy",
-              "hJprgzJycpKaCaJEg",
-              "8Fne9GFWNduk6u5QH",
-              "cyh9g5gs2rHocxKcf",
-              "wDEwts8arSWxke2WW",
-              "pgQ9souFfYH9xY8kf",
-              "Wqomsf5jyNHgzfT2y",
-              "5LRFj6XNXwhkWwbG7",
-              "kukfJZNW3MhYFQfcE",
-              "saA5ZqRWswsoG97YF",
-              "4o9WfeJfSfjB9DuyX",
-              "c9Y6FnuMLPtFCGZ9E",
-              "8r55yBJgo5qkcrJfy",
-              "uRARhHMKWsmsALSyA",
-              "3AAnWW8tpKCjQRvYD",
-              "XJYWKoyooS5ncDaqR"
-            ],
+            "transactions": [  ],
             "phone": "4433869479",
             "settings": {
               "push": true,
@@ -625,41 +466,7 @@ Meteor.methods({
             "admin",
             "running"
           ],
-          "deliveries": [
-            {
-              "_id": "KevG8Ws5fJwGupqfk"
-            },
-            {
-              "_id": "8xgaA5a95TGStRtLB"
-            },
-            {
-              "_id": "jcxd5HvRDnK3Yjy5i"
-            },
-            {
-              "_id": "2H68AXenfeArHDZaP"
-            },
-            {
-              "_id": "PjYSPGof2TcxbnyPX"
-            },
-            {
-              "_id": "XNRyRAaD3aBrPj6zi"
-            },
-            {
-              "_id": "8mC3zLFAnWHRKnsNy"
-            },
-            {
-              "_id": "8jQqQHsfoJCCnww72"
-            },
-            {
-              "_id": "tCAJP6TG4EFK7BXe5"
-            },
-            {
-              "_id": "DqtaWgoXpadTuBuwo"
-            },
-            {
-              "_id": "XozLktXNZnm2ddEmY"
-            }
-          ],
+          "deliveries": [],
           "avgRating": 3,
           "status": {
             "online": true,
@@ -673,7 +480,7 @@ Meteor.methods({
         }
       },
     ]
- : staffJoy.getShifts();
+ : runner.getShifts();
   }
 });
 
