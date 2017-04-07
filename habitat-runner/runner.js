@@ -29,17 +29,13 @@ runner = {
     });
   },
   getRole(role, habitat){
-    return !role ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
+    return role === 'runner' ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
   },
   getHours(start, end, habitat) {
-    start = moment(Habitats.openedAtToday(habitat._id))
-      .subtract(Meteor.settings.devMode ? 4 : 0, 'hours')
-      .toISOString() || start;
-    end = moment(Habitats.closedAtToday(habitat._id))
-      .subtract(Meteor.settings.devMode ? 4 : 0, 'hours')
-      .toISOString() || end;
-    console.log(`${habitat.name} opening at: ` + start);
-    console.log(`${habitat.name} closing at: ` + end);
+    start = moment(Habitats.openedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || start;
+    end = moment(Habitats.closedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || end;
+    // console.log(`${habitat.name} opening at: ` + start);
+    // console.log(`${habitat.name} closing at: ` + end);
     return { start, end };
   },
   _shifts(start, end, habitat, role){
@@ -56,21 +52,23 @@ runner = {
     ).data.data;
   },
   getShifts (start, end, habitats, role) {
-        console.log(role);
-        return _.compact(_.flatten(habitats.map((id) => {
+        let shifts = habitats.map((id) => {
           habitat = Habitats.findOne(id);
           role = this.getRole(role, habitat);
           try {
             return this._shifts(start, end, habitat, role).map((shift) => {
               try {
+                if(shift.user_id !== 0){
                   newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
+                  console.log(`${workerId} ${userShift.data.data.name} has a shift today`);
                   return {
                     shift: shift,
                     staffJoyUser: userShift.data.data,
                     user: Meteor.users.findOne(workerId ? workerId : {username: userShift.data.data.email}),
                   };
+                }
               } catch (e) {
                 console.warn(`error geting usershift data ${e.message}`);
               }
@@ -78,13 +76,17 @@ runner = {
           } catch(e) {
             console.warn( "Cannot get shift data..." + e.message);
           }
-        })));
+        });
+        const parsedShifts = _.compact(_.flatten(shifts));
+        return parsedShifts;
     },
   getShifted(start, end, habitats, role) {
+    habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
+    console.log(`getshifted habitats is ${habitats}`);
     return this.getShifts(start, end, habitats, role).filter((shift) => {
-      console.log(`now = ${moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
-      console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
-      console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
+      // console.log(`now = ${moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
+      // console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
+      // console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
       return !shift || !shift.shift ? {} :
         moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').isBetween(
           moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours'),
@@ -93,7 +95,7 @@ runner = {
     });
   },
   alertShifted(txId, habId){
-    runner.getShifted(habId).filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
+    runner.getShifted(false, false, [habId], 'runner').filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
       twilio.messages.create({
         to: runner.profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
@@ -245,8 +247,7 @@ staffJoy = {
   _baseRequest(){ return this._baseUrl() + this._orgQuery(); },
   _getUrl(query){
     url = !query ? this._baseRequest() : this._baseRequest() + `/${query}`;
-    // validUrl.isHttpsUri();
-    console.log(url);
+    // console.log(url);
     return url;
 
    },

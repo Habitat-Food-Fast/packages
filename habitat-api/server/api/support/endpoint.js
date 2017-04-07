@@ -4,10 +4,6 @@ Router.route( '/api/v1/support', function() {
     if(err) { console.warn(err.message); } else {
       this.response.writeHead(200);
       if(res.length){
-        console.log(res);
-        // console.log(res[0].shift.user);
-        phone = res[0].user.profile.phone;
-        console.log(phone);
         this.response.end(phone);
       } else {
         console.warn(`no shifts found!`);
