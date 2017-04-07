@@ -784,6 +784,7 @@ Meteor.methods({
       }
     },
     remoteVendorContact(txId, apiKey) {
+      console.log('TEST');
       console.log(this.userId);
       if (APIKeys.findOne({key: apiKey}) || this.userId && Meteor.users.findOne(this.userId).roles.includes('admin')) {
         handleInitialVendorContact(txId, apiKey);

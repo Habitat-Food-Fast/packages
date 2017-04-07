@@ -63,6 +63,10 @@ class transactionsCollection extends Mongo.Collection {
          _.extend(order, {
           orderId: this.pin(),
           itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
+          itemName: saleItems.findOne(order.saleItemId).name,
+          itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
+          modifiers: order.modifiers,
+          modifiersText: this.formatMods(order.modifiers)
         })
       );
     } else {
@@ -71,10 +75,22 @@ class transactionsCollection extends Mongo.Collection {
           orderId: this.pin(),
           itemPrice: order.itemPrice,
           itemName: order.itemName,
-          modifiers: order.modifiers,
+          modifiers: order.modifiers
         })
       );
     }
+  }
+  formatMods(mods) {
+    let modArray = [];
+    for (i = 0; i < mods.length; i++) {
+      var mod = Modifiers.findOne(mods[i]);
+      modArray.push({
+        name: mod.name,
+        category: modCategories.findOne(mod.subcategory).name,
+        price: mod.price
+      });
+    };
+    return modArray;
   }
   remove(id, callback){ return super.remove(id, callback); }
   //todo: clean up params
@@ -196,7 +212,7 @@ class transactionsCollection extends Mongo.Collection {
   }
 
   creditsCoverFullOrder(id) {
-    return transactions.findOne(id).payRef.mealInfo && (transactions.findOne(id).payRef.platformRevenue === 0);
+    return transactions.findOne(id) && transactions.findOne(id).payRef.mealInfo && (transactions.findOne(id).payRef.platformRevenue === 0);
   }
   platRevIsZero(id) { return transactions.findOne(id).payRef.platformRevenue === 0; }
   getPromo(txId){ return Instances.findOne(tx(id).promoId); }

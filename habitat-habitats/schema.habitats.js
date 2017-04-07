@@ -3,6 +3,11 @@ Meteor.startup(function(){
     console.warn('WARNING: RESETTING HABITAT TO SCHEMA STATE');
     Habitats.remove({}, {multi: true});
     Habitats.defaults.forEach(h => Habitats.insert(h));
+    if(Meteor.settings.devMode && !Meteor.settings.inspectorMode){
+      Habitats.update({name: 'Test Habitat'}, {$set: {
+        featured: true
+      }}, (err) => { if(err) { console.warn(err.message); }});
+    }
   }
 });
 
@@ -190,58 +195,58 @@ Habitats.defaults = [
     },
     "weeklyHours" : Habitats.setHours(),
   },
-  // {
-  //   "_id": "TMdKN6FhxdbyoXodY",
-  //   "staffJoyId": 775,
-  //   "staffJoyRunnerRole": 1440,
-  //   "name" : "CC",
-  //   "icon" : "owl",
-  //   "orderType" : "either",
-  //   "order" : 0,
-  //   "featured" : true,
-  //   "mealsEnabled" : true,
-  //   "open" : true,
-  //   "surge" : false,
-  //   "bounds" : {
-  //       "type" : "geojson",
-  //       "data" : {
-  //           "type" : "Feature",
-  //           "properties" : {
-  //               "name" : "CC"
-  //           },
-  //           "geometry" : {
-  //               "type" : "Polygon",
-  //               "coordinates" :  [
-  //         [
-  //           [
-  //             -75.16360759735107,
-  //             39.95426045505634
-  //           ],
-  //           [
-  //             -75.16965866088867,
-  //             39.955082876914574
-  //           ],
-  //           [
-  //             -75.16910076141356,
-  //             39.946595007738985
-  //           ],
-  //           [
-  //             -75.15004634857176,
-  //             39.94475254043076
-  //           ],
-  //           [
-  //             -75.14691352844238,
-  //             39.95225370421749
-  //           ],
-  //           [
-  //             -75.16360759735107,
-  //             39.95426045505634
-  //           ]
-  //         ]
-  //       ]
-  //           }
-  //       }
-  //   },
-  //   "weeklyHours" : Habitats.setHours(),
-  // }
+  {
+    "_id": "TMdKN6FhxdbyoXodY",
+    "staffJoyId": 775,
+    "staffJoyRunnerRole": 1440,
+    "name" : "Test Habitat",
+    "icon" : "owl",
+    "orderType" : "either",
+    "order" : 0,
+    "featured" : false,
+    "mealsEnabled" : true,
+    "open" : true,
+    "surge" : false,
+    "bounds" : {
+        "type" : "geojson",
+        "data" : {
+            "type" : "Feature",
+            "properties" : {
+                "name" : "CC"
+            },
+            "geometry" : {
+                "type" : "Polygon",
+                "coordinates" :  [
+          [
+            [
+              -75.16360759735107,
+              39.95426045505634
+            ],
+            [
+              -75.16965866088867,
+              39.955082876914574
+            ],
+            [
+              -75.16910076141356,
+              39.946595007738985
+            ],
+            [
+              -75.15004634857176,
+              39.94475254043076
+            ],
+            [
+              -75.14691352844238,
+              39.95225370421749
+            ],
+            [
+              -75.16360759735107,
+              39.95426045505634
+            ]
+          ]
+        ]
+            }
+        }
+    },
+    "weeklyHours" : Habitats.setHours(),
+  }
 ];
