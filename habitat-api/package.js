@@ -25,7 +25,8 @@ Package.onUse(function (api) {
   api.use('accounts-password');
   api.addFiles([
     'server/api/_config.js',
-    'server/api/endpoint.js',
+    'server/api/orders/endpoint.js',
+    'server/api/support/endpoint.js',
     'server/api/methods.js',
     'server/_test-data.js',
     'server/emails.reset.js',

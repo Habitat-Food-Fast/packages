@@ -25,17 +25,23 @@ class habitatsCollection extends Mongo.Collection {
     const weeklyHours = Habitats.findOne(habId).weeklyHours; check(weeklyHours, [Object]);
     return _.findWhere( weeklyHours, { day: moment().day() } );
   }
+
+
   openedAtToday (habId)  {
       openHr = this.parseTo24Hour(this.getToday(habId).openHr);
       hr = moment((openHr), ["h:mm"]).format("HH");
       min = moment(openHr, ["h:mm"]).format("mm");
-      return moment().day(moment(Date.now()).day()).hour(hr).minute(min).format();
+      return moment().day(moment(Date.now())  .subtract(
+                    Meteor.settings.devMode ? 0 :
+                    5, 'hours').day()).hour(hr).minute(min).format();
   }
   closedAtToday (habId)  {
       closeHr = this.parseTo24Hour(this.getToday(habId).closeHr);
       hr = moment((closeHr), ["h:mm"]).format("HH");
       min = moment(closeHr, ["h:mm"]).format("mm");
-      return moment().day(moment(Date.now()).day()).hour(hr).minute(min).format();
+      return moment().day(moment(Date.now())  .subtract(
+                    Meteor.settings.devMode ? 0 :
+                    5, 'hours').day()).hour(hr).minute(min).format();
   }
   parseTo24Hour(hr) {
     return moment(hr, 'h:mm a').format('H:mm').split(':')[0];
