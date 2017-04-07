@@ -33,10 +33,10 @@ runner = {
   },
   getHours(start, end, habitat) {
     start = moment(Habitats.openedAtToday(habitat._id))
-      .subtract(4, 'hours')
+      .subtract(Meteor.settings.devMode ? 4 : 0, 'hours')
       .toISOString() || start;
     end = moment(Habitats.closedAtToday(habitat._id))
-      .subtract(4, 'hours')
+      .subtract(Meteor.settings.devMode ? 4 : 0, 'hours')
       .toISOString() || end;
     console.log(`${habitat.name} opening at: ` + start);
     console.log(`${habitat.name} closing at: ` + end);
@@ -82,13 +82,13 @@ runner = {
     },
   getShifted(start, end, habitats, role) {
     return this.getShifts(start, end, habitats, role).filter((shift) => {
-      console.log(`now = ${moment(Date.now()).subtract(4, 'hours').toISOString()}`);
-      console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(4, 'hours').toISOString()}`);
-      console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(4, 'hours').toISOString()}`);
+      console.log(`now = ${moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
+      console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
+      console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
       return !shift || !shift.shift ? {} :
-        moment(Date.now()).subtract(4, 'hours').isBetween(
-          moment(new Date(shift.shift.start)).subtract(4, 'hours'),
-          moment(new Date(shift.shift.stop)).subtract(4, 'hours')
+        moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').isBetween(
+          moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours'),
+          moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours')
       );
     });
   },
