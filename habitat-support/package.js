@@ -15,9 +15,9 @@ Package.onUse(function(api) {
   api.use('ecmascript');
   api.use('http');
   api.use('url');
-  api.use(["aldeed:simple-schema@1.5.3", "aldeed:collection2", "underscore"]);
+  api.use(["aldeed:simple-schema", "aldeed:collection2", "underscore"]);
   api.use('mongo', ['client', 'server']);
-  api.use('mdg:validated-method@1.1.0', ['client', 'server']);
+  api.use('mdg:validated-method', ['client', 'server']);
   api.use('raix:push@3.0.2', ['client', 'server']);
   api.addFiles('collection.support.js', ['client', 'server']);
   api.addFiles('methods.support.js', ['client', 'server']);

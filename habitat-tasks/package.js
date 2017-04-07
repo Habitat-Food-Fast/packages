@@ -13,7 +13,7 @@ Package.onUse(function (api) {
   api.use('aldeed:collection2');
   api.use('aldeed:simple-schema');
   api.use('mdg:validated-method');
-  api.use('tunifight:loggedin-mixin')
+  api.use('tunifight:loggedin-mixin');
 
   api.addFiles('tasks.js', ['client', 'server']);
   api.export('Tasks');
