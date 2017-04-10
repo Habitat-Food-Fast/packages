@@ -73,9 +73,16 @@ transactions.methods = {
         }
       }), (err, txId) => {
         if(err) { throwError(err.message); } else {
-          console.log(transactions.findOne(txId));
-          if(this.isSimulation) { subs.subscribe('delivery', Meteor.user().profile.businesses[0]); }
-
+          const tx = transactions.findOne(txId);
+          if (!tx.customerPhone) {
+            slm(`DaaS #${tx.orderNumber} missing PHONE`);
+          }
+          if (!tx.deliveryAddress) {
+            slm(`DaaS #${tx.orderNumber} missing ADDRESS`);
+          }
+          if (tx.DaaSType === 'online_prepaid' && !tx.payRef.tip) {
+            slm(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
+          }
         }
       });
       }
