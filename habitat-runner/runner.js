@@ -185,35 +185,41 @@ runner = {
     return req.response.end(xml);
   },
 
-generateOrderInfo(tx, runner) {
-  const bizProf = businessProfiles.findOne(tx.DaaS ? tx.buyerId : tx.sellerId);
-  const userProf = Meteor.users.findOne(tx.buyerId);
-  deliveryInstructions = tx.deliveryInstructions || '';
-  let msg;
+  generateOrderInfo(tx, runner) {
+    const bizProf = businessProfiles.findOne(tx.DaaS ? tx.buyerId : tx.sellerId);
+    const userProf = Meteor.users.findOne(tx.buyerId);
+    deliveryInstructions = tx.deliveryInstructions ? `(${tx.deliveryInstructions})` : '';
 
-  if(tx.DaaS){
-    customerName = tx.customerName || 'unknown';
-    customerPhone = tx.customerPhone || 'unknown';
-    msg = `Order #${tx.orderNumber} for ${runner.profile.fn} accepted, estimated pickup time is ${tx.prepTime} minutes.
-VENDOR NAME: ${tx.company_name}
+    let msg;
+    const pck = tx.prepTime ? moment(Date.now() + (tx.prepTime * 60000)).format('LT') : 'ASAP';
+
+    if(tx.DaaS){
+      customerName = tx.customerName || 'unknown';
+      customerPhone = tx.customerPhone || 'unknown';
+      msg = `Order #${tx.orderNumber} assigned.
+READY AT: ${pck}
+PAYMENT: ${tx.DaaSType}
+VENDOR: ${tx.company_name}
 PHONE: ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}
-CUSTOMER NAME: ${customerName}
+CUSTOMER: ${customerName}
 PHONE: ${customerPhone}
-ADDR: ${tx.deliveryAddress}. (${deliveryInstructions}) `;
+ADDR: ${tx.deliveryAddress}. ${deliveryInstructions} `;
   } else {
-msg = `Order # ${tx.orderNumber} for ${runner.profile.fn}  accepted, estimated pickup time is ${bizProf.prep_time} minutes.
-VENDOR NAME:  ${tx.company_name}
+msg = `Order # ${tx.orderNumber} assigned.
+READY AT: ${pck}
+PAYMENT: Prepaid
+VENDOR: ${tx.company_name}
 PHONE: ${bizProf.company_phone}
-ADDR: ${bizProf.company_address} ${deliveryInstructions}
-CUSTOMER NAME: ${userProf.profile.fn}
+ADDR: ${bizProf.company_address}
+CUSTOMER: ${userProf.profile.fn}
 PHONE: ${userProf.profile.phone}
-ADDR: ${tx.deliveryAddress}
+ADDR: ${tx.deliveryAddress} ${deliveryInstructions}
 
 VENDOR RECEIPT: ${tx.textMessage}`;
-  }
-  return msg;
-},
+    }
+    return msg;
+  },
 };
 
 Meteor.methods({
