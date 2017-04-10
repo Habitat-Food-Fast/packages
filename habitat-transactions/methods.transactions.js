@@ -299,8 +299,14 @@ sendReceiptImage: new ValidatedMethod({
       );
 
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
+      const rnr = Meteor.users.findOne(runnerId);
+      const runnerObj = {
+        phone: rnr.profile.phone,
+        pic: rnr.profile.profile_pic,
+        name: rnr.profile.fn
+      };
       transactions.update(tx._id, { $set: {
-        status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign,
+        status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
         DDPenv().call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
           if(err) { throwError(err.message); } else {
