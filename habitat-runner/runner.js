@@ -191,7 +191,7 @@ runner = {
     deliveryInstructions = tx.deliveryInstructions ? `(${tx.deliveryInstructions})` : '';
 
     let msg;
-    const pck = tx.prepTime ? moment(Date.now() + (tx.prepTime * 60000)).format('LT') : 'ASAP';
+    const pck = tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format('LT') : 'ASAP';
 
     if(tx.DaaS){
       customerName = tx.customerName || 'unknown';
