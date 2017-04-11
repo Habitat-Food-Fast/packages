@@ -55,10 +55,12 @@ runner = {
         let shifts = habitats.map((id) => {
           habitat = Habitats.findOne(id);
           role = this.getRole(role, habitat);
+          console.log('hit that get it');
           try {
             return this._shifts(start, end, habitat, role).map((shift) => {
               try {
                 if(shift.user_id !== 0){
+                  console.log('inside the first if');
                   newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
@@ -97,7 +99,7 @@ runner = {
   alertShifted(txId, habId){
     runner.getShifted(false, false, [habId], 'runner').filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
       twilio.messages.create({
-        to: runner.profile.phone,
+        to: runner.user.profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
         body: this.runnerText(txId),
       }, (err, responseData) => {
@@ -224,23 +226,25 @@ VENDOR RECEIPT: ${tx.textMessage}`;
 
 Meteor.methods({
 sendRunnerPing(txId, runnerId, initialPing){
-  const tx = transactions.findOne(txId);
-  return initialPing ? runner.alertShifted(tx._id, tx.habitat) :
-    twilio.messages.create({
-      to: Meteor.users.findOne(runnerId).profile.phone,
-      from: Meteor.settings.twilio.twilioPhone,
-      body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
-    }, (err, responseData) => {
-        if (!err) { console.log(responseData.body); } else {
-          if(err.code === 21211) {
-            const parsedWrongNum = err.message.match(/[0-9]+/)[0];
-            console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
-          } else {
-            console.log(err);
+  if (Meteor.isServer) {
+    const tx = transactions.findOne(txId);
+    return initialPing ? runner.alertShifted(tx._id, tx.habitat) :
+      twilio.messages.create({
+        to: Meteor.users.findOne(runnerId).profile.phone,
+        from: Meteor.settings.twilio.twilioPhone,
+        body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
+      }, (err, responseData) => {
+          if (!err) { console.log(responseData.body); } else {
+            if(err.code === 21211) {
+              const parsedWrongNum = err.message.match(/[0-9]+/)[0];
+              console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
+            } else {
+              console.log(err);
+            }
           }
         }
-      }
-    );
+      );
+  }
   }
 });
 
@@ -253,7 +257,7 @@ staffJoy = {
   _baseRequest(){ return this._baseUrl() + this._orgQuery(); },
   _getUrl(query){
     url = !query ? this._baseRequest() : this._baseRequest() + `/${query}`;
-    // console.log(url);
+    console.log(url);
     return url;
 
    },
