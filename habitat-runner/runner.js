@@ -55,12 +55,10 @@ runner = {
         let shifts = habitats.map((id) => {
           habitat = Habitats.findOne(id);
           role = this.getRole(role, habitat);
-          console.log('hit that get it');
           try {
             return this._shifts(start, end, habitat, role).map((shift) => {
               try {
                 if(shift.user_id !== 0){
-                  console.log('inside the first if');
                   newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
