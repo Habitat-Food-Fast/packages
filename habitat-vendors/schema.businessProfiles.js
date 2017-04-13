@@ -8,6 +8,7 @@ businessProfiles.schema = new SimpleSchema({
   orderPhone: { type: Number },
   twilioPhone: { type: String, optional: true},
   DaaS: { type: Boolean, optional: true},
+  backend_name: { type: String, optional: true },
   rating_vendor: { type: Number, optional: true, decimal: true },
   faxPhone: { type: Number, optional: true },
   company_type: { type: String, trim: true },
