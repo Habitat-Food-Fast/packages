@@ -11,7 +11,15 @@ businessProfiles.schema = new SimpleSchema({
   backend_name: { type: String, optional: true },
   rating_vendor: { type: Number, optional: true, decimal: true },
   faxPhone: { type: Number, optional: true },
-  company_type: { type: String, trim: true },
+  company_type: {
+    type: String,
+    trim: true,
+    allowedValues: [
+      'Fast Casual',
+      'Food Truck',
+      'Dine In'
+    ]
+  },
   company_picture: { type: String, trim: true },
   prep_time: { type: Number, min: 0, max: 45, defaultValue: 15 },
   method: { type: String, trim: true, allowedValues: ['pickup', 'delivery', 'none'] },
