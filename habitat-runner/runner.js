@@ -97,7 +97,7 @@ runner = {
   alertShifted(txId, habId){
     runner.getShifted(false, false, [habId], 'runner').filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
       twilio.messages.create({
-        to: runner.profile.phone,
+        to: runner.user.profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
         body: this.runnerText(txId),
       }, (err, responseData) => {
@@ -188,53 +188,61 @@ runner = {
 generateOrderInfo(tx, runner) {
   const bizProf = businessProfiles.findOne(tx.DaaS ? tx.buyerId : tx.sellerId);
   const userProf = Meteor.users.findOne(tx.buyerId);
-  deliveryInstructions = tx.deliveryInstructions || '';
+  deliveryInstructions = tx.deliveryInstructions ? `(${tx.deliveryInstructions})` : '';
+
   let msg;
+  const pck = tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format('LT') : 'ASAP';
 
   if(tx.DaaS){
     customerName = tx.customerName || 'unknown';
     customerPhone = tx.customerPhone || 'unknown';
-    msg = `Order #${tx.orderNumber} for ${runner.profile.fn} accepted, estimated pickup time is ${tx.prepTime} minutes.
-VENDOR NAME: ${tx.company_name}
+    msg = `Order #${tx.orderNumber} assigned.
+READY AT: ${pck}
+PAYMENT: ${tx.DaaSType}
+VENDOR: ${tx.company_name}
 PHONE: ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}
-CUSTOMER NAME: ${customerName}
+CUSTOMER: ${customerName}
 PHONE: ${customerPhone}
-ADDR: ${tx.deliveryAddress}. (${deliveryInstructions}) `;
+ADDR: ${tx.deliveryAddress}. ${deliveryInstructions} `;
   } else {
-msg = `Order # ${tx.orderNumber} for ${runner.profile.fn}  accepted, estimated pickup time is ${bizProf.prep_time} minutes.
-VENDOR NAME:  ${tx.company_name}
+msg = `Order # ${tx.orderNumber} assigned.
+READY AT: ${pck}
+PAYMENT: Prepaid
+VENDOR: ${tx.company_name}
 PHONE: ${bizProf.company_phone}
-ADDR: ${bizProf.company_address} ${deliveryInstructions}
-CUSTOMER NAME: ${userProf.profile.fn}
+ADDR: ${bizProf.company_address}
+CUSTOMER: ${userProf.profile.fn}
 PHONE: ${userProf.profile.phone}
-ADDR: ${tx.deliveryAddress}
+ADDR: ${tx.deliveryAddress} ${deliveryInstructions}
 
 VENDOR RECEIPT: ${tx.textMessage}`;
-  }
-  return msg;
-},
+    }
+    return msg;
+  },
 };
 
 Meteor.methods({
 sendRunnerPing(txId, runnerId, initialPing){
-  const tx = transactions.findOne(txId);
-  return initialPing ? runner.alertShifted(tx._id, tx.habitat) :
-    twilio.messages.create({
-      to: Meteor.users.findOne(runnerId).profile.phone,
-      from: Meteor.settings.twilio.twilioPhone,
-      body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
-    }, (err, responseData) => {
-        if (!err) { console.log(responseData.body); } else {
-          if(err.code === 21211) {
-            const parsedWrongNum = err.message.match(/[0-9]+/)[0];
-            console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
-          } else {
-            console.log(err);
+  if (Meteor.isServer) {
+    const tx = transactions.findOne(txId);
+    return initialPing ? runner.alertShifted(tx._id, tx.habitat) :
+      twilio.messages.create({
+        to: Meteor.users.findOne(runnerId).profile.phone,
+        from: Meteor.settings.twilio.twilioPhone,
+        body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
+      }, (err, responseData) => {
+          if (!err) { console.log(responseData.body); } else {
+            if(err.code === 21211) {
+              const parsedWrongNum = err.message.match(/[0-9]+/)[0];
+              console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
+            } else {
+              console.log(err);
+            }
           }
         }
-      }
-    );
+      );
+  }
   }
 });
 
@@ -247,7 +255,7 @@ staffJoy = {
   _baseRequest(){ return this._baseUrl() + this._orgQuery(); },
   _getUrl(query){
     url = !query ? this._baseRequest() : this._baseRequest() + `/${query}`;
-    // console.log(url);
+    console.log(url);
     return url;
 
    },

@@ -73,9 +73,16 @@ transactions.methods = {
         }
       }), (err, txId) => {
         if(err) { throwError(err.message); } else {
-          console.log(transactions.findOne(txId));
-          if(this.isSimulation) { subs.subscribe('delivery', Meteor.user().profile.businesses[0]); }
-
+          const tx = transactions.findOne(txId);
+          if (!tx.customerPhone) {
+            slm(`DaaS #${tx.orderNumber} missing PHONE`);
+          }
+          if (!tx.deliveryAddress) {
+            slm(`DaaS #${tx.orderNumber} missing ADDRESS`);
+          }
+          if (tx.DaaSType === 'online_prepaid' && !tx.payRef.tip) {
+            slm(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
+          }
         }
       });
       }
@@ -299,8 +306,14 @@ sendReceiptImage: new ValidatedMethod({
       );
 
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
+      const rnr = Meteor.users.findOne(runnerId);
+      const runnerObj = {
+        phone: rnr.profile.phone,
+        pic: rnr.profile.profile_pic,
+        name: rnr.profile.fn
+      };
       transactions.update(tx._id, { $set: {
-        status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign,
+        status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
         DDPenv().call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
           if(err) { throwError(err.message); } else {

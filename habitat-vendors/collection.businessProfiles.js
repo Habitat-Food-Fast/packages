@@ -9,6 +9,7 @@ class businessProfilesCollection extends Mongo.Collection {
           featured: false,
           clicks: 0,
           DaaS: true,
+          backend_name: doc.company_name,
           order: businessProfiles.find().count() + 1,
           categories: [ 'none' ], //need to start w/ this or reassigning category won't work
           transactionCount: 0,
