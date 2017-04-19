@@ -88,5 +88,9 @@ Meteor.methods({
     if (Meteor.users.findOne(this.userId).roles.includes('admin')) {
       businessProfiles.update(biz, {$set: {tax: type}});
     }
+  },
+  updateProfile(id, newState){
+    console.log(id);
+    return businessProfiles.update({_id: id}, {$set: newState});
   }
 });
