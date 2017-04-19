@@ -218,9 +218,23 @@ calc = {
           orders: allComplete
             .filter(t => !t.DaaS)
             .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
+          DaaSPreTip: allComplete
+            .filter(t => t.DaaS)
+            .reduce((total, tx) => {
+              return total + tx.vendorPayRef.vendorPayout;
+            }, 0),
+          DaaSTips: allComplete
+            .filter(t => t.DaaS)
+            .reduce((total, tx) => {
+              tip = tx.payRef.tip || tx.tip || 0;
+              return total + tip;
+            }, 0),
           DaaS: allComplete
             .filter(t => t.DaaS)
-            .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
+            .reduce((total, tx) => {
+              tips = tx.payRef.tip || tx.tip || 0;
+              return total + tx.vendorPayRef.vendorPayout - tips;
+            }, 0),
         },
         startTime: moment(week.startTime).format(),
         endTime: moment(week.endTime).format(),
@@ -233,3 +247,5 @@ calc = {
   cancelCredits: 0.125,
   taxRate: 0.08,
 };
+
+testPayout = () => { calc.weeks.getWeek('thm89eD8so6ERG8qn', 29).payout; };

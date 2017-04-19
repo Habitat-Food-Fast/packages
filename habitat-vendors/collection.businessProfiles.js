@@ -1,3 +1,5 @@
+import convert from 'json-2-csv';
+vendorReceipts = new Meteor.Collection("vendorreceipts");
 class businessProfilesCollection extends Mongo.Collection {
   insert(doc, callback) {
     transactions.methods.searchForAddress.call({address: doc.company_address}, (err, res) => {
@@ -115,14 +117,46 @@ class businessProfilesCollection extends Mongo.Collection {
     min = moment(openHr, ["h:mm"]).format("mm");
     return moment().day(moment(Date.now()).day()).hour(hr).minute(min).format();
   }
+  getWeeklyOrders(bp, week, isDaaS) {
+    txs = transactions.find({
+      week: week.week,
+      status: {$in: transactions.completedAndArchived()},
+      DaaS: isDaaS,
+      sellerId: bp._id
+    }, {sort: {timeRequested: 1}});
+    return txs.count() ? txs.fetch() : [];
+  }
   sendWeeklyReceipt(bizId, weekNum){
     const bp = businessProfiles.findOne(bizId);
-    Mailer.send({
-      to: `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
-      subject: `Weekly Transaction Summary for ${bp.company_name}`,
-      template: 'emailVendorWeeklyPayout',
-      data: { bizId: bizId, week: weekNum },
-    });
+    const week = weeks.findOne({week: weekNum});
+    const date = moment(week.endTime).format('MMM Do YYYY');
+    const DaaSResolver = this.getWeeklyOrders(bp, week, isDaaS=true).map((t) => EJSON.toJSONValue(transactions.csv.vendor.DaaS(week, bp, t)));
+    const txResolver = this.getWeeklyOrders(bp, week, isDaaS=false).map((t) => EJSON.toJSONValue(transactions.csv.vendor.habitat(week, bp, t)));
+    convert.json2csv( txResolver, Meteor.bindEnvironment((err, habitatSheet) => {
+      if(err) { throw new Meteor.Error(err.message); } else {
+        vendorReceipts.insert({ DaaS: false, csv: habitatSheet }, (err, res) => {
+          console.log(err);
+          console.log(res);
+          if(bp.DaaS){
+            convert.json2csv(DaaSResolver, Meteor.bindEnvironment((err, DaaSSheet) => {
+              if(err) { throw new Meteor.Error(err.message); } else {
+                vendorReceipts.insert({ DaaS: true, csv: DaaSSheet }, (err, res) => {
+                  attachments = !txResolver.length ? [] : [{ fileName: `FF_${this.getShortName(bp.company_name)}_invoice_${date}.csv`, contents: habitatSheet }];
+                  if(bp.DaaS) { attachments.push({ fileName: `DaaS_${this.getShortName(bp.company_name)}_invoice_${date}.csv`, contents: DaaSSheet }); }
+                  Mailer.send({
+                    to: Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
+                    subject: `Habitat Invoice - Week Ending ${date}`,
+                    template: 'emailVendorWeeklyPayout',
+                    data: { bizId: bizId, week: weekNum },
+                    attachments
+                  });
+                });
+              }
+            }), csv.settings);
+          }
+        });
+      }
+    }), csv.settings);
   }
   getToday(id){
     const weeklyHours = businessProfiles.findOne(id).weeklyHours; check(weeklyHours, [Object]);
