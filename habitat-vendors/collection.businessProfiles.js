@@ -126,13 +126,9 @@ class businessProfilesCollection extends Mongo.Collection {
     }, {sort: {timeRequested: 1}});
     return txs.count() ? txs.fetch() : [];
   }
-<<<<<<< HEAD
   getWeeklyReceipt(bizId, weekNum, DaaS, token=Random.id(), send=true){
-=======
-  getWeeklyReceipt(bizId, weekNum, DaaS, token, send=true){
     console.log(`hit getweeklyreceipt method`);
     console.log(arguments[0]);
->>>>>>> c46eeca
     const bp = businessProfiles.findOne(bizId);
     const week = weeks.findOne({week: weekNum});
     const date = moment(week.endTime).format('MMM Do YYYY');
