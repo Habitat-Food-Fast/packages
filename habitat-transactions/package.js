@@ -19,7 +19,9 @@ Package.onUse(function (api) {
   api.use('habitat-calc');
   api.addFiles('collection.transactions.js', ['client', 'server']);
   api.addFiles('methods.transactions.js', ['client', 'server']);
+  api.addFiles('resolvers.transactions.js', ['client', 'server']);
   api.addFiles('util.transactions.js', ['client', 'server']);
+
 
 
   api.export('transactions');
