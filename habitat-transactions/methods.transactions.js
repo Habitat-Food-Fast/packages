@@ -250,6 +250,7 @@ confirmDropoff: new ValidatedMethod({
     tip: { type: Number, decimal: true, optional: true}
   }).validator(),
   run({ txId, isAdmin, tip }) {
+    tx = transactions.findOne(txId);
     const now = Date.now();
     update = {
       status: 'completed',
@@ -260,7 +261,11 @@ confirmDropoff: new ValidatedMethod({
       settledByAdmin: isAdmin,
     };
     if(tip) { update.tip = tip; }
-    transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); }});
+    transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
+      businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
+        if(err) { console.warn(err.message); }
+      });
+    }});
 
   }
 }),

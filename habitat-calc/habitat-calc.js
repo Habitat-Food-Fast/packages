@@ -1,3 +1,4 @@
+
 //init submodule
 calc = {
   _checkDecimalPlace (num) {
@@ -13,6 +14,11 @@ calc = {
   },
   _totalPrice(tp){
     return calc._roundToTwo(tp);
+  },
+  _checkQuery(query, DaaS=false){
+    if(!_.contains(['count', 'pretax', 'pretip', 'rate', 'tips', 'tax', 'total', 'payout'], query)){
+      throwError(`query ${query} is not allowed`);
+    }
   },
   orderTotal(order) {
     return this._roundToTwo(order.map((order) => {
@@ -148,6 +154,7 @@ calc = {
       return false;
     }
   },
+  //All .weeks private methods are DaaS/Food Fast agnostic
   weeks: {
     _weekQuery(bizId, weekNum){
       const query = {
@@ -175,12 +182,8 @@ calc = {
         .filter(tx => tx.cancelledByVendor)
         .filter(tx => tx.cancelledByAdmin);
     },
-    _all(bizId, weekNum) {
-      return transactions.find(this._weekQuery(bizId, weekNum), {sort: { timeRequested: -1 }}).fetch();
-    },
-    getAllWeeks(bizId) {
-      return weeks.find({}, {sort: {week: 1}}).map(week => this.getWeek(bizId, week, counts=true));
-    },
+    _all(bizId, weekNum) { return transactions.find(this._weekQuery(bizId, weekNum), {sort: { timeRequested: -1 }}).fetch(); },
+    _getAllWeeks(bizId) { return weeks.find({}, {sort: {week: 1}}).map(week => this.getWeek(bizId, week, counts=true)); },
     getWeek(bizId, weekNum, counts){
       //always filter what vendor sees by these
       const week = weeks.findOne({week: parseInt(weekNum)});
@@ -243,9 +246,55 @@ calc = {
       };
     },
   },
+  //parsing down different payouts from getWeek into what vendor needs
+  //we are abstracting this 4 levels up, i don't think there's further need for refactoring
+  payouts: {
+    delivery(request, query) {
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Delivery') .filter(tx => !tx.DaaS).length;
+        case 'pretax': return week.subtotal.deliveryOrders;
+        case 'tax': return week.subtotal.deliveryOrders * calc.taxRate;
+        case 'total': return week.subtotal.deliveryOrders * calc.taxRate + week.subtotal.deliveryOrders ;
+        case 'payout': return  week.payout.deliveryOrders + week.subtotal.orders * calc.taxRate ;
+      }
+    },
+    pickup(request, query) {
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Pickup').filter(tx => !tx.DaaS).length;
+        case 'pretax': return week.subtotal.pickupOrders;
+        case 'tax': return week.subtotal.pickupOrders * calc.taxRate;
+        case 'total': return week.subtotal.pickupOrders * calc.taxRate + week.subtotal.pickupOrders;
+        case 'payout': return  week.payout.pickupOrders + week.subtotal.orders * calc.taxRate;
+      }
+    },
+    DaaS(request, query){
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived' ).filter(tx => tx.DaaS).length;
+        case 'pretip': return Math.abs(week.payout.DaaSPreTip);
+        case 'rate': return businessProfiles.getToday(request.bizId).vendorRates.DaaS.flat;
+        case 'tips': return week.payout.DaaSTips;
+        case 'payout': return Math.abs(week.payout.DaaS);
+      }
+    },
+    total(request, query){
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => !tx.DaaS).length;
+        case 'pretax': return week.subtotal.orders;
+        case 'tax': return week.subtotal.orders * calc.taxRate;
+        case 'total': return week.subtotal.orders + week.subtotal.orders * calc.taxRate;
+        case 'payout': return  week.payout.orders + week.subtotal.orders * calc.taxRate ;
+      }
+    }
+  },
   creditsForAcquisition: 0.625,
   cancelCredits: 0.125,
   taxRate: 0.08,
 };
-
-testPayout = () => { calc.weeks.getWeek('thm89eD8so6ERG8qn', 29).payout; };

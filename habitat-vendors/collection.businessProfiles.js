@@ -126,7 +126,7 @@ class businessProfilesCollection extends Mongo.Collection {
     }, {sort: {timeRequested: 1}});
     return txs.count() ? txs.fetch() : [];
   }
-  sendWeeklyReceipt(bizId, weekNum){
+  getWeeklyReceipt(bizId, weekNum, DaaS, send=true){
     const bp = businessProfiles.findOne(bizId);
     const week = weeks.findOne({week: weekNum});
     const date = moment(week.endTime).format('MMM Do YYYY');
@@ -134,22 +134,26 @@ class businessProfilesCollection extends Mongo.Collection {
     const txResolver = this.getWeeklyOrders(bp, week, isDaaS=false).map((t) => EJSON.toJSONValue(transactions.csv.vendor.habitat(week, bp, t)));
     convert.json2csv( txResolver, Meteor.bindEnvironment((err, habitatSheet) => {
       if(err) { throw new Meteor.Error(err.message); } else {
-        vendorReceipts.insert({ DaaS: false, csv: habitatSheet }, (err, res) => {
+        vendorReceipts.insert({ createdAt: new Date(), sellerId: bizId, weekNum: weekNum, bp, week, date, orders: txResolver, DaaS: false, csv: habitatSheet }, (err, res) => {
           console.log(err);
           console.log(res);
           if(bp.DaaS){
             convert.json2csv(DaaSResolver, Meteor.bindEnvironment((err, DaaSSheet) => {
               if(err) { throw new Meteor.Error(err.message); } else {
-                vendorReceipts.insert({ DaaS: true, csv: DaaSSheet }, (err, res) => {
+                vendorReceipts.insert({ createdAt: new Date(), bp, week, date, orders: DaaSResolver, DaaS: true, csv: DaaSSheet }, (err, res) => {
                   attachments = !txResolver.length ? [] : [{ fileName: `FF_${this.getShortName(bp.company_name)}_invoice_${date}.csv`, contents: habitatSheet }];
                   if(bp.DaaS) { attachments.push({ fileName: `DaaS_${this.getShortName(bp.company_name)}_invoice_${date}.csv`, contents: DaaSSheet }); }
-                  Mailer.send({
-                    to: Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
-                    subject: `Habitat Invoice - Week Ending ${date}`,
-                    template: 'emailVendorWeeklyPayout',
-                    data: { bizId: bizId, week: weekNum },
-                    attachments
-                  });
+                  if(send){
+                    Mailer.send({
+                      to: Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
+                      subject: `Habitat Invoice - Week Ending ${date}`,
+                      template: 'emailVendorWeeklyPayout',
+                      data: { bizId: bizId, week: weekNum },
+                      attachments
+                    });
+                  } else {
+                    return DaaS ? DaaSSheet : habitatSheet;
+                  }
                 });
               }
             }), csv.settings);
