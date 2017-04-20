@@ -170,6 +170,7 @@ class businessProfilesCollection extends Mongo.Collection {
         });
       }
     }), csv.settings);
+    return 'hell'
   }
   getToday(id){
     const weeklyHours = businessProfiles.findOne(id).weeklyHours; check(weeklyHours, [Object]);
