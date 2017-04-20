@@ -80,7 +80,7 @@ businessProfiles.methods = {
         throwError('Unauthorized');
       }
     }
- })
+ }),
 };
 
 Meteor.methods({
