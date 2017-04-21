@@ -252,23 +252,37 @@ calc = {
     delivery(request, query) {
       calc._checkQuery(query);
       week = calc.weeks.getWeek(request.bizId, request.week);
+      subtotal = week.subtotal.deliveryOrders;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Delivery') .filter(tx => !tx.DaaS).length;
-        case 'pretax': return week.subtotal.deliveryOrders;
-        case 'tax': return week.subtotal.deliveryOrders * calc.taxRate;
-        case 'total': return week.subtotal.deliveryOrders * calc.taxRate + week.subtotal.deliveryOrders ;
-        case 'payout': return  week.payout.deliveryOrders + week.subtotal.orders * calc.taxRate ;
+        case 'pretax': return subtotal;
+        case 'tax': return subtotal * calc.taxRate;
+        case 'total': return subtotal * calc.taxRate + subtotal;
+        case 'payout': return  week.payout.deliveryOrders + subtotal * calc.taxRate;
       }
     },
     pickup(request, query) {
       calc._checkQuery(query);
       week = calc.weeks.getWeek(request.bizId, request.week);
+      subtotal = week.subtotal.pickupOrders;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Pickup').filter(tx => !tx.DaaS).length;
-        case 'pretax': return week.subtotal.pickupOrders;
-        case 'tax': return week.subtotal.pickupOrders * calc.taxRate;
-        case 'total': return week.subtotal.pickupOrders * calc.taxRate + week.subtotal.pickupOrders;
-        case 'payout': return  week.payout.pickupOrders + week.subtotal.orders * calc.taxRate;
+        case 'pretax': return subtotal;
+        case 'tax': return subtotal * calc.taxRate;
+        case 'total': return subtotal * calc.taxRate + subtotal;
+        case 'payout': return week.payout.pickupOrders + subtotal * calc.taxRate;
+      }
+    },
+    total(request, query){
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      subtotal = week.subtotal.orders;
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => !tx.DaaS).length;
+        case 'pretax': return subtotal;
+        case 'tax': return subtotal * calc.taxRate;
+        case 'total': return subtotal + subtotal * calc.taxRate;
+        case 'payout': return  week.payout.orders + subtotal * calc.taxRate ;
       }
     },
     DaaS(request, query){
@@ -282,17 +296,6 @@ calc = {
         case 'payout': return Math.abs(week.payout.DaaS);
       }
     },
-    total(request, query){
-      calc._checkQuery(query);
-      week = calc.weeks.getWeek(request.bizId, request.week);
-      switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => !tx.DaaS).length;
-        case 'pretax': return week.subtotal.orders;
-        case 'tax': return week.subtotal.orders * calc.taxRate;
-        case 'total': return week.subtotal.orders + week.subtotal.orders * calc.taxRate;
-        case 'payout': return  week.payout.orders + week.subtotal.orders * calc.taxRate ;
-      }
-    }
   },
   creditsForAcquisition: 0.625,
   cancelCredits: 0.125,

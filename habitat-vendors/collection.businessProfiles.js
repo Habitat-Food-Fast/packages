@@ -127,27 +127,37 @@ class businessProfilesCollection extends Mongo.Collection {
     return txs.count() ? txs.fetch() : [];
   }
   getWeeklyReceipt(bizId, weekNum, DaaS, token=Random.id(), send=true){
-    console.log(`hit getweeklyreceipt method`);
-    console.log(arguments[0]);
     const bp = businessProfiles.findOne(bizId);
+    console.log(`Converting receipts for ${bp.company_name}`);
     const week = weeks.findOne({week: weekNum});
     const date = moment(week.endTime).format('MMM Do YYYY');
     const DaaSResolver = this.getWeeklyOrders(bp, week, isDaaS=true).map((t) => EJSON.toJSONValue(transactions.csv.vendor.DaaS(week, bp, t)));
     const txResolver = this.getWeeklyOrders(bp, week, isDaaS=false).map((t) => EJSON.toJSONValue(transactions.csv.vendor.habitat(week, bp, t)));
-    console.log(`converting transactions to json`);
     convert.json2csv(txResolver, Meteor.bindEnvironment((err, habitatSheet) => {
-      console.log(`inside tx bindEnvironment`);
       if(err) { throw new Meteor.Error(err.message); } else {
-        console.log(`no error on convert...inserting tx record`);
-        vendorReceipts.insert({ createdAt: new Date(), sellerId: bizId, weekNum: weekNum, bp, week, date, orders: txResolver, DaaS: false, csv: habitatSheet }, (err, res) => {
+        vendorReceipts.insert({
+          createdAt: new Date(),
+          sellerId: bizId,
+          weekNum: weekNum,
+          orders: txResolver,
+          DaaS: false,
+          csv: habitatSheet,
+          bp, week, date,
+        }, (err, res) => {
           if(err) { throw new Meteor.Error(err.reason); }
-          console.log(`inserted vendor receipt`);
-          console.log(`DaaS is ${bp.DaaS}`);
           if(bp.DaaS){
             convert.json2csv(DaaSResolver, Meteor.bindEnvironment((err, DaaSSheet) => {
               if(err) { throw new Meteor.Error(err.message); } else {
                 console.log(`converted second delivery as a service`);
-                vendorReceipts.insert({ createdAt: new Date(), bp, week, date, orders: DaaSResolver, DaaS: true, csv: DaaSSheet }, (err, res) => {
+                vendorReceipts.insert({
+                  createdAt: new Date(),
+                  sellerId: bizId,
+                  weekNum: weekNum,
+                  orders: DaaSResolver,
+                  DaaS: true,
+                  csv: DaaSSheet,
+                  bp, week, date,
+                }, (err, res) => {
                   attachments = !txResolver.length ? [] : [{ fileName: `FF_${this.getShortName(bp.company_name)}_invoice_${date}.csv`, contents: habitatSheet }];
                   if(bp.DaaS) { attachments.push({ fileName: `DaaS_${this.getShortName(bp.company_name)}_invoice_${date}.csv`, contents: DaaSSheet }); }
                   console.log(`send email? ${send}`);
@@ -170,7 +180,6 @@ class businessProfilesCollection extends Mongo.Collection {
         });
       }
     }), csv.settings);
-    return 'hell'
   }
   getToday(id){
     const weeklyHours = businessProfiles.findOne(id).weeklyHours; check(weeklyHours, [Object]);

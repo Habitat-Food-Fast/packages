@@ -113,10 +113,12 @@ transactions.csv = {
         'Method': tx.method,
         'Order Number': tx.orderNumber,
         'Time Requested': tx.humanTimeRequested,
-        'Order Total': accounting.formatMoney(tx.payRef.tp),
+        'Order Total': tx.payRef.tp,
+        'Habitat Rate': tx.vendorPayRef.percent,
+        'Tax': 0.08,
         'Vendor Commission': vendorCommission(tx),
-        'Total': vendorCommission(tx) + tx.payRef.tip || tx.tip || 0,
-        'Address': tx.method === 'Delivery' ? tx.deliveryAddress.split(',')[0] : '',
+        'Total': (tx.payRef.tp - vendorCommission(tx)) + (tx.payRef.tp * 0.08),
+        'Address': tx.method === 'Delivery' ? tx.deliveryAddress.split(',')[0] : 'N/A',
       };
       // console.log(order);
       return order;
@@ -148,7 +150,9 @@ function getVariation(tx, getIncomplete){
   }
 }
 function vendorCommission(tx) {
-  const backupRate = !businessProfiles.rates(tx._id)? 'NO RATE' : calc._roundToTwo(businessProfiles.rates(tx._id).totalPrice -businessProfiles.rates(tx._id).vendorPayout);
+  const backupRate = !businessProfiles.rates(tx._id) ? 'NO RATE' :
+    businessProfiles.rates(tx._id).totalPrice -
+    businessProfiles.rates(tx._id).vendorPayout;
   const vCom = !tx.vendorPayRef.totalPrice ? backupRate :
     tx.DaaS ?
       tx.vendorPayRef.flat :
