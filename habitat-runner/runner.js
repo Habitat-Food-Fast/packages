@@ -199,8 +199,7 @@ generateOrderInfo(tx, runner) {
     msg = `Order #${tx.orderNumber} assigned.
 READY AT: ${pck}
 PAYMENT: ${tx.DaaSType}
-VENDOR: ${tx.company_name}
-PHONE: ${bizProf.company_phone}
+VENDOR: ${tx.company_name} ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}
 CUSTOMER: ${customerName}
 PHONE: ${customerPhone}
@@ -209,8 +208,7 @@ ADDR: ${tx.deliveryAddress}. ${deliveryInstructions} `;
 msg = `Order # ${tx.orderNumber} assigned.
 READY AT: ${pck}
 PAYMENT: Prepaid
-VENDOR: ${tx.company_name}
-PHONE: ${bizProf.company_phone}
+VENDOR: ${tx.company_name} ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}
 CUSTOMER: ${userProf.profile.fn}
 PHONE: ${userProf.profile.phone}
