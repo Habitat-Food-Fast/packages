@@ -130,9 +130,10 @@ transactions.csv = {
     },
     payout: {
       _progress(token, progress) {
-        streamer.emit(`progress-${token}`, progress );
+        console.log(`hit stream prog for ${token}`);
+        streamer.emit(token, progress);
       },
-      DaaS(bizId, weekNum, DaaS, token=Random.id(), send=true){
+      DaaS(bizId, weekNum, DaaS, token, send=true){
         const bp = businessProfiles.findOne(bizId);
         const week = weeks.findOne({week: weekNum});
         const date = moment(week.endTime).format('MMM Do YYYY');
@@ -194,11 +195,11 @@ transactions.csv = {
           }
         }
       },
-      getAttachments(bizId, weekNum, DaaS, token=Random.id(), send=true){
+      getAttachments(bizId, weekNum, DaaS, token, send=true){
         const week = weeks.findOne({week: weekNum});console.log(`week ${week._id}`);
         const bp = businessProfiles.findOne(bizId);
-        const DaaSOrders = this.DaaS(bizId, weekNum, DaaS, token=Random.id(), send=true); console.log(`daasorder length is ${DaaSOrders.length}`);
-        const HabitatOrders = this.habitat(bizId, weekNum, DaaS, token=Random.id(), send=true);console.log(`hab length is ${HabitatOrders.length}`);
+        const DaaSOrders = this.DaaS(bizId, weekNum, DaaS, token, send=true); console.log(`daasorder length is ${DaaSOrders.length}`);
+        const HabitatOrders = this.habitat(bizId, weekNum, DaaS, token, send=true);console.log(`hab length is ${HabitatOrders.length}`);
         const date = moment(week.endTime).format('MMM Do YYYY');
         let   attachments = !HabitatOrders.length ? [] : [{
           fileName: `FF_${businessProfiles.getShortName(bp.company_name)}_invoice_${date}.csv`,
@@ -212,10 +213,10 @@ transactions.csv = {
         }
         return attachments;
       },
-      send(bizId, weekNum, DaaS, token=Random.id(), send=true){
+      send(bizId, weekNum, DaaS, token, send=true){
         const bp = businessProfiles.findOne(bizId);
         const week = weeks.findOne({week: weekNum});
-        const attachments = this.getAttachments(bizId, weekNum, DaaS, token=Random.id(), send=true);
+        const attachments = this.getAttachments(bizId, weekNum, DaaS, token, send=true);
         console.log(`inside send for ${bp.company_name}, week: ${week.week}`);
         if(send){
           const date = moment(week.endTime).format('MMM Do YYYY');
