@@ -11,19 +11,11 @@ businessProfiles.schema = new SimpleSchema({
   backend_name: { type: String, optional: true },
   rating_vendor: { type: Number, optional: true, decimal: true },
   faxPhone: { type: Number, optional: true },
-  company_type: {
-    type: String,
-    trim: true,
-    allowedValues: [
-      'Fast Casual',
-      'Food Truck',
-      'Dine In'
-    ]
-  },
+  company_type: { type: String, trim: true, allowedValues: ['Fast Casual', 'Food Truck', 'Dine In'] },
   company_picture: { type: String, trim: true },
   prep_time: { type: Number, min: 0, max: 45, defaultValue: 15 },
   method: { type: String, trim: true, allowedValues: ['pickup', 'delivery', 'none'] },
-  notificationPreference: { type: String, trim: true, optional: false, allowedValues: ['sms', 'email', 'fax', 'app'] },
+  notificationPreference: { type: String, trim: true, optional: false, allowedValues: ['sms', 'email', 'fax', 'app', 'receipt printer'] },
   production: { type: Boolean, autoValue(){ return this.isInsert && !Meteor.settings.devMode; } },
   uid: { type: String, regEx: SimpleSchema.RegEx.Id, optional: true },
   open: { type: Boolean },
@@ -36,6 +28,9 @@ businessProfiles.schema = new SimpleSchema({
   transactionCount: { type: Number },
   order: { type: Number, optional: true, min: 0 },
   geometry: { type: Object, blackbox: true, },
+  direct_deposit: { type: Boolean, optional: true},
+  catering: { type: Boolean, optional: true},
+  habitat_exclusive: { type: Boolean, optional: true},
 
   employees: { type: [Object], optional: true },
     'employees.$.name': { type: String },
