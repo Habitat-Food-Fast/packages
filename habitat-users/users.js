@@ -239,11 +239,7 @@ Meteor.users.getAcquisitionCode = () => {
   return Instances.findOne({ownedBy: Meteor.userId()});
 };
 
-Meteor.users.initEasySearch(['username'], {
-  'limit': 20,
-  'use': 'mongo-db',
-  'convertNumbers': false
-});
+
 
 Meteor.users.before.update(function(userId, doc, fieldNames, modifier) {
   if (fieldNames[0] === 'profile' && Meteor.isServer) {
