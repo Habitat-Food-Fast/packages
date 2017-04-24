@@ -183,9 +183,9 @@ class businessProfilesCollection extends Mongo.Collection {
 }
 
 Meteor.methods({
-   fetchReceipt(bizId, weekNum, token) {
-     console.log(`token is ${token}`);
-     return transactions.csv.vendor.payout.DaaS(bizId, weeks.find().count(), true, token);
+   fetchReceipt(bizId, weekNum, token, DaaS) {
+     const type = DaaS ? 'DaaS' : 'habitat';
+     return transactions.csv.vendor.payout[type](bizId, weekNum || weeks.find().count(), true, token);
    }
 });
 businessProfiles = new businessProfilesCollection("businessprofiles");

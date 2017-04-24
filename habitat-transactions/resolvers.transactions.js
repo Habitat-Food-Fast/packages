@@ -100,6 +100,7 @@ transactions.csv = {
         const tip = tx.payRef.tip || tx.tip || 0;
         order = {
           'Week Ending': moment(week.endTime).format('MMM Do YYYY'),
+          'Company Name': bp.company_name,
           'Type': tx.DaaSType,
           'Order Number': tx.orderNumber,
           'Time Requested': tx.humanTimeRequested,
@@ -114,6 +115,7 @@ transactions.csv = {
       habitat(week, bp, tx){
         order = {
           'Week Ending': moment(week.endTime).format('MMM Do YYYY'),
+          'Company Name': bp.company_name,
           'Method': tx.method,
           'Order Number': tx.orderNumber,
           'Time Requested': tx.humanTimeRequested,
@@ -158,7 +160,7 @@ transactions.csv = {
               csv: convertSync(orders, csv.settings),
               bp, week, date,
             });
-            return orders;
+            return vendorReceipts.findOne(id).csv;
           } catch (err) {
             throw new Meteor.Error(err.message);
           }
@@ -189,7 +191,7 @@ transactions.csv = {
               csv: convertSync(orders, csv.settings),
               bp, week, date,
             });
-            return orders;
+            return vendorReceipts.findOne(id).csv;
           } catch (err) {
             throw new Meteor.Error(err.message);
           }
