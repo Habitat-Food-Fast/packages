@@ -135,19 +135,18 @@ transactions.csv = {
         console.log(`hit stream prog for ${token}`);
         streamer.emit(token, progress);
       },
-      DaaS(bizId, weekNum, DaaS, token, send=true){
+      DaaS(bizId, weekNum, token, send=true){
         const bp = businessProfiles.findOne(bizId);
         const week = weeks.findOne({week: weekNum});
         const date = moment(week.endTime).format('MMM Do YYYY');
         const resolver = businessProfiles.getWeeklyOrders(bp, week, isDaaS=true);
-        const orders = resolver.map((t, index) => {
-          progress = index / resolver.length;
-          console.log(`completed ${progress * 100}%`);
-          this._progress(token, progress);
-          return EJSON.toJSONValue(transactions.csv.vendor.resolvers.DaaS(week, bp, t));
-        });
-
-        if(orders.length){
+        if(!resolver.length){ console.warn(`No DaaS orders for ${bp.company_name}`); } else {
+          const orders = resolver.map((t, index) => {
+            progress = index / resolver.length;
+            console.log(`completed ${progress * 100}%`);
+            this._progress(token, progress);
+            return EJSON.toJSONValue(transactions.csv.vendor.resolvers.DaaS(week, bp, t));
+          });
           try {
             console.log(`converting ${orders.length} DaaS for ${bp.company_name}`);
             id = vendorReceipts.insert({
@@ -166,19 +165,17 @@ transactions.csv = {
           }
         }
       },
-      habitat(bizId, weekNum, DaaS, token=Random.id(), send=true){
+      habitat(bizId, weekNum, token=Random.id(), send=true){
         const bp = businessProfiles.findOne(bizId);
         const week = weeks.findOne({week: weekNum});
         const date = moment(week.endTime).format('MMM Do YYYY');
         const resolver = businessProfiles.getWeeklyOrders(bp, week, isDaaS=false);
-
-        const orders = resolver.map((t, index) => {
-          console.log(`completed ${(index / resolver.length) * 100}%`);
-          this._progress(token, (index / resolver.length));
-          return EJSON.toJSONValue(transactions.csv.vendor.resolvers.habitat(week, bp, t));
-        });
-
-        if(orders.length){
+        if(!resolver.length){ console.warn(`No habitat orders for ${bp.company_name}`); } else {
+          const orders = resolver.map((t, index) => {
+            console.log(`completed ${(index / resolver.length) * 100}%`);
+            this._progress(token, (index / resolver.length));
+            return EJSON.toJSONValue(transactions.csv.vendor.resolvers.habitat(week, bp, t));
+          });
           try {
             console.log(`converting ${orders.length} DaaS for ${bp.company_name}`);
             id = vendorReceipts.insert({
@@ -197,13 +194,13 @@ transactions.csv = {
           }
         }
       },
-      getAttachments(bizId, weekNum, DaaS, token, send=true){
+      getAttachments(bizId, weekNum, token, send=true){
         const week = weeks.findOne({week: weekNum});console.log(`week ${week._id}`);
         const bp = businessProfiles.findOne(bizId);
-        const DaaSOrders = this.DaaS(bizId, weekNum, DaaS, token, send=true); console.log(`daasorder length is ${DaaSOrders.length}`);
-        const HabitatOrders = this.habitat(bizId, weekNum, DaaS, token, send=true);console.log(`hab length is ${HabitatOrders.length}`);
+        const DaaSOrders = this.DaaS(bizId, weekNum, token, send=true);
+        const HabitatOrders = this.habitat(bizId, weekNum, token, send=true);
         const date = moment(week.endTime).format('MMM Do YYYY');
-        let   attachments = !HabitatOrders.length ? [] : [{
+        let   attachments = !HabitatOrders || !HabitatOrders.length ? [] : [{
           fileName: `FF_${businessProfiles.getShortName(bp.company_name)}_invoice_${date}.csv`,
           contents: HabitatOrders
         }];
@@ -215,20 +212,21 @@ transactions.csv = {
         }
         return attachments;
       },
-      send(bizId, weekNum, DaaS, token, send=true){
+      send(bizId, weekNum, token, send=true){
         const bp = businessProfiles.findOne(bizId);
         const week = weeks.findOne({week: weekNum});
-        const attachments = this.getAttachments(bizId, weekNum, DaaS, token, send=true);
+        const attachments = this.getAttachments(bizId, weekNum, token, send=true);
         console.log(`inside send for ${bp.company_name}, week: ${week.week}`);
         if(send){
           const date = moment(week.endTime).format('MMM Do YYYY');
-          Mailer.send({
+          const query ={
             to: Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
             subject: `Habitat Invoice - Week Ending ${date}`,
             template: 'emailVendorWeeklyPayout',
             data: { bizId: bizId, week: weekNum },
             attachments,
-          });
+          }; console.log(query);
+          Mailer.send(query);
         }
       },
     },
