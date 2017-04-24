@@ -80,7 +80,7 @@ transactions.methods = {
           if (!tx.deliveryAddress) {
             slm(`DaaS #${tx.orderNumber} missing ADDRESS`);
           }
-          if (tx.DaaSType === 'online_prepaid' && !tx.payRef.tip) {
+          if (tx.DaaSType === 'online' && !tx.payRef.tip) {
             slm(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
           }
         }
