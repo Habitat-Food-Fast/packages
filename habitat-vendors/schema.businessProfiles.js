@@ -31,6 +31,9 @@ businessProfiles.schema = new SimpleSchema({
   direct_deposit: { type: Boolean, optional: true},
   catering: { type: Boolean, optional: true},
   habitat_exclusive: { type: Boolean, optional: true},
+  habitatOwnsTablet: { type: Boolean, optional: true},
+  serialNumber: { type: Number, optional: true},
+  ownerPhone: {type: String },
 
   employees: { type: [Object], optional: true },
     'employees.$.name': { type: String },
