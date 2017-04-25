@@ -1,6 +1,7 @@
 import phoneFormatter from 'phone-formatter';
 // import crypto from 'crypto';
 import convert from 'json-2-csv';
+const convertSync = Meteor.wrapAsync(convert.json2csv);
 
 if (Meteor.isServer) {
   Twilio = require('twilio');
@@ -570,6 +571,10 @@ runner.payouts = {
             this._onDemandOwed(runnerTxs) +
             this._tips(runnerTxs);
   },
+  _progress(token, progress) {
+    console.log(`hit stream prog for ${token}`);
+    streamer.emit(token, progress);
+  },
   payRef(worker, allShifts, runnerTxs, runnerId, week){
     query = _.extend(worker, {
       week: week,
@@ -588,9 +593,13 @@ runner.payouts = {
     }); console.log(query);
     return query;
   },
-  getAll(week){
+  getAll(week, token){
     console.log(`we're on week ${week.week}`);
-    return runner.payouts.getWorkers().map((worker) => {
+    workers = runner.payouts.getWorkers();
+    return workers.map((worker, index) => {
+      progress = index / workers.length;
+      console.log(`completed ${progress * 100}%`);
+      this._progress(token, progress);
       const runnerUser = Meteor.users.findOne({username: worker.email});
 
       if(!runnerUser) { console.warn(`no user for ${worker.email}`); } else {
@@ -601,24 +610,35 @@ runner.payouts = {
     }).filter(doc => doc && doc.transactionCount > 0 || doc &&  doc.daasCount > 0);
   }
 };
-Router.route('/staffjoy/weekTotals/:weekNum', {
+Router.route('/staffjoy/weekTotals/:weekId/:weekNum/:token', {
   where: 'server',
   action() {
-    const week = weeks.findOne({week: parseInt(this.params.weekNum)});
+    console.log(this.params);
+    const week = weeks.findOne(this.params.weekId);
     try {
-      return convert.json2csv(_.sortBy(runner.payouts.getAll(week), 'runnerOwed').reverse(), (err, spreadsheet) => {
-        console.log('Finished converting');
-        if(err) { console.warn(err.message); } else {
-          console.log('Success, serving spreadsheet');
-          this.response.writeHead(200, csv.writeHead(`runner_summary_week-${week.week}`, 'csv'));
-          this.response.end(spreadsheet);
-        }
-      }, csv.settings);
+      payouts = _.sortBy(runner.payouts.getAll(week, this.params.token), 'runnerOwed').reverse();
+      spreadsheet = convertSync(payouts, csv.settings);
+
+      console.log('Success, serving spreadsheet');
+      this.response.writeHead(200, csv.writeHead(`runner_summary_week-${week.week}`, 'csv'));
+      this.response.end(spreadsheet);
 
     } catch (err) {
       console.warn(err.message, err.stack);
     }
   }
+});
+
+Meteor.methods({
+   getRunnerWeek(weekId, weekNum, token) {
+     if(Meteor.isServer){
+       try {
+         return HTTP.get(`https://habitat-runner.ngrok.io/staffjoy/weekTotals/${weekId}/${weekNum}/${token}`);
+       } catch (err) {
+         console.warn(err.message, err.stack);
+       }
+     }
+   }
 });
 
 Router.route('/allweeks', {

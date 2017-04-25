@@ -1,3 +1,6 @@
+import convert from 'json-2-csv';
+const convertSync = Meteor.wrapAsync(convert.json2csv);
+
 transactions.csv = {
   orders(txId, req) {
     getIncomplete = req.getIncomplete;
@@ -92,38 +95,144 @@ transactions.csv = {
     }
   },
   vendor: {
-    DaaS(week, bp, tx){
-      const tip = tx.payRef.tip || tx.tip || 0;
-      order = {
-        'Week Ending': moment(week.endTime).format('MMM Do YYYY'),
-        'Type': tx.DaaSType,
-        'Order Number': tx.orderNumber,
-        'Time Requested': tx.humanTimeRequested,
-        'Vendor Commission': vendorCommission(tx),
-        'Tip': tip,
-        'Total': vendorCommission(tx) + tip,
-        'Address': tx.deliveryAddress.split(',')[0],
-      };
-      // console.log(order);
-      return order;
+    resolvers: {
+      DaaS(week, bp, tx){
+        const tip = tx.payRef.tip || tx.tip || 0;
+        order = {
+          'Week Ending': moment(week.endTime).format('MMM Do YYYY'),
+          'Company Name': bp.company_name,
+          'Type': tx.DaaSType,
+          'Order Number': tx.orderNumber,
+          'Time Requested': tx.humanTimeRequested,
+          'Vendor Commission': vendorCommission(tx),
+          'Tip': tip,
+          'Total': vendorCommission(tx) + tip,
+          'Address': tx.deliveryAddress.split(',')[0],
+        };
+        // console.log(order);
+        return order;
+      },
+      habitat(week, bp, tx){
+        order = {
+          'Week Ending': moment(week.endTime).format('MMM Do YYYY'),
+          'Company Name': bp.company_name,
+          'Method': tx.method,
+          'Order Number': tx.orderNumber,
+          'Time Requested': tx.humanTimeRequested,
+          'Order Total': tx.payRef.tp,
+          'Habitat Rate': tx.vendorPayRef.percent,
+          'Tax': 0.08,
+          'Vendor Commission': vendorCommission(tx),
+          'Total': (tx.payRef.tp - vendorCommission(tx)) + (tx.payRef.tp * 0.08),
+          'Address': tx.method === 'Delivery' ? tx.deliveryAddress.split(',')[0] : 'N/A',
+        };
+        // console.log(order);
+        return order;
+      },
     },
-    habitat(week, bp, tx){
-      order = {
-        'Week Ending': moment(week.endTime).format('MMM Do YYYY'),
-        'Method': tx.method,
-        'Order Number': tx.orderNumber,
-        'Time Requested': tx.humanTimeRequested,
-        'Order Total': tx.payRef.tp,
-        'Habitat Rate': tx.vendorPayRef.percent,
-        'Tax': 0.08,
-        'Vendor Commission': vendorCommission(tx),
-        'Total': (tx.payRef.tp - vendorCommission(tx)) + (tx.payRef.tp * 0.08),
-        'Address': tx.method === 'Delivery' ? tx.deliveryAddress.split(',')[0] : 'N/A',
-      };
-      // console.log(order);
-      return order;
+    payout: {
+      _progress(token, progress) { streamer.emit(token, progress); },
+      DaaS(bizId, weekNum, token, send=true){
+        const bp = businessProfiles.findOne(bizId);
+        const week = weeks.findOne({week: weekNum});
+        const date = moment(week.endTime).format('MMM Do YYYY');
+        const resolver = businessProfiles.getWeeklyOrders(bp, week, isDaaS=true);
+        if(!resolver.length){ console.warn(`No DaaS orders for ${bp.company_name}`); } else {
+          const orders = resolver.map((t, index) => {
+            progress = index / resolver.length;
+            console.log(`DaaS Payout ${calc._roundToTwo(progress * 100)}% completed`);
+            this._progress(token, progress);
+            return EJSON.toJSONValue(transactions.csv.vendor.resolvers.DaaS(week, bp, t));
+          });
+          try {
+            console.log(`converting ${orders.length} DaaS for ${bp.company_name}`);
+            id = vendorReceipts.insert({
+              createdAt: new Date(),
+              sellerId: bizId,
+              company_name: bp.company_name,
+              weekNum: weekNum,
+              orders: resolver.length,
+              DaaS: true,
+              csv: convertSync(orders, csv.settings),
+              bp, week, date,
+            });
+            return vendorReceipts.findOne(id).csv;
+          } catch (err) {
+            throw new Meteor.Error(err.message);
+          }
+        }
+      },
+      habitat(bizId, weekNum, token=Random.id(), send=true){
+        const bp = businessProfiles.findOne(bizId);
+        const week = weeks.findOne({week: weekNum});
+        const date = moment(week.endTime).format('MMM Do YYYY');
+        const resolver = businessProfiles.getWeeklyOrders(bp, week, isDaaS=false);
+        if(!resolver.length){ console.warn(`No habitat orders for ${bp.company_name}`); } else {
+          const orders = resolver.map((t, index) => {
+            console.log(`Habitat Payout ${calc._roundToTwo((index / resolver.length) * 100)}% completed`);
+            this._progress(token, (index / resolver.length));
+            return EJSON.toJSONValue(transactions.csv.vendor.resolvers.habitat(week, bp, t));
+          });
+          try {
+            console.log(`converting ${orders.length} DaaS for ${bp.company_name}`);
+            id = vendorReceipts.insert({
+              createdAt: new Date(),
+              sellerId: bizId,
+              company_name: bp.company_name,
+              weekNum: weekNum,
+              orders: orders.length,
+              DaaS: true,
+              csv: convertSync(orders, csv.settings),
+              bp, week, date,
+            });
+            return vendorReceipts.findOne(id).csv;
+          } catch (err) {
+            throw new Meteor.Error(err.message);
+          }
+        }
+      },
+      getAttachments(bizId, weekNum, token, send=true){
+        const week = weeks.findOne({week: weekNum});
+        const bp = businessProfiles.findOne(bizId);
+        const DaaSOrders = this.DaaS(bizId, weekNum, token, send=true);
+        const HabitatOrders = this.habitat(bizId, weekNum, token, send=true);
+        const date = moment(week.endTime).format('MMM Do YYYY');
+        let   attachments = !HabitatOrders || !HabitatOrders.length ? [] : [{
+          fileName: `FF_${businessProfiles.getShortName(bp.company_name)}_invoice_${date}.csv`,
+          contents: HabitatOrders
+        }];
+        if(bp.DaaS) {
+          attachments.push({
+            fileName: `DaaS_${businessProfiles.getShortName(bp.company_name)}_invoice_${date}.csv`,
+            contents: DaaSOrders
+          });
+        }
+        return attachments;
+      },
+      send(bizId, weekNum, token, send=true){
+        const bp = businessProfiles.findOne(bizId);
+        const week = weeks.findOne({week: weekNum});
+        console.log(`Running payout email for ${bp.company_name}, week: ${week.week}`);
+
+        const attachments = this.getAttachments(bizId, weekNum, token, send=true);
+        if(send){
+          const date = moment(week.endTime).format('MMM Do YYYY');
+          const query ={
+            to: Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
+            subject: `Habitat Invoice - Week Ending ${date}`,
+            template: 'emailVendorWeeklyPayout',
+            data: { bizId: bizId, week: weekNum },
+            attachments,
+          };
+
+          if(!Meteor.settings.devMode){
+            Mailer.send(query);
+          }
+
+        }
+      },
     },
-  }
+  },
 };
 
 function times(tx, req){
@@ -135,7 +244,6 @@ function times(tx, req){
     dropoffVariation: getVariation(tx, getIncomplete),
   };
 }
-
 function getVariation(tx, getIncomplete){
   if(getIncomplete || tx.method === 'Pickup'){
     return '';
@@ -159,31 +267,6 @@ function vendorCommission(tx) {
       tx.vendorPayRef.totalPrice - tx.vendorPayRef.vendorPayout;
   return calc._roundToTwo(vCom);
 }
-runReceiptTest = () => {
-  weeks.find({week: 32}, {sort: {week: -1}}).forEach((week) => {
-    console.warn(`we are in week ${week.week}`);
-    businessProfiles.find({company_name: 'Ochatto Hot Pot'}).forEach((bp) => {
-      console.warn(`hello ${bp.company_name}!`);
-      txs = transactions.find({
-				week: week.week,
-				status: {$in: transactions.completedAndArchived()},
-				DaaS: true,
-				sellerId: bp._id
-			}, {limit: 5, sort: {timeRequested: 1}})
-			.map((t) => EJSON.toJSONValue(transactions.csv.vendor.DaaS(week, bp, t)));
-
-			convert.json2csv(txs, Meteor.bindEnvironment((err, spreadsheet) => {
-				if(err) { throw new Meteor.Error(err.message); } else {
-					vendorReceipts.insert({
-						csv: spreadsheet
-					}, (err, res) => {
-						console.log(err); console.log(res);
-					});
-				}
-			}), csv.settings);
-    });
-  });
-};
 
 function payRef(tx){
   const bp = businessProfiles.findOne(tx.sellerId);

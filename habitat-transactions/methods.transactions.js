@@ -80,7 +80,7 @@ transactions.methods = {
           if (!tx.deliveryAddress) {
             slm(`DaaS #${tx.orderNumber} missing ADDRESS`);
           }
-          if (tx.DaaSType === 'online_prepaid' && !tx.payRef.tip) {
+          if (tx.DaaSType === 'online' && !tx.payRef.tip) {
             slm(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
           }
         }
@@ -837,6 +837,17 @@ Meteor.methods({
     }
 });
 
+Meteor.methods({
+  getMasterWeek(weekId, weekNum, token) {
+    if(Meteor.isServer){
+      try {
+        return HTTP.get(`https://habitat-runner.ngrok.io/mastertransactions/${weekId}/${weekNum}/${token}`);
+      } catch (err) {
+        console.warn(err.message, err.stack);
+      }
+    }
+  }
+});
 
 getRatingSum = function(collection, key){
   return _.reduce(_.pluck(collection, key), (memo, num) => {
