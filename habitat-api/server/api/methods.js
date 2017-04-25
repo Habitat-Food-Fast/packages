@@ -28,7 +28,7 @@ API.methods = {
             console.log(res);
           }
           bp = businessProfiles.findOne(connection.data.sellerId);
-          if(!bp) { return API.utility.response(context, 403, { error: 403, message: `Can't find business ${connection.data.companyName}`, }); } else {
+          if(!bp) { return API.utility.response(context, 400, { error: 400, message: `Can't find business ${connection.data.companyName}`, }); } else {
             transactions.methods.insertDaaS.call({
               isDelivery: connection.data.isDelivery,
               deliveryAddress: connection.data.isDelivery ? res.features[0].place_name : '',

@@ -131,10 +131,7 @@ transactions.csv = {
       },
     },
     payout: {
-      _progress(token, progress) {
-        console.log(`hit stream prog for ${token}`);
-        streamer.emit(token, progress);
-      },
+      _progress(token, progress) { streamer.emit(token, progress); },
       DaaS(bizId, weekNum, token, send=true){
         const bp = businessProfiles.findOne(bizId);
         const week = weeks.findOne({week: weekNum});
@@ -143,7 +140,7 @@ transactions.csv = {
         if(!resolver.length){ console.warn(`No DaaS orders for ${bp.company_name}`); } else {
           const orders = resolver.map((t, index) => {
             progress = index / resolver.length;
-            console.log(`completed ${progress * 100}%`);
+            console.log(`DaaS Payout ${calc._roundToTwo(progress * 100)}% completed`);
             this._progress(token, progress);
             return EJSON.toJSONValue(transactions.csv.vendor.resolvers.DaaS(week, bp, t));
           });
@@ -172,7 +169,7 @@ transactions.csv = {
         const resolver = businessProfiles.getWeeklyOrders(bp, week, isDaaS=false);
         if(!resolver.length){ console.warn(`No habitat orders for ${bp.company_name}`); } else {
           const orders = resolver.map((t, index) => {
-            console.log(`completed ${(index / resolver.length) * 100}%`);
+            console.log(`Habitat Payout ${calc._roundToTwo((index / resolver.length) * 100)}% completed`);
             this._progress(token, (index / resolver.length));
             return EJSON.toJSONValue(transactions.csv.vendor.resolvers.habitat(week, bp, t));
           });
@@ -195,7 +192,7 @@ transactions.csv = {
         }
       },
       getAttachments(bizId, weekNum, token, send=true){
-        const week = weeks.findOne({week: weekNum});console.log(`week ${week._id}`);
+        const week = weeks.findOne({week: weekNum});
         const bp = businessProfiles.findOne(bizId);
         const DaaSOrders = this.DaaS(bizId, weekNum, token, send=true);
         const HabitatOrders = this.habitat(bizId, weekNum, token, send=true);
@@ -215,8 +212,9 @@ transactions.csv = {
       send(bizId, weekNum, token, send=true){
         const bp = businessProfiles.findOne(bizId);
         const week = weeks.findOne({week: weekNum});
+        console.log(`Running payout email for ${bp.company_name}, week: ${week.week}`);
+
         const attachments = this.getAttachments(bizId, weekNum, token, send=true);
-        console.log(`inside send for ${bp.company_name}, week: ${week.week}`);
         if(send){
           const date = moment(week.endTime).format('MMM Do YYYY');
           const query ={
@@ -225,8 +223,12 @@ transactions.csv = {
             template: 'emailVendorWeeklyPayout',
             data: { bizId: bizId, week: weekNum },
             attachments,
-          }; console.log(query);
-          Mailer.send(query);
+          };
+
+          if(!Meteor.settings.devMode){
+            Mailer.send(query);
+          }
+
         }
       },
     },
@@ -265,31 +267,7 @@ function vendorCommission(tx) {
       tx.vendorPayRef.totalPrice - tx.vendorPayRef.vendorPayout;
   return calc._roundToTwo(vCom);
 }
-runReceiptTest = () => {
-  weeks.find({week: 32}, {sort: {week: -1}}).forEach((week) => {
-    console.warn(`we are in week ${week.week}`);
-    businessProfiles.find({company_name: 'Ochatto Hot Pot'}).forEach((bp) => {
-      console.warn(`hello ${bp.company_name}!`);
-      txs = transactions.find({
-				week: week.week,
-				status: {$in: transactions.completedAndArchived()},
-				DaaS: true,
-				sellerId: bp._id
-			}, {limit: 5, sort: {timeRequested: 1}})
-			.map((t) => EJSON.toJSONValue(transactions.csv.vendor.DaaS(week, bp, t)));
 
-			convert.json2csv(txs, Meteor.bindEnvironment((err, spreadsheet) => {
-				if(err) { throw new Meteor.Error(err.message); } else {
-					vendorReceipts.insert({
-						csv: spreadsheet
-					}, (err, res) => {
-						console.log(err); console.log(res);
-					});
-				}
-			}), csv.settings);
-    });
-  });
-};
 function payRef(tx){
   const bp = businessProfiles.findOne(tx.sellerId);
   const backupRate = !businessProfiles.rates(tx._id)? 'NO RATE' : calc._roundToTwo(businessProfiles.rates(tx._id).totalPrice -businessProfiles.rates(tx._id).vendorPayout);
