@@ -152,7 +152,7 @@ runner = {
     }
   },
   sendReceipt(req, tx, orderNumber, image, runnerId, tip) {
-    if(!image) { return this.invalidResponse(req, `Must include receipt image to drop off`); } else {
+    if(!image) { return this.invalidResponse(req, `Must include img and tip to drop, no symbols or dollar signs.`); } else {
       transactions.update(tx._id, {$set: {
           receiptPicture: image,
           'payRef.tip': parseFloat(tip),
@@ -198,7 +198,7 @@ generateOrderInfo(tx, runner) {
     customerPhone = tx.customerPhone || 'unknown';
     msg = `Order #${tx.orderNumber} assigned.
 READY AT: ${pck}
-PAYMENT: ${tx.DaaSType}
+PAYMENT: ${(tx.DaaSType === 'online' || tx.DaaSType === 'credit_card') ? 'Conf drop w/ tip + pic' : tx.DaaSType}
 VENDOR: ${tx.company_name} ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}
 CUSTOMER: ${customerName}
@@ -207,7 +207,7 @@ ADDR: ${tx.deliveryAddress}. ${deliveryInstructions} `;
   } else {
 msg = `Order # ${tx.orderNumber} assigned.
 READY AT: ${pck}
-PAYMENT: Prepaid
+PAYMENT: Habitat
 VENDOR: ${tx.company_name} ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}
 CUSTOMER: ${userProf.profile.fn}
