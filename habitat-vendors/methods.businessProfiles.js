@@ -93,7 +93,10 @@ Meteor.methods({
     console.log(id);
     console.log(newState);
     if(newState.habitat){
-      newState.habitat = newState.habitat.map(habName => Habitats.findOne({name: habName})._id);
+      newState.habitat = newState.habitat.map((habitatIdentifier) => {
+        habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
+        return habitat._id;
+      });
     }
     return businessProfiles.update({_id: id}, {$set: newState});
   },
@@ -118,3 +121,10 @@ Meteor.methods({
   }
 },
 });
+
+// mixin: [permissionMixin],
+// allow: [{
+  //roles:          either true, a string, or an array of strings
+  //group:             either true, a string, or an array of strings
+  // allow:               function that accepts the methods input and returns a boolean
+// }]
