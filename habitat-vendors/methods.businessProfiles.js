@@ -91,6 +91,30 @@ Meteor.methods({
   },
   updateProfile(id, newState){
     console.log(id);
+    console.log(newState);
+    if(newState.habitat){
+      newState.habitat = newState.habitat.map(habName => Habitats.findOne({name: habName})._id);
+    }
     return businessProfiles.update({_id: id}, {$set: newState});
+  },
+  hardResetPassword(id, newPassword) {
+  if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
+    Accounts.setPassword(id, newPassword);
+    const usr = Meteor.users.findOne(id);
+    const biz = businessProfiles.findOne({uid: id});
+
+    if(biz){
+      Email.send({
+        from: "app@market.tryhabitat.com",
+        to: "info@tryhabitat.com",
+        subject: `${biz.company_name} password reset`,
+        text: `${biz.company_name} new login info:
+        Username: ${usr.profile.email}
+        Password: ${newPassword}`,
+        html: "",
+        headers: "",
+      });
+    }
   }
+},
 });
