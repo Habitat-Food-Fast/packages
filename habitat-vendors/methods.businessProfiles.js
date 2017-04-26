@@ -91,9 +91,21 @@ Meteor.methods({
   },
   updateProfile(id, newState){
     console.log(id);
-    habitat = newState.map((habitatIdentifier) =>  {
-      habitat = newState.findOne({_id: habitatIdentifier}) || Habitats.findOne({name: habitatIdentifier})
+    console.log(newState);
+    if(newState.habitat){
+      newState.habitat = newState.habitat.map((habitatIdentifier) => {
+        habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
+        return habitat._id;
+      });
+    }
+
     return businessProfiles.update({_id: id}, {$set: newState});
   }
-)}
 });
+
+// mixin: [permissionMixin],
+// allow: [{
+  //roles:          either true, a string, or an array of strings
+  //group:             either true, a string, or an array of strings
+  // allow:               function that accepts the methods input and returns a boolean
+// }]
