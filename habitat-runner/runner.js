@@ -2,6 +2,7 @@ import phoneFormatter from 'phone-formatter';
 // import crypto from 'crypto';
 import convert from 'json-2-csv';
 const convertSync = Meteor.wrapAsync(convert.json2csv);
+import moment from 'moment';
 
 if (Meteor.isServer) {
   Twilio = require('twilio');
@@ -35,29 +36,31 @@ runner = {
   getHours(start, end, habitat) {
     start = moment(Habitats.openedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || start;
     end = moment(Habitats.closedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || end;
-    // console.log(`${habitat.name} opening at: ` + start);
-    // console.log(`${habitat.name} closing at: ` + end);
     return { start, end };
   },
   _shifts(start, end, habitat, role){
-    return HTTP.call(`GET`,
-      staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`),
-      {
-        auth: staffJoy._auth,
-        params: {
-          start: this.getHours(start, end, habitat).start,
-          end: this.getHours(start, end, habitat).end,
-          include_summary: true,
-        }
+    params = {
+      auth: staffJoy._auth,
+      params: {
+        start: this.getHours(start, end, habitat).start,
+        end: this.getHours(start, end, habitat).end,
+        include_summary: true,
       }
-    ).data.data;
+    };
+    res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`), params);
+    console.log(res);
+    return res.data.data;
   },
   getShifts (start, end, habitats, role) {
+        habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
         let shifts = habitats.map((id) => {
           habitat = Habitats.findOne(id);
           role = this.getRole(role, habitat);
           try {
-            return this._shifts(start, end, habitat, role).map((shift) => {
+            s = this._shifts(start, end, habitat, role);
+            console.log(`shifts.length ${s.length}`);
+            return s.map((shift) => {
+              console.log(shift);
               try {
                 if(shift.user_id !== 0){
                   newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
@@ -82,6 +85,7 @@ runner = {
         return parsedShifts;
     },
   getShifted(start, end, habitats, role) {
+    console.log('hit getShifted');
     habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
     console.log(`getshifted habitats is ${habitats}`);
     return this.getShifts(start, end, habitats, role).filter((shift) => {
@@ -380,117 +384,7 @@ runnerPayout = {
   }
 };
 
-Meteor.methods({
-  getShifts() {
-    return Meteor.settings.devMode ? [
-      {
-        "shift": {
-          "start": "2017-03-17T13:00:00",
-          "user_id": 2719,
-          "description": null,
-          "published": true,
-          "user_name": "miketest",
-          "stop": "2017-03-17T21:00:00",
-          "id": 149770,
-          "role_id": 1439
-        },
-        "staffJoyUser": {
-          "username": null,
-          "phone_number": null,
-          "confirmed": false,
-          "working_hours": null,
-          "name": "miketest",
-          "internal_id": "HfpJwxTFfoeCpxxyn",
-          "member_since": "2017-01-06T19:14:48",
-          "sudo": false,
-          "archived": false,
-          "min_hours_per_workweek": 20,
-          "email": "mike@p.com",
-          "max_hours_per_workweek": 40,
-          "active": false,
-          "id": 2719,
-          "last_seen": "2017-01-06T19:14:48"
-        },
-        "user": {
-          "_id": "HfpJwxTFfoeCpxxyn",
-          "createdAt": "2015-07-08T23:11:13.445Z",
-          "username": "mike@tryhabitat.com",
-          "services": {
-            "password": {
-              "bcrypt": "$2a$10$IL0F3HNrzLUhTy2.gh4rR.ubs1pbOXei9hZbOCceCo5Z3uKMZVyoS"
-            },
-            "resume": {
-              "loginTokens": [
-                {
-                  "when": "2017-03-17T15:22:27.019Z",
-                  "hashedToken": "jHfIx0BW5h+O3ik6Gvv/eViVRbkJiJnqrOxfZMyU1vg="
-                }
-              ]
-            }
-          },
-          "emails": [
-            {
-              "address": "mike@tryhabitat.com",
-              "verified": true
-            }
-          ],
-          "profile": {
-            "fn": "Mike",
-            "profile_pic": "/images/runner_pics/runner_mike.png",
-            "email": "mike@tryhabitat.com",
-            "runHabitats": [
-              "g77XEv8LqxJKjTT8k",
-              "zfY5SkgFSjXcjXbgW"
-            ],
-            "transactions": [  ],
-            "phone": "4433869479",
-            "settings": {
-              "push": true,
-              "email": null,
-              "text": true
-            },
-            "seenOrders": 22,
-            "habitat": "g77XEv8LqxJKjTT8k",
-            "loginPin": 34875,
-            "avgRating": 4.5,
-            "signupCode": "CTF1013",
-            "mealCount": 0.25,
-            "address": "1718 Edgley St",
-            "geometry": {
-              "type": "Point",
-              "coordinates": [
-                -75.161883,
-                39.985883
-              ]
-            },
-            "myPromo": "MICH5765",
-            "gender": null,
-            "ln": "P",
-            "mealUser": false
-          },
-          "roles": [
-            "runner",
-            "student",
-            "admin",
-            "running"
-          ],
-          "deliveries": [],
-          "avgRating": 3,
-          "status": {
-            "online": true,
-            "lastLogin": {
-              "date": "2017-03-17T16:19:57.769Z",
-              "ipAddr": "65.210.86.62",
-              "userAgent": "Mozilla/5.0 (Linux; Android 7.1.1; Pixel Build/NOF26V; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/56.0.2924.87 Mobile Safari/537.36"
-            },
-            "idle": false
-          }
-        }
-      },
-    ]
- : runner.getShifts();
-  }
-});
+
 
 
 runner.payouts = {
