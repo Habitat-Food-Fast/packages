@@ -91,6 +91,9 @@ Meteor.methods({
   },
   updateProfile(id, newState){
     console.log(id);
+    inputVal = inputVal.map((habitatIdentifier) =>  {
+      habitat = Habitats.findOne({_id: habitatIdentifier}) || Habitats.findOne({name: habitatIdentifier})
     return businessProfiles.update({_id: id}, {$set: newState});
   }
+)}
 });
