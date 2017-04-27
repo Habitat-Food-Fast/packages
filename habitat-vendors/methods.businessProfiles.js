@@ -81,6 +81,40 @@ businessProfiles.methods = {
       }
     }
  }),
+
+ validatePassword: new ValidatedMethod({
+   name: 'businessProfiles.methods.validatePassword',
+  //  mixins: [PermissionsMixin],
+  //  allow: [{
+  //    roles: 'admin',
+  //    group: Roles.GLOBAL_GROUP
+  //    allow:            function that accepts the methods input and returns a boolean
+  //  }],
+   validate: new SimpleSchema({
+     uid: { type: String },
+     pass: { type: String, min: 6 },
+   }).validator(),
+   run({id, newPassword}) {
+     if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
+       Accounts.setPassword(id, newPassword);
+       const usr = Meteor.users.findOne(id);
+       const biz = businessProfiles.findOne({uid: id});
+
+       if(biz){
+         Email.send({
+           from: "app@market.tryhabitat.com",
+           to: "info@tryhabitat.com",
+           subject: `${biz.company_name} password reset`,
+           text: `${biz.company_name} new login info:
+           Username: ${usr.profile.email}
+           Password: ${newPassword}`,
+           html: "",
+           headers: "",
+         });
+       }
+     }
+   }
+ })
 };
 
 Meteor.methods({
@@ -102,10 +136,3 @@ Meteor.methods({
     return businessProfiles.update({_id: id}, {$set: newState});
   }
 });
-
-// mixin: [permissionMixin],
-// allow: [{
-  //roles:          either true, a string, or an array of strings
-  //group:             either true, a string, or an array of strings
-  // allow:               function that accepts the methods input and returns a boolean
-// }]
