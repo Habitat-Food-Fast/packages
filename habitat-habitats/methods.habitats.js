@@ -40,6 +40,26 @@ Habitats.methods = {
     });
   }
 }),
+updateRadius: new ValidatedMethod({
+  name: 'Habitats.methods.updateRadius',
+  validate: new SimpleSchema({
+    id: {type: String },
+    radius: {type: Array},
+    'radius.$': {type: [Number], decimal: true }
+  }).validator(),
+  run({id, radius}) {
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    Habitats.update(id, {$unset: {'bounds.data.geometry.coordinates': ''}}, (err, res) => {
+      if (!err) {
+        Habitats.update(id, {$set: {'bounds.data.geometry.coordinates': radius}}, (err, res) => {
+          if (err) {
+            throw new Meteor.Error('Failure to update');
+          }
+        });
+      }
+    });
+  }
+})
 };
 
 Meteor.methods({
