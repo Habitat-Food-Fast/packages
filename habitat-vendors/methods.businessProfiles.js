@@ -18,6 +18,7 @@ businessProfiles.methods = {
 
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',
+    mixins: [PermissionsMixin],
     validate: new SimpleSchema({
       habitat: { type: [String] },
       company_name: { type: String },
