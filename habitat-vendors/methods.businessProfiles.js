@@ -100,7 +100,33 @@ Meteor.methods({
     }
 
     return businessProfiles.update({_id: id}, {$set: newState});
+  },
+
+  updateWeeklyHours (biz, myDay, field, val) {
+  if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+  var weekArray = businessProfiles.findOne(biz).weeklyHours;
+  var hourObj = _.findWhere(weekArray, {day: myDay});
+
+  if (field === 'open') {
+    businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {
+      'weeklyHours.$.open': val}
+    });
+  } else {
+    var hour = Number(moment(val, 'h hh, a A').format('H'));
+    var min = Number(moment(val, 'HH:mm').format('m'));
+    var dayBase = myDay * 86400000;
+    var hourBase = hour * 3600000;
+    var minBase = min * 60000;
+    if (field === 'openHr') {
+      var openTime = dayBase + hourBase + minBase;
+      businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {'weeklyHours.$.openTime': openTime, 'weeklyHours.$.openHr': val}});
+    }
+    if (field === 'closeHr') {
+      var closeTime = dayBase + hourBase + minBase;
+      businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {'weeklyHours.$.closeTime': closeTime, 'weeklyHours.$.closeHr': val}});
+    }
   }
+},
 });
 
 // mixin: [permissionMixin],
