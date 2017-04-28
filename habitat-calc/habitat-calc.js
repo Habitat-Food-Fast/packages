@@ -37,7 +37,7 @@ calc = {
     if (!today.vendorPremium) { return today.deliveryFee; } else {
       const deliveryFee = today.deliveryFeeMinimumFallback; //it's premium, so deliveryFee for today is 0. need to look at the day's minimumFallbackFee
       const diff = today.vendorRates.freeDel.minimum - tx.payRef.tp; //get the difference between the free delivery minimum and totalPrice
-      return diff < 0 ? 0 : deliveryFee;
+      return diff <= 0 ? 0 : deliveryFee;
     }
   },
   meal: {

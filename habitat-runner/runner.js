@@ -31,6 +31,7 @@ runner = {
     });
   },
   getRole(role, habitat){
+    console.log(`getRole role is ${role}`);
     return role === 'runner' ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
   },
   getHours(start, end, habitat) {
@@ -48,25 +49,22 @@ runner = {
       }
     };
     res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`), params);
-    console.log(res);
     return res.data.data;
   },
-  getShifts (start, end, habitats, role) {
+  getShifts(start, end, habitats, roleName) {
         habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
         let shifts = habitats.map((id) => {
           habitat = Habitats.findOne(id);
-          role = this.getRole(role, habitat);
+          role = this.getRole(roleName, habitat);
           try {
             s = this._shifts(start, end, habitat, role);
-            console.log(`shifts.length ${s.length}`);
             return s.map((shift) => {
-              console.log(shift);
               try {
                 if(shift.user_id !== 0){
                   newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
-                  console.log(`${workerId} ${userShift.data.data.name} has a shift today`);
+                  // console.log(`${workerId} ${userShift.data.data.name} has a shift today`);
                   return {
                     shift: shift,
                     staffJoyUser: userShift.data.data,
@@ -84,11 +82,9 @@ runner = {
         const parsedShifts = _.compact(_.flatten(shifts));
         return parsedShifts;
     },
-  getShifted(start, end, habitats, role) {
-    console.log('hit getShifted');
+  getShifted(start, end, habitats, roleName) {
     habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
-    console.log(`getshifted habitats is ${habitats}`);
-    return this.getShifts(start, end, habitats, role).filter((shift) => {
+    return this.getShifts(start, end, habitats, roleName).filter((shift) => {
       // console.log(`now = ${moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
       // console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
       // console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
@@ -157,7 +153,7 @@ runner = {
     }
   },
   sendReceipt(req, tx, orderNumber, image, runnerId, tip) {
-    if(!image) { return this.invalidResponse(req, `Must include img and tip to drop, no symbols or dollar signs.`); } else {
+    if(!image) { return this.invalidResponse(req, `Failed to dropoff. To complete the order and declare the tip, attach the image to a text message and respond ORDER#TIP. Example: 12345#0`); } else {
       transactions.update(tx._id, {$set: {
           receiptPicture: image,
           'payRef.tip': parseFloat(tip),

@@ -13,6 +13,7 @@ Package.onUse(function (api) {
   api.use('momentjs:moment');
   api.use('mdg:validated-method');
   api.use('alanning:roles');
+  api.use('didericis:permissions-mixin');
   api.addFiles('collection.businessProfiles.js', ['client', 'server']);
   api.addFiles('methods.businessProfiles.js', ['client', 'server']);
   api.addFiles('schema.businessProfiles.js', ['client', 'server']);

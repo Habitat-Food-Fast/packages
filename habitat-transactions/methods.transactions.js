@@ -665,7 +665,7 @@ sendReceiptImage: new ValidatedMethod({
       }}, (err) => { if (err) throwError(err.message); });
       if(!this.isSimulation){return sendEmergencyPing(tx, hab._id, amount);}
     }
-  }),
+  })
 };
 
 sendEmergencyPing = (tx, habId, amount) => {
@@ -833,6 +833,12 @@ Meteor.methods({
             }
           }
         );
+      }
+    },
+    updateOrderQuantity(order, id) {
+      if (transactions.findOne(id).buyerId === this.userId) {
+        order.orderId = order.orderId + 1;
+        transactions.update(id, {$push: {order: order}});  
       }
     }
 });
