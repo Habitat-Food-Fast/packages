@@ -18,6 +18,7 @@ businessProfiles.methods = {
 
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',
+    mixins: [PermissionsMixin],
     validate: new SimpleSchema({
       habitat: { type: [String] },
       company_name: { type: String },
@@ -102,10 +103,3 @@ Meteor.methods({
     return businessProfiles.update({_id: id}, {$set: newState});
   }
 });
-
-// mixin: [permissionMixin],
-// allow: [{
-  //roles:          either true, a string, or an array of strings
-  //group:             either true, a string, or an array of strings
-  // allow:               function that accepts the methods input and returns a boolean
-// }]
