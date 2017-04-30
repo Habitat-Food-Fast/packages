@@ -167,18 +167,6 @@ Notifications.methods = {
       }, (error, result) => {
         if (!error) {
           const recipient = Meteor.users.findOne(message.to);
-          if(recipient && recipient.profile.settings.push){
-            Push.send({
-              from: 'Habitat',
-              title: tx ? 'Order Update' : 'Habitat Update',
-              text: message.content,
-              badge: message.previous && message.previous.badge ? message.previous.badge + 1 : 1,
-              payload: { title: 'Habitat', historyId: result },
-              query: {
-                userId: message.to
-              }
-            });
-          }
         }
       });
     }
