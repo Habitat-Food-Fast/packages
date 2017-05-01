@@ -193,3 +193,11 @@ businessProfiles = new businessProfilesCollection("businessprofiles");
 businessProfiles.allow({
   update(){ return Roles.userIsInRole(Meteor.userId(), ['admin']); }
 });
+
+generateBizPass = function (company_name) {
+  return  company_name
+          .toLowerCase()
+          .replace(/\s+/g, '') +
+          ("0" + Math.floor(Math.random() * (9999 - 0 + 1)))
+          .substr(-4);
+};

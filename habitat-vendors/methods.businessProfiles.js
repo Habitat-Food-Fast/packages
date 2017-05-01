@@ -18,7 +18,6 @@ businessProfiles.methods = {
 
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',
-    mixins: [PermissionsMixin],
     validate: new SimpleSchema({
       habitat: { type: [String] },
       company_name: { type: String },
@@ -36,7 +35,9 @@ businessProfiles.methods = {
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
+        console.log('else!');
         return businessProfiles.insert(arguments[0], (err) => {
+          console.log(err);
           if(err) { throwError(err.message); } else {
             return id;
           }
