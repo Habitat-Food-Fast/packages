@@ -174,7 +174,7 @@ class businessProfilesCollection extends Mongo.Collection {
   }
   getShortName(company_name) {
     const bizByWord = company_name.split(' ');
-    const shortName = bizByWord.length < 1 ? bizByWord[0] : (bizByWord[0].length > 8 ? bizByWord[0] : `${bizByWord[0]} ${bizByWord[1]}`);
+    const shortName = bizByWord.length < 1 ? bizByWord[0] : (bizByWord[0].length > 8 ? bizByWord[0] : `${bizByWord[0]} ${bizByWord[1] ? bizByWord[1] : ''}`);
     const removeCommas = shortName.replace(/,/g , " ");
     return removeCommas.replace('&', ' and ');
   }
