@@ -523,7 +523,7 @@ Meteor.methods({
    getRunnerWeek(weekId, weekNum, token) {
      if(Meteor.isServer){
        try {
-         return HTTP.get(`https://habitat-runner.ngrok.io/staffjoy/weekTotals/${weekId}/${weekNum}/${token}`);
+         return HTTP.get(`${Meteor.absoluteUrl()}/staffjoy/weekTotals/${weekId}/${weekNum}/${token}`);
        } catch (err) {
          console.warn(err.message, err.stack);
        }
