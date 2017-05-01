@@ -22,6 +22,7 @@ transactions.csv = {
         braintreeId: tx.braintreeId || '',
         receipt_link: urls.user.single_receipt(tx._id),
         buyerId: tx.buyerId,
+        sellerId: tx.sellerId,
         buyerName: up ? up.fn : '',
         buyerLastName: up && up.ln ? up.ln : '',
         buyerPhone: up ? up.phone : '',
