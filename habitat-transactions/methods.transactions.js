@@ -838,7 +838,7 @@ Meteor.methods({
     updateOrderQuantity(order, id) {
       if (transactions.findOne(id).buyerId === this.userId) {
         order.orderId = order.orderId + 1;
-        transactions.update(id, {$push: {order: order}});  
+        transactions.update(id, {$push: {order: order}});
       }
     }
 });
