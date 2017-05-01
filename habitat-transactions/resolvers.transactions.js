@@ -16,7 +16,7 @@ transactions.csv = {
       const res = {
          // weekId: weeks.findOne({week: tx.week})._id,
         week: tx.week,
-        habitat: h.name,
+        habitat: b.backend_habitat,
         _id: tx._id,
         order_number: tx.orderNumber,
         braintreeId: tx.braintreeId || '',
