@@ -838,7 +838,7 @@ Meteor.methods({
     updateOrderQuantity(order, id) {
       if (transactions.findOne(id).buyerId === this.userId) {
         order.orderId = order.orderId + 1;
-        transactions.update(id, {$push: {order: order}});  
+        transactions.update(id, {$push: {order: order}});
       }
     }
 });
@@ -847,7 +847,7 @@ Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
     if(Meteor.isServer){
       try {
-        return HTTP.get(`https://habitat-runner.ngrok.io/mastertransactions/${weekId}/${weekNum}/${token}`);
+        return HTTP.get(`https://${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`);
       } catch (err) {
         console.warn(err.message, err.stack);
       }

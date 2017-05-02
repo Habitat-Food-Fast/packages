@@ -153,7 +153,7 @@ runner = {
     }
   },
   sendReceipt(req, tx, orderNumber, image, runnerId, tip) {
-    if(!image) { return this.invalidResponse(req, `Must include img and tip to drop, no symbols or dollar signs.`); } else {
+    if(!image) { return this.invalidResponse(req, `Failed to dropoff. To complete the order and declare the tip, attach the image to a text message and respond ORDER#TIP. Example: 12345#0`); } else {
       transactions.update(tx._id, {$set: {
           receiptPicture: image,
           'payRef.tip': parseFloat(tip),
@@ -523,7 +523,7 @@ Meteor.methods({
    getRunnerWeek(weekId, weekNum, token) {
      if(Meteor.isServer){
        try {
-         return HTTP.get(`https://habitat-runner.ngrok.io/staffjoy/weekTotals/${weekId}/${weekNum}/${token}`);
+         return HTTP.get(`${Meteor.absoluteUrl()}/staffjoy/weekTotals/${weekId}/${weekNum}/${token}`);
        } catch (err) {
          console.warn(err.message, err.stack);
        }

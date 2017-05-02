@@ -18,7 +18,6 @@ Package.onUse(function(api) {
   api.use(["aldeed:simple-schema", "aldeed:collection2", "underscore"]);
   api.use('mongo', ['client', 'server']);
   api.use('mdg:validated-method', ['client', 'server']);
-  api.use('raix:push@3.0.2', ['client', 'server']);
   api.addFiles('collection.support.js', ['client', 'server']);
   api.addFiles('methods.support.js', ['client', 'server']);
   api.addFiles('schema.support.js', ['client', 'server']);

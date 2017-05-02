@@ -18,7 +18,6 @@ businessProfiles.methods = {
 
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',
-    mixins: [PermissionsMixin],
     validate: new SimpleSchema({
       habitat: { type: [String] },
       company_name: { type: String },
@@ -36,7 +35,9 @@ businessProfiles.methods = {
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
+        console.log('else!');
         return businessProfiles.insert(arguments[0], (err) => {
+          console.log(err);
           if(err) { throwError(err.message); } else {
             return id;
           }
@@ -101,5 +102,31 @@ Meteor.methods({
     }
 
     return businessProfiles.update({_id: id}, {$set: newState});
+  },
+
+  updateWeeklyHours (biz, myDay, field, val) {
+  if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+  var weekArray = businessProfiles.findOne(biz).weeklyHours;
+  var hourObj = _.findWhere(weekArray, {day: myDay});
+
+  if (field === 'open') {
+    businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {
+      'weeklyHours.$.open': val}
+    });
+  } else {
+    var hour = Number(moment(val, 'h hh, a A').format('H'));
+    var min = Number(moment(val, 'HH:mm').format('m'));
+    var dayBase = myDay * 86400000;
+    var hourBase = hour * 3600000;
+    var minBase = min * 60000;
+    if (field === 'openHr') {
+      var openTime = dayBase + hourBase + minBase;
+      businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {'weeklyHours.$.openTime': openTime, 'weeklyHours.$.openHr': val}});
+    }
+    if (field === 'closeHr') {
+      var closeTime = dayBase + hourBase + minBase;
+      businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {'weeklyHours.$.closeTime': closeTime, 'weeklyHours.$.closeHr': val}});
+    }
   }
+},
 });
