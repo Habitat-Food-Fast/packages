@@ -548,13 +548,16 @@ sendReceiptImage: new ValidatedMethod({
     run({ txId, tip }) {
       const tx = transactions.findOne(txId); check(tx, Object);
       const usr = Meteor.user();
-      if(tx.buyerId !== usr._id || tx.status !== 'created') { throw new Meteor.Error(503, 'methods.setTip.statusOrUserIdWrong'); }
-
-      return transactions.update(tx._id, { $set: { 'payRef.tip': calc._roundToTwo(tip) } }, (err) => {
-        if(err) { throw new Meteor.Error(err.message); }
-        return tx._id;
-      });
-
+      if((tx.buyerId === usr._id && tx.status === 'created') || Meteor.user().roles.includes('admin')) {
+        return transactions.update(tx._id, { $set: { 'payRef.tip': calc._roundToTwo(tip) } }, (err) => {
+          if(err) { throw new Meteor.Error(err.message); } else {
+            Meteor.call('recalcPayRef', tx._id);
+            return tx._id;
+          }
+        });
+    } else {
+      throw new Meteor.Error(503, 'methods.setTip.statusOrUserIdWrong');
+    }
     }
   }),
 

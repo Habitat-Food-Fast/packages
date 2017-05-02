@@ -35,13 +35,13 @@ businessProfiles.methods = {
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
-        console.log('else!');
-        return businessProfiles.insert(arguments[0], (err) => {
-          console.log(err);
-          if(err) { throwError(err.message); } else {
-            return id;
-          }
-        });
+        try {
+          const insert = businessProfiles.insert(arguments[0]);
+          console.log(insert);
+          return insert;
+        } catch(e) {
+          throwError(e);
+        }
       }
   }
   }),
