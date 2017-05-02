@@ -9,6 +9,7 @@ businessProfiles.schema = new SimpleSchema({
   twilioPhone: { type: String, optional: true},
   DaaS: { type: Boolean, optional: true},
   backend_name: { type: String, optional: true },
+  backend_habitat: { type: String, optional: true },
   rating_vendor: { type: Number, optional: true, decimal: true },
   faxPhone: { type: Number, optional: true },
   company_type: { type: String, trim: true, allowedValues: ['Fast Casual', 'Food Truck', 'Dine In'] },
@@ -33,7 +34,7 @@ businessProfiles.schema = new SimpleSchema({
   habitat_exclusive: { type: Boolean, optional: true},
   habitatOwnsTablet: { type: Boolean, optional: true},
   serialNumber: { type: Number, optional: true},
-  ownerPhone: {type: String },
+  ownerPhone: {type: String, optional: true },
 
   employees: { type: [Object], optional: true },
     'employees.$.name': { type: String },
