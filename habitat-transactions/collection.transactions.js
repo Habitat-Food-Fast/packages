@@ -67,7 +67,7 @@ class transactionsCollection extends Mongo.Collection {
           itemName: saleItems.findOne(order.saleItemId).name,
           itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
           modifiers: order.modifiers,
-          modifiersText: this.formatMods(order.modifiers)
+          modifiersText: order.modifiers === [] ? [] : this.formatMods(order.modifiers)
         })
       );
     } else {
@@ -85,11 +85,13 @@ class transactionsCollection extends Mongo.Collection {
     let modArray = [];
     for (i = 0; i < mods.length; i++) {
       var mod = Modifiers.findOne(mods[i]);
-      modArray.push({
-        name: mod.name,
-        category: modCategories.findOne(mod.subcategory).name,
-        price: mod.price
-      });
+      if (mod) {
+        modArray.push({
+          name: mod.name,
+          category: modCategories.findOne(mod.subcategory).name,
+          price: mod.price
+        });
+      }
     };
     return modArray;
   }

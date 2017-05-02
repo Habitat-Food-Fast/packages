@@ -1,3 +1,4 @@
+
 //init submodule
 calc = {
   _checkDecimalPlace (num) {
@@ -13,6 +14,11 @@ calc = {
   },
   _totalPrice(tp){
     return calc._roundToTwo(tp);
+  },
+  _checkQuery(query, DaaS=false){
+    if(!_.contains(['count', 'pretax', 'pretip', 'rate', 'tips', 'tax', 'total', 'payout'], query)){
+      throwError(`query ${query} is not allowed`);
+    }
   },
   orderTotal(order) {
     return this._roundToTwo(order.map((order) => {
@@ -31,7 +37,7 @@ calc = {
     if (!today.vendorPremium) { return today.deliveryFee; } else {
       const deliveryFee = today.deliveryFeeMinimumFallback; //it's premium, so deliveryFee for today is 0. need to look at the day's minimumFallbackFee
       const diff = today.vendorRates.freeDel.minimum - tx.payRef.tp; //get the difference between the free delivery minimum and totalPrice
-      return diff < 0 ? 0 : deliveryFee;
+      return diff <= 0 ? 0 : deliveryFee;
     }
   },
   meal: {
@@ -148,6 +154,7 @@ calc = {
       return false;
     }
   },
+  //All .weeks private methods are DaaS/Food Fast agnostic
   weeks: {
     _weekQuery(bizId, weekNum){
       const query = {
@@ -175,12 +182,8 @@ calc = {
         .filter(tx => tx.cancelledByVendor)
         .filter(tx => tx.cancelledByAdmin);
     },
-    _all(bizId, weekNum) {
-      return transactions.find(this._weekQuery(bizId, weekNum), {sort: { timeRequested: -1 }}).fetch();
-    },
-    getAllWeeks(bizId) {
-      return weeks.find({}, {sort: {week: 1}}).map(week => this.getWeek(bizId, week, counts=true));
-    },
+    _all(bizId, weekNum) { return transactions.find(this._weekQuery(bizId, weekNum), {sort: { timeRequested: -1 }}).fetch(); },
+    _getAllWeeks(bizId) { return weeks.find({}, {sort: {week: 1}}).map(week => this.getWeek(bizId, week, counts=true)); },
     getWeek(bizId, weekNum, counts){
       //always filter what vendor sees by these
       const week = weeks.findOne({week: parseInt(weekNum)});
@@ -218,15 +221,80 @@ calc = {
           orders: allComplete
             .filter(t => !t.DaaS)
             .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
+          DaaSPreTip: allComplete
+            .filter(t => t.DaaS)
+            .reduce((total, tx) => {
+              return total + tx.vendorPayRef.vendorPayout;
+            }, 0),
+          DaaSTips: allComplete
+            .filter(t => t.DaaS)
+            .reduce((total, tx) => {
+              tip = tx.payRef.tip || tx.tip || 0;
+              return total + tip;
+            }, 0),
           DaaS: allComplete
             .filter(t => t.DaaS)
-            .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
+            .reduce((total, tx) => {
+              tips = tx.payRef.tip || tx.tip || 0;
+              return total + tx.vendorPayRef.vendorPayout - tips;
+            }, 0),
         },
         startTime: moment(week.startTime).format(),
         endTime: moment(week.endTime).format(),
         start: week.startTime,
         end: week.endTime,
       };
+    },
+  },
+  //parsing down different payouts from getWeek into what vendor needs
+  //we are abstracting this 4 levels up, i don't think there's further need for refactoring
+  payouts: {
+    delivery(request, query) {
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      subtotal = week.subtotal.deliveryOrders;
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Delivery') .filter(tx => !tx.DaaS).length;
+        case 'pretax': return subtotal;
+        case 'tax': return subtotal * calc.taxRate;
+        case 'total': return subtotal * calc.taxRate + subtotal;
+        case 'payout': return  week.payout.deliveryOrders + subtotal * calc.taxRate;
+      }
+    },
+    pickup(request, query) {
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      subtotal = week.subtotal.pickupOrders;
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Pickup').filter(tx => !tx.DaaS).length;
+        case 'pretax': return subtotal;
+        case 'tax': return subtotal * calc.taxRate;
+        case 'total': return subtotal * calc.taxRate + subtotal;
+        case 'payout': return week.payout.pickupOrders + subtotal * calc.taxRate;
+      }
+    },
+    total(request, query){
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      subtotal = week.subtotal.orders;
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => !tx.DaaS).length;
+        case 'pretax': return subtotal;
+        case 'tax': return subtotal * calc.taxRate;
+        case 'total': return subtotal + subtotal * calc.taxRate;
+        case 'payout': return  week.payout.orders + subtotal * calc.taxRate ;
+      }
+    },
+    DaaS(request, query){
+      calc._checkQuery(query);
+      week = calc.weeks.getWeek(request.bizId, request.week);
+      switch (query) {
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived' ).filter(tx => tx.DaaS).length;
+        case 'pretip': return Math.abs(week.payout.DaaSPreTip);
+        case 'rate': return businessProfiles.getToday(request.bizId).vendorRates.DaaS.flat;
+        case 'tips': return week.payout.DaaSTips;
+        case 'payout': return Math.abs(week.payout.DaaS);
+      }
     },
   },
   creditsForAcquisition: 0.625,

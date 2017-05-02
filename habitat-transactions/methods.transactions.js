@@ -74,9 +74,16 @@ transactions.methods = {
         }
       }), (err, txId) => {
         if(err) { throwError(err.message); } else {
-          console.log(transactions.findOne(txId));
-          if(this.isSimulation) { subs.subscribe('delivery', Meteor.user().profile.businesses[0]); }
-
+          const tx = transactions.findOne(txId);
+          if (!tx.customerPhone) {
+            slm(`DaaS #${tx.orderNumber} missing PHONE`);
+          }
+          if (!tx.deliveryAddress) {
+            slm(`DaaS #${tx.orderNumber} missing ADDRESS`);
+          }
+          if (tx.DaaSType === 'online' && !tx.payRef.tip) {
+            slm(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
+          }
         }
       });
       }
@@ -244,6 +251,7 @@ confirmDropoff: new ValidatedMethod({
     tip: { type: Number, decimal: true, optional: true}
   }).validator(),
   run({ txId, isAdmin, tip }) {
+    tx = transactions.findOne(txId);
     const now = Date.now();
     update = {
       status: 'completed',
@@ -254,7 +262,11 @@ confirmDropoff: new ValidatedMethod({
       settledByAdmin: isAdmin,
     };
     if(tip) { update.tip = tip; }
-    transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); }});
+    transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
+      businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
+        if(err) { console.warn(err.message); }
+      });
+    }});
 
   }
 }),
@@ -300,8 +312,14 @@ sendReceiptImage: new ValidatedMethod({
       );
 
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
+      const rnr = Meteor.users.findOne(runnerId);
+      const runnerObj = {
+        phone: rnr.profile.phone,
+        pic: rnr.profile.profile_pic,
+        name: rnr.profile.fn
+      };
       transactions.update(tx._id, { $set: {
-        status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign,
+        status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
         DDPenv().call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
           if(err) { throwError(err.message); } else {
@@ -531,13 +549,16 @@ sendReceiptImage: new ValidatedMethod({
     run({ txId, tip }) {
       const tx = transactions.findOne(txId); check(tx, Object);
       const usr = Meteor.user();
-      if(tx.buyerId !== usr._id || tx.status !== 'created') { throw new Meteor.Error(503, 'methods.setTip.statusOrUserIdWrong'); }
-
-      return transactions.update(tx._id, { $set: { 'payRef.tip': calc._roundToTwo(tip) } }, (err) => {
-        if(err) { throw new Meteor.Error(err.message); }
-        return tx._id;
-      });
-
+      if((tx.buyerId === usr._id && tx.status === 'created') || Meteor.user().roles.includes('admin')) {
+        return transactions.update(tx._id, { $set: { 'payRef.tip': calc._roundToTwo(tip) } }, (err) => {
+          if(err) { throw new Meteor.Error(err.message); } else {
+            Meteor.call('recalcPayRef', tx._id);
+            return tx._id;
+          }
+        });
+    } else {
+      throw new Meteor.Error(503, 'methods.setTip.statusOrUserIdWrong');
+    }
     }
   }),
 
@@ -648,7 +669,7 @@ sendReceiptImage: new ValidatedMethod({
       }}, (err) => { if (err) throwError(err.message); });
       if(!this.isSimulation){return sendEmergencyPing(tx, hab._id, amount);}
     }
-  }),
+  })
 };
 
 sendEmergencyPing = (tx, habId, amount) => {
@@ -818,9 +839,26 @@ Meteor.methods({
           }
         );
       }
+    },
+    updateOrderQuantity(order, id) {
+      if (transactions.findOne(id).buyerId === this.userId) {
+        order.orderId = order.orderId + 1;
+        transactions.update(id, {$push: {order: order}});
+      }
     }
 });
 
+Meteor.methods({
+  getMasterWeek(weekId, weekNum, token) {
+    if(Meteor.isServer){
+      try {
+        return HTTP.get(`https://${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`);
+      } catch (err) {
+        console.warn(err.message, err.stack);
+      }
+    }
+  }
+});
 
 getRatingSum = function(collection, key){
   return _.reduce(_.pluck(collection, key), (memo, num) => {

@@ -40,6 +40,26 @@ Habitats.methods = {
     });
   }
 }),
+updateRadius: new ValidatedMethod({
+  name: 'Habitats.methods.updateRadius',
+  validate: new SimpleSchema({
+    id: {type: String },
+    radius: {type: Array},
+    'radius.$': {type: [Number], decimal: true }
+  }).validator(),
+  run({id, radius}) {
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    Habitats.update(id, {$unset: {'bounds.data.geometry.coordinates': ''}}, (err, res) => {
+      if (!err) {
+        Habitats.update(id, {$set: {'bounds.data.geometry.coordinates': radius}}, (err, res) => {
+          if (err) {
+            throw new Meteor.Error('Failure to update');
+          }
+        });
+      }
+    });
+  }
+})
 };
 
 Meteor.methods({
@@ -64,4 +84,24 @@ Meteor.methods({
     if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
     Habitats.update(hab, {$set: {deliveryTime: Number(time)}});
   },
+  changeHabitatHours(id, day, type, time) {
+  check(id, String); check(day, Number); check(type, String); check(time, String);
+  if (this.userId && Meteor.users.findOne(this.userId).roles.includes('admin')) {
+    var weekArray = Habitats.findOne(id).weeklyHours;
+    var hourObj = _.findWhere(weekArray, {day: day});
+    var hour = Number(moment(time, 'h hh, a A').format('H'));
+    var min = Number(moment(time, 'HH:mm').format('m'));
+    var dayBase = day * 86400000;
+    var hourBase = hour * 3600000;
+    var minBase = min * 60000;
+    if (type === 'openHr') {
+      var openTime = dayBase + hourBase + minBase;
+      Habitats.update({_id: id, 'weeklyHours.day': day}, {$set: {'weeklyHours.$.openTime': openTime, 'weeklyHours.$.openHr': time}});
+    }
+    if (type === 'closeHr') {
+      var closeTime = dayBase + hourBase + minBase;
+      Habitats.update({_id: id, 'weeklyHours.day': day}, {$set: {'weeklyHours.$.closeTime': closeTime, 'weeklyHours.$.closeHr': time}});
+    }
+  }
+},
 });

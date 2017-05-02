@@ -12,6 +12,19 @@ Settings.methods = {
       }
     }
   }),
+  updateGlobalTip: new ValidatedMethod({
+    name: 'Settings.methods.updateGlobalTip',
+    validate: new SimpleSchema({
+      tip: { type: Number, min: 0, max: 5 }
+    }).validator(),
+    run({tip}) {
+      if (_.contains(Meteor.user().roles, 'admin')) {
+        Settings.update({name: 'globalTipAmount'}, {$set: {amount: tip}})
+      } else {
+        throw new Meteor.Error('No Access');
+      }
+    }
+  }),
   insertParentPromo:  new ValidatedMethod({
     name: 'Settings.methods.insertParentPromo',
     validate: new SimpleSchema({

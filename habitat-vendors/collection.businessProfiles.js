@@ -1,3 +1,4 @@
+import convert from 'json-2-csv';
 class businessProfilesCollection extends Mongo.Collection {
   insert(doc, callback) {
     transactions.methods.searchForAddress.call({address: doc.company_address}, (err, res) => {
@@ -9,6 +10,7 @@ class businessProfilesCollection extends Mongo.Collection {
           featured: false,
           clicks: 0,
           DaaS: true,
+          backend_name: doc.company_name,
           order: businessProfiles.find().count() + 1,
           categories: [ 'none' ], //need to start w/ this or reassigning category won't work
           transactionCount: 0,
@@ -114,14 +116,14 @@ class businessProfilesCollection extends Mongo.Collection {
     min = moment(openHr, ["h:mm"]).format("mm");
     return moment().day(moment(Date.now()).day()).hour(hr).minute(min).format();
   }
-  sendWeeklyReceipt(bizId, weekNum){
-    const bp = businessProfiles.findOne(bizId);
-    Mailer.send({
-      to: `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
-      subject: `Weekly Transaction Summary for ${bp.company_name}`,
-      template: 'emailVendorWeeklyPayout',
-      data: { bizId: bizId, week: weekNum },
-    });
+  getWeeklyOrders(bp, week, isDaaS) {
+    txs = transactions.find({
+      week: week.week,
+      status: {$in: transactions.completedAndArchived()},
+      DaaS: isDaaS,
+      sellerId: bp._id
+    }, {sort: {timeRequested: 1}});
+    return txs.count() ? txs.fetch() : [];
   }
   getToday(id){
     const weeklyHours = businessProfiles.findOne(id).weeklyHours; check(weeklyHours, [Object]);
@@ -172,7 +174,7 @@ class businessProfilesCollection extends Mongo.Collection {
   }
   getShortName(company_name) {
     const bizByWord = company_name.split(' ');
-    const shortName = bizByWord.length < 1 ? bizByWord[0] : (bizByWord[0].length > 8 ? bizByWord[0] : `${bizByWord[0]} ${bizByWord[1]}`);
+    const shortName = bizByWord.length < 1 ? bizByWord[0] : (bizByWord[0].length > 8 ? bizByWord[0] : `${bizByWord[0]} ${bizByWord[1] ? bizByWord[1] : ''}`);
     const removeCommas = shortName.replace(/,/g , " ");
     return removeCommas.replace('&', ' and ');
   }
@@ -180,8 +182,22 @@ class businessProfilesCollection extends Mongo.Collection {
 
 }
 
+Meteor.methods({
+   fetchReceipt(bizId, weekNum, token, DaaS) {
+     const type = DaaS ? 'DaaS' : 'habitat';
+     return transactions.csv.vendor.payout[type](bizId, weekNum || weeks.find().count(), token, send=false);
+   }
+});
 businessProfiles = new businessProfilesCollection("businessprofiles");
 
 businessProfiles.allow({
   update(){ return Roles.userIsInRole(Meteor.userId(), ['admin']); }
 });
+
+generateBizPass = function (company_name) {
+  return  company_name
+          .toLowerCase()
+          .replace(/\s+/g, '') +
+          ("0" + Math.floor(Math.random() * (9999 - 0 + 1)))
+          .substr(-4);
+};

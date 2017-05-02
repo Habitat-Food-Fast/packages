@@ -1,6 +1,8 @@
 import phoneFormatter from 'phone-formatter';
 // import crypto from 'crypto';
 import convert from 'json-2-csv';
+const convertSync = Meteor.wrapAsync(convert.json2csv);
+import moment from 'moment';
 
 if (Meteor.isServer) {
   Twilio = require('twilio');
@@ -29,40 +31,40 @@ runner = {
     });
   },
   getRole(role, habitat){
+    console.log(`getRole role is ${role}`);
     return role === 'runner' ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
   },
   getHours(start, end, habitat) {
     start = moment(Habitats.openedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || start;
     end = moment(Habitats.closedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || end;
-    // console.log(`${habitat.name} opening at: ` + start);
-    // console.log(`${habitat.name} closing at: ` + end);
     return { start, end };
   },
   _shifts(start, end, habitat, role){
-    return HTTP.call(`GET`,
-      staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`),
-      {
-        auth: staffJoy._auth,
-        params: {
-          start: this.getHours(start, end, habitat).start,
-          end: this.getHours(start, end, habitat).end,
-          include_summary: true,
-        }
+    params = {
+      auth: staffJoy._auth,
+      params: {
+        start: this.getHours(start, end, habitat).start,
+        end: this.getHours(start, end, habitat).end,
+        include_summary: true,
       }
-    ).data.data;
+    };
+    res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`), params);
+    return res.data.data;
   },
-  getShifts (start, end, habitats, role) {
+  getShifts(start, end, habitats, roleName) {
+        habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
         let shifts = habitats.map((id) => {
           habitat = Habitats.findOne(id);
-          role = this.getRole(role, habitat);
+          role = this.getRole(roleName, habitat);
           try {
-            return this._shifts(start, end, habitat, role).map((shift) => {
+            s = this._shifts(start, end, habitat, role);
+            return s.map((shift) => {
               try {
                 if(shift.user_id !== 0){
                   newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
-                  console.log(`${workerId} ${userShift.data.data.name} has a shift today`);
+                  // console.log(`${workerId} ${userShift.data.data.name} has a shift today`);
                   return {
                     shift: shift,
                     staffJoyUser: userShift.data.data,
@@ -80,10 +82,9 @@ runner = {
         const parsedShifts = _.compact(_.flatten(shifts));
         return parsedShifts;
     },
-  getShifted(start, end, habitats, role) {
+  getShifted(start, end, habitats, roleName) {
     habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
-    console.log(`getshifted habitats is ${habitats}`);
-    return this.getShifts(start, end, habitats, role).filter((shift) => {
+    return this.getShifts(start, end, habitats, roleName).filter((shift) => {
       // console.log(`now = ${moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
       // console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
       // console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
@@ -97,7 +98,7 @@ runner = {
   alertShifted(txId, habId){
     runner.getShifted(false, false, [habId], 'runner').filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
       twilio.messages.create({
-        to: runner.profile.phone,
+        to: runner.user.profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
         body: this.runnerText(txId),
       }, (err, responseData) => {
@@ -152,7 +153,7 @@ runner = {
     }
   },
   sendReceipt(req, tx, orderNumber, image, runnerId, tip) {
-    if(!image) { return this.invalidResponse(req, `Must include receipt image to drop off`); } else {
+    if(!image) { return this.invalidResponse(req, `Failed to dropoff. To complete the order and declare the tip, attach the image to a text message and respond ORDER#TIP. Example: 12345#0`); } else {
       transactions.update(tx._id, {$set: {
           receiptPicture: image,
           'payRef.tip': parseFloat(tip),
@@ -188,53 +189,59 @@ runner = {
 generateOrderInfo(tx, runner) {
   const bizProf = businessProfiles.findOne(tx.DaaS ? tx.buyerId : tx.sellerId);
   const userProf = Meteor.users.findOne(tx.buyerId);
-  deliveryInstructions = tx.deliveryInstructions || '';
+  deliveryInstructions = tx.deliveryInstructions ? `(${tx.deliveryInstructions})` : '';
+
   let msg;
+  const pck = tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format('LT') : 'ASAP';
 
   if(tx.DaaS){
     customerName = tx.customerName || 'unknown';
     customerPhone = tx.customerPhone || 'unknown';
-    msg = `Order #${tx.orderNumber} for ${runner.profile.fn} accepted, estimated pickup time is ${tx.prepTime} minutes.
-VENDOR NAME: ${tx.company_name}
-PHONE: ${bizProf.company_phone}
+    msg = `Order #${tx.orderNumber} assigned.
+READY AT: ${pck}
+PAYMENT: ${(tx.DaaSType === 'online' || tx.DaaSType === 'credit_card') ? 'Conf drop w/ tip + pic' : tx.DaaSType}
+VENDOR: ${tx.company_name} ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}
-CUSTOMER NAME: ${customerName}
+CUSTOMER: ${customerName}
 PHONE: ${customerPhone}
-ADDR: ${tx.deliveryAddress}. (${deliveryInstructions}) `;
+ADDR: ${tx.deliveryAddress}. ${deliveryInstructions} `;
   } else {
-msg = `Order # ${tx.orderNumber} for ${runner.profile.fn}  accepted, estimated pickup time is ${bizProf.prep_time} minutes.
-VENDOR NAME:  ${tx.company_name}
-PHONE: ${bizProf.company_phone}
-ADDR: ${bizProf.company_address} ${deliveryInstructions}
-CUSTOMER NAME: ${userProf.profile.fn}
+msg = `Order # ${tx.orderNumber} assigned.
+READY AT: ${pck}
+PAYMENT: Habitat
+VENDOR: ${tx.company_name} ${bizProf.company_phone}
+ADDR: ${bizProf.company_address}
+CUSTOMER: ${userProf.profile.fn}
 PHONE: ${userProf.profile.phone}
-ADDR: ${tx.deliveryAddress}
+ADDR: ${tx.deliveryAddress} ${deliveryInstructions}
 
 VENDOR RECEIPT: ${tx.textMessage}`;
-  }
-  return msg;
-},
+    }
+    return msg;
+  },
 };
 
 Meteor.methods({
 sendRunnerPing(txId, runnerId, initialPing){
-  const tx = transactions.findOne(txId);
-  return initialPing ? runner.alertShifted(tx._id, tx.habitat) :
-    twilio.messages.create({
-      to: Meteor.users.findOne(runnerId).profile.phone,
-      from: Meteor.settings.twilio.twilioPhone,
-      body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
-    }, (err, responseData) => {
-        if (!err) { console.log(responseData.body); } else {
-          if(err.code === 21211) {
-            const parsedWrongNum = err.message.match(/[0-9]+/)[0];
-            console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
-          } else {
-            console.log(err);
+  if (Meteor.isServer) {
+    const tx = transactions.findOne(txId);
+    return initialPing ? runner.alertShifted(tx._id, tx.habitat) :
+      twilio.messages.create({
+        to: Meteor.users.findOne(runnerId).profile.phone,
+        from: Meteor.settings.twilio.twilioPhone,
+        body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
+      }, (err, responseData) => {
+          if (!err) { console.log(responseData.body); } else {
+            if(err.code === 21211) {
+              const parsedWrongNum = err.message.match(/[0-9]+/)[0];
+              console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
+            } else {
+              console.log(err);
+            }
           }
         }
-      }
-    );
+      );
+  }
   }
 });
 
@@ -247,7 +254,7 @@ staffJoy = {
   _baseRequest(){ return this._baseUrl() + this._orgQuery(); },
   _getUrl(query){
     url = !query ? this._baseRequest() : this._baseRequest() + `/${query}`;
-    // console.log(url);
+    console.log(url);
     return url;
 
    },
@@ -373,117 +380,7 @@ runnerPayout = {
   }
 };
 
-Meteor.methods({
-  getShifts() {
-    return Meteor.settings.devMode ? [
-      {
-        "shift": {
-          "start": "2017-03-17T13:00:00",
-          "user_id": 2719,
-          "description": null,
-          "published": true,
-          "user_name": "miketest",
-          "stop": "2017-03-17T21:00:00",
-          "id": 149770,
-          "role_id": 1439
-        },
-        "staffJoyUser": {
-          "username": null,
-          "phone_number": null,
-          "confirmed": false,
-          "working_hours": null,
-          "name": "miketest",
-          "internal_id": "HfpJwxTFfoeCpxxyn",
-          "member_since": "2017-01-06T19:14:48",
-          "sudo": false,
-          "archived": false,
-          "min_hours_per_workweek": 20,
-          "email": "mike@p.com",
-          "max_hours_per_workweek": 40,
-          "active": false,
-          "id": 2719,
-          "last_seen": "2017-01-06T19:14:48"
-        },
-        "user": {
-          "_id": "HfpJwxTFfoeCpxxyn",
-          "createdAt": "2015-07-08T23:11:13.445Z",
-          "username": "mike@tryhabitat.com",
-          "services": {
-            "password": {
-              "bcrypt": "$2a$10$IL0F3HNrzLUhTy2.gh4rR.ubs1pbOXei9hZbOCceCo5Z3uKMZVyoS"
-            },
-            "resume": {
-              "loginTokens": [
-                {
-                  "when": "2017-03-17T15:22:27.019Z",
-                  "hashedToken": "jHfIx0BW5h+O3ik6Gvv/eViVRbkJiJnqrOxfZMyU1vg="
-                }
-              ]
-            }
-          },
-          "emails": [
-            {
-              "address": "mike@tryhabitat.com",
-              "verified": true
-            }
-          ],
-          "profile": {
-            "fn": "Mike",
-            "profile_pic": "/images/runner_pics/runner_mike.png",
-            "email": "mike@tryhabitat.com",
-            "runHabitats": [
-              "g77XEv8LqxJKjTT8k",
-              "zfY5SkgFSjXcjXbgW"
-            ],
-            "transactions": [  ],
-            "phone": "4433869479",
-            "settings": {
-              "push": true,
-              "email": null,
-              "text": true
-            },
-            "seenOrders": 22,
-            "habitat": "g77XEv8LqxJKjTT8k",
-            "loginPin": 34875,
-            "avgRating": 4.5,
-            "signupCode": "CTF1013",
-            "mealCount": 0.25,
-            "address": "1718 Edgley St",
-            "geometry": {
-              "type": "Point",
-              "coordinates": [
-                -75.161883,
-                39.985883
-              ]
-            },
-            "myPromo": "MICH5765",
-            "gender": null,
-            "ln": "P",
-            "mealUser": false
-          },
-          "roles": [
-            "runner",
-            "student",
-            "admin",
-            "running"
-          ],
-          "deliveries": [],
-          "avgRating": 3,
-          "status": {
-            "online": true,
-            "lastLogin": {
-              "date": "2017-03-17T16:19:57.769Z",
-              "ipAddr": "65.210.86.62",
-              "userAgent": "Mozilla/5.0 (Linux; Android 7.1.1; Pixel Build/NOF26V; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/56.0.2924.87 Mobile Safari/537.36"
-            },
-            "idle": false
-          }
-        }
-      },
-    ]
- : runner.getShifts();
-  }
-});
+
 
 
 runner.payouts = {
@@ -564,6 +461,10 @@ runner.payouts = {
             this._onDemandOwed(runnerTxs) +
             this._tips(runnerTxs);
   },
+  _progress(token, progress) {
+    console.log(`hit stream prog for ${token}`);
+    streamer.emit(token, progress);
+  },
   payRef(worker, allShifts, runnerTxs, runnerId, week){
     query = _.extend(worker, {
       week: week,
@@ -582,9 +483,13 @@ runner.payouts = {
     }); console.log(query);
     return query;
   },
-  getAll(week){
+  getAll(week, token){
     console.log(`we're on week ${week.week}`);
-    return runner.payouts.getWorkers().map((worker) => {
+    workers = runner.payouts.getWorkers();
+    return workers.map((worker, index) => {
+      progress = index / workers.length;
+      console.log(`completed ${progress * 100}%`);
+      this._progress(token, progress);
       const runnerUser = Meteor.users.findOne({username: worker.email});
 
       if(!runnerUser) { console.warn(`no user for ${worker.email}`); } else {
@@ -595,24 +500,35 @@ runner.payouts = {
     }).filter(doc => doc && doc.transactionCount > 0 || doc &&  doc.daasCount > 0);
   }
 };
-Router.route('/staffjoy/weekTotals/:weekNum', {
+Router.route('/staffjoy/weekTotals/:weekId/:weekNum/:token', {
   where: 'server',
   action() {
-    const week = weeks.findOne({week: parseInt(this.params.weekNum)});
+    console.log(this.params);
+    const week = weeks.findOne(this.params.weekId);
     try {
-      return convert.json2csv(_.sortBy(runner.payouts.getAll(week), 'runnerOwed').reverse(), (err, spreadsheet) => {
-        console.log('Finished converting');
-        if(err) { console.warn(err.message); } else {
-          console.log('Success, serving spreadsheet');
-          this.response.writeHead(200, csv.writeHead(`runner_summary_week-${week.week}`, 'csv'));
-          this.response.end(spreadsheet);
-        }
-      }, csv.settings);
+      payouts = _.sortBy(runner.payouts.getAll(week, this.params.token), 'runnerOwed').reverse();
+      spreadsheet = convertSync(payouts, csv.settings);
+
+      console.log('Success, serving spreadsheet');
+      this.response.writeHead(200, csv.writeHead(`runner_summary_week-${week.week}`, 'csv'));
+      this.response.end(spreadsheet);
 
     } catch (err) {
       console.warn(err.message, err.stack);
     }
   }
+});
+
+Meteor.methods({
+   getRunnerWeek(weekId, weekNum, token) {
+     if(Meteor.isServer){
+       try {
+         return HTTP.get(`${Meteor.absoluteUrl()}/staffjoy/weekTotals/${weekId}/${weekNum}/${token}`);
+       } catch (err) {
+         console.warn(err.message, err.stack);
+       }
+     }
+   }
 });
 
 Router.route('/allweeks', {
