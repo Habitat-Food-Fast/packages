@@ -27,14 +27,30 @@ Package.onUse(function (api) {
     'server/api/_config.js',
     'server/api/orders/endpoint.js',
     'server/api/support/endpoint.js',
+    'server/api/businessprofiles/csv.endpoint.businessprofiles.js',
+    'server/api/instances/csv.endpoint.instances.js',
+    'server/api/invoices/csv.invoices.js',
+    'server/api/mealRecords/csv.mealrecords.js',
+    'server/api/runners/active-shifts.js',
+    'server/api/runners/endpoint.staffjoy.js',
+    'server/api/runners/week-shifts.js',
+    'server/api/runners/week-totals.js',
+    'server/api/saleItems/csv.endpoints.saleItems.js',
+    'server/api/saleItems/json.resolver.saleitems.js',
+    'server/api/transactions/csv.endpoints.transactions.js',
+    'server/api/transactions/csv.query.transactions.js',
+    'server/api/transactions/json.endpoints.transactions.js',
+    'server/api/users/new-promo-stats.js',
+    'server/api/users/runner-stats.js',
     'server/api/methods.js',
     'server/_test-data.js',
     'server/emails.reset.js',
     'server/pubs.api-key.js',
-    'server/startup.js'
+    'server/startup.js',
   ], ['server']);
 
   api.addFiles(['examples.api.js', 'collection.api.js'], ['client', 'server']);
   api.export('API');
   api.export('APIKeys');
+  api.export('Router');
 });
