@@ -194,6 +194,12 @@ businessProfiles.allow({
   update(){ return Roles.userIsInRole(Meteor.userId(), ['admin']); }
 });
 
+businessProfiles.initEasySearch( ['company_name', 'company_type'], {
+  'limit': 5,
+  'use': 'mongo-db',
+  'convertNumbers': false
+});
+
 generateBizPass = function (company_name) {
   return  company_name
           .toLowerCase()
