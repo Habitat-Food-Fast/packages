@@ -22,6 +22,7 @@ class transactionsCollection extends Mongo.Collection {
       order: !doc.order.length ? [] : this.formatOrder(doc.order, doc.thirdParty),
       plainOrder: !doc.order.length ? [] : this.formatOrder(doc.order, doc.thirdParty),
       orderNumber: doc.orderNumber || this.pin(),
+      orderSize: doc.orderSize || 1,
       nonUser: (!Meteor.userId() ? true: false ),
       habitat: doc.habitat,
       method: doc.methodType || doc.method,
