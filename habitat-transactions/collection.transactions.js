@@ -26,7 +26,9 @@ class transactionsCollection extends Mongo.Collection {
       habitat: doc.habitat,
       method: doc.methodType || doc.method,
       deliveryAddress: doc.deliveryAddress || '',
-      geometry: doc.loc,
+      geometry: doc.loc, //where the order is getting delivered to
+      company_address: bizProf.company_address,
+      company_geometry: bizProf.geometry,
       buyerId: !doc.DaaS ? doc.buyerId : doc.sellerId,
       customer: this.customerItems(usr, doc),
       sellerId: doc.DaaS ? doc.sellerId : bizProf._id,
