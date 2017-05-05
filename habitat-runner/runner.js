@@ -30,10 +30,7 @@ runner = {
       });
     });
   },
-  getRole(role, habitat){
-    console.log(`getRole role is ${role}`);
-    return role === 'runner' ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole;
-  },
+  getRole(role, habitat){ return role === 'runner' ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole; },
   getHours(start, end, habitat) {
     start = moment(Habitats.openedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || start;
     end = moment(Habitats.closedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || end;
@@ -55,12 +52,11 @@ runner = {
       const habitat = Habitats.findOne(habitatId);
       try {
           const url = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${habitat.staffJoyRunnerRole}/users/`);
-          console.log(url);
           params = { auth: staffJoy._auth, params: {
             min_hours_per_workweek: 0,
             max_hours_per_workweek: 60,
             name, email, internal_id,
-          }}; console.log(params);
+          }};
           const worker = HTTP.call(`POST`, url, params);
           console.log(worker);
       } catch (e) {
@@ -81,7 +77,6 @@ runner = {
                   newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
-                  // console.log(`${workerId} ${userShift.data.data.name} has a shift today`);
                   return {
                     shift: shift,
                     staffJoyUser: userShift.data.data,
