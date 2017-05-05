@@ -169,8 +169,12 @@ runner = {
       }});
     }
   },
-  sendReceipt(req, tx, orderNumber, image, runnerId, tip) {
-    if(!image) { return this.invalidResponse(req, `Failed to dropoff. To complete the order and declare the tip, attach the image to a text message and respond ORDER#TIP. Example: 12345#0`); } else {
+  sendReceipt(req, tx, orderNumber, image, runnerId, tip, textResponse) {
+    if(!image) {
+      return this.invalidResponse(req, `To complete the order and declare the tip, attach the image to a text message and respond ORDER#TIP. Example: 12345#0`);
+    } else if(tx.DaaS && (tx.DaaSType === 'credit_card' || tx.DaaSType === 'online') && textResponse && !textResponse.includes('#')) {
+      return this.invalidResponse(req, `To complete the order and declare the tip, attach the image to a text message and respond ORDER#TIP. Example: 12345#0`);
+    } else {
       transactions.update(tx._id, {$set: {
           receiptPicture: image,
           'payRef.tip': parseFloat(tip),
