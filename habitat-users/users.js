@@ -120,6 +120,14 @@ Meteor.users.schema = new SimpleSchema({
     regEx: SimpleSchema.RegEx.Id,
     optional: true
   },
+  'profile.runnerApproved': {
+    type: Boolean,
+    optional: true,
+  },
+  'profile.runnerTransport': {
+    type: String,
+    optional: true,
+  },
   'profile.geometry.type': {
     type: String,
     optional: true

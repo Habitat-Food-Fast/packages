@@ -15,15 +15,14 @@ Meteor.methods({
     items.forEach(item => Categories.update(item._id, { $set: { order: item.order } }));
   },
 
-  updateCatBiz(id, bizId, type) {
-    if (!Roles.userIsInRole(Meteor.userId(), 'admin')) {
-      throw new Meteor.Error('Not Authorized');
-    }
-    if (type) {
-      Categories.update(id, { $push: { businesses: bizId } });
-    } else {
-      Categories.update(id, { $pull: { businesses: bizId } });
-    }
+  updateCategory(id, bizId) {
+    pull = Categories.findOne(id).businesses.includes(bizId);
+    query = pull ? {$pull: bizId} : {$push: bizId};
+    Categories.update(id, {businesses: query}, (err) => {
+      if (err) {
+        throwError(err.message);
+      }
+    });
   },
 
   editCatName(id, name) {

@@ -63,6 +63,7 @@ transactions.methods = {
         status: 'created',
         method: args.isDelivery ? 'Delivery' : 'Pickup',
         orderNumber: transactions.pin(),
+        orderSize: args.orderSize,
         order: args.order || [],
         acceptUrl: args.acceptUrl,
         customerPhone: args.customerPhone,
@@ -751,6 +752,7 @@ Meteor.methods({
             loc: res.features[0].geometry,
             sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
             DaaSType: obj.type,
+            orderSize: obj.orderSize || 1,
             isDelivery: true,
           }, (err, id) => {
             if (err) {

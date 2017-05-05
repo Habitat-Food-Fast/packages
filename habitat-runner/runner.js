@@ -51,6 +51,23 @@ runner = {
     res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`), params);
     return res.data.data;
   },
+  create(habitatId, email, name, internal_id){
+      const habitat = Habitats.findOne(habitatId);
+      try {
+          const url = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${habitat.staffJoyRunnerRole}/users/`);
+          console.log(url);
+          params = { auth: staffJoy._auth, params: {
+            min_hours_per_workweek: 0,
+            max_hours_per_workweek: 60,
+            name, email, internal_id,
+          }}; console.log(params);
+          const worker = HTTP.call(`POST`, url, params);
+          console.log(worker);
+      } catch (e) {
+        console.warn(`error CREATING data ${e}`);
+      }
+
+  },
   getShifts(start, end, habitats, roleName) {
         habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
         let shifts = habitats.map((id) => {
