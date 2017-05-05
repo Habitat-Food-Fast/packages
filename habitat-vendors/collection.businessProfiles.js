@@ -197,7 +197,10 @@ businessProfiles.allow({
 businessProfiles.initEasySearch( ['company_name', 'company_type'], {
   'limit': 5,
   'use': 'mongo-db',
-  'convertNumbers': false
+  'convertNumbers': false,
+  'sort': function() {
+    return {open: -1}
+  }
 });
 
 generateBizPass = function (company_name) {
