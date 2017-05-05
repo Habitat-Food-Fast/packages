@@ -282,7 +282,7 @@ sendReceiptImage: new ValidatedMethod({
   run({ txId, image, runnerId, tip}) {
     if(Meteor.isServer) {
       const tx = transactions.findOne(txId);
-      runner.sendReceipt(req=false, tx, tx.orderNumber, image, tx.runnerId, tip);
+      runner.sendReceipt(req=false, tx, tx.orderNumber, image, tx.runnerId, tip, textResponse=false);
     }
 
 
