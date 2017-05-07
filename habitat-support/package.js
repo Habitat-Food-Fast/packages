@@ -1,5 +1,5 @@
 Package.describe({
-  name: 'habitat-messages',
+  name: 'habitat-support',
   version: '1.1.3',
   // Brief, one-line summary of the package.
   summary: 'Support and messaging',
@@ -18,8 +18,17 @@ Package.onUse(function(api) {
   api.use(["aldeed:simple-schema", "aldeed:collection2", "underscore"]);
   api.use('mongo', ['client', 'server']);
   api.use('mdg:validated-method', ['client', 'server']);
-  api.use('raix:push@3.0.2', ['client', 'server']);
-  api.addFiles('collection.messages.js', ['client', 'server']);
-  api.addFiles('methods.messages.js', ['client', 'server']);
+  // api.use('raix:push@3.0.2', ['client', 'server']);
+  api.addFiles('collection.support.js', ['client', 'server']);
+  api.addFiles('methods.support.js', ['client', 'server']);
+  api.addFiles('schema.support.js', ['client', 'server']);
+  api.export('SupportTickets');
   api.export('Messages');
+});
+
+Package.onTest(function(api) {
+  api.use('ecmascript');
+  api.use('tinytest');
+  api.use('habitat-support');
+  api.mainModule('habitat-support-tests.js');
 });
