@@ -117,7 +117,7 @@ API.methods = {
 };
 
 Meteor.methods({
-    requestTxWrapper(id, connection,onnection) {
+    requestTxWrapper(id, connection) {
       transactions.update(id, {$set: {status: 'pending_vendor'}}, (err) => {
         if(err) { console.warn(err.message); }
         Meteor.call('remoteVendorContact', id, connection.data.key, (err) => {

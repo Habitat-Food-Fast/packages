@@ -511,24 +511,6 @@ runner.payouts = {
     }).filter(doc => doc && doc.transactionCount > 0 || doc &&  doc.daasCount > 0);
   }
 };
-Router.route('/staffjoy/weekTotals/:weekId/:weekNum/:token', {
-  where: 'server',
-  action() {
-    console.log(this.params);
-    const week = weeks.findOne(this.params.weekId);
-    try {
-      payouts = _.sortBy(runner.payouts.getAll(week, this.params.token), 'runnerOwed').reverse();
-      spreadsheet = convertSync(payouts, csv.settings);
-
-      console.log('Success, serving spreadsheet');
-      this.response.writeHead(200, csv.writeHead(`runner_summary_week-${week.week}`, 'csv'));
-      this.response.end(spreadsheet);
-
-    } catch (err) {
-      console.warn(err.message, err.stack);
-    }
-  }
-});
 
 Meteor.methods({
    getRunnerWeek(weekId, weekNum, token) {
