@@ -57,5 +57,3 @@ Router.route('/vendors/all', {
     }, csv.settings);
   }
 });
-
-businessProfiles.escape = company_name => company_name.replace(/,/g , " ").replace('&', ' and ');
