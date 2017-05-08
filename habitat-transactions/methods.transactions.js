@@ -108,12 +108,11 @@ transactions.methods = {
         return transactions.update(deliveryId, {
           $set: _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime))
         }, (err) => {
-          if(err) { throwError(err.message); }
-          if(!this.isSimulation) {
+          if(err) { throwError(err.message); } else {
             DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
               if(err) { console.log(err); throwError(err.message); }
             });
-          } else { as.trackRunnerAccept(txId, runnerId, this.userId); }
+          }
         });
     }
   }),
@@ -142,7 +141,6 @@ transactions.methods = {
             if(this.isSimulation){
               modOverlay.animate.close();
               orderFooter.showCheckout();
-              as.startedNewCart(args);
             }
           }
         });
@@ -155,7 +153,6 @@ transactions.methods = {
               if(this.isSimulation){
                 modOverlay.animate.close();
                 orderFooter.showCheckout();
-                as.addedItemToCart(args);
               }
               return currentOpenTx._id;
             }
@@ -322,9 +319,7 @@ sendReceiptImage: new ValidatedMethod({
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
         DDPenv().call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
-          if(err) { throwError(err.message); } else {
-            if(this.isSimulation) { as.trackRunnerAccept(txId, runnerId, this.userId); }
-          }
+          if(err) { throwError(err.message); }
         });
       });
 
@@ -845,7 +840,19 @@ Meteor.methods({
         order.orderId = order.orderId + 1;
         transactions.update(id, {$push: {order: order}});
       }
-    }
+    },
+    sendUserReceiptEmail(transId) {
+      var transToSend = transactions.findOne(transId);
+      var buyer = Meteor.users.findOne(transToSend.buyerId);
+      Mailer.send({
+        to: buyer.profile.fn + ' <'+buyer.username+'>',
+        subject: 'Your habitat order #' + transToSend.orderNumber,
+        template: 'emailUserReceipt',
+        data: {
+          transaction: transToSend
+        }
+      });
+    },
 });
 
 Meteor.methods({

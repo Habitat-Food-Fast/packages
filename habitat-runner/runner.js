@@ -96,16 +96,16 @@ runner = {
     },
   getShifted(start, end, habitats, roleName) {
     habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
-    return this.getShifts(start, end, habitats, roleName).filter((shift) => {
-      // console.log(`now = ${moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
-      // console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
-      // console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
-      return !shift || !shift.shift ? {} :
-        moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').isBetween(
-          moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours'),
-          moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours')
-      );
-    });
+      return this.getShifts(start, end, habitats, roleName).filter((shift) => {
+        // console.log(`now = ${moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
+        // console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
+        // console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
+        return !shift || !shift.shift ? {} :
+          moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').isBetween(
+            moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours'),
+            moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours')
+        );
+      });
   },
   alertShifted(txId, habId){
     runner.getShifted(false, false, [habId], 'runner').filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
@@ -268,12 +268,7 @@ staffJoy = {
   _baseUrl(){ return `http://staffing.tryhabitat.com/api/v2`; },
   _orgQuery(){ return `/organizations/${this._orgId}`; },
   _baseRequest(){ return this._baseUrl() + this._orgQuery(); },
-  _getUrl(query){
-    url = !query ? this._baseRequest() : this._baseRequest() + `/${query}`;
-    console.log(url);
-    return url;
-
-   },
+  _getUrl(query){ return !query ? this._baseRequest() : this._baseRequest() + `/${query}`; },
   allHabitats() { return Habitats.find().map(h => ({_id: h._id, staffJoyId: h.staffJoyId, name: h.name})); },
   getWorkers(workers){
     res = workers.map((worker) => {
