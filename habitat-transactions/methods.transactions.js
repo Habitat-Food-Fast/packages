@@ -859,7 +859,9 @@ Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
     if(Meteor.isServer){
       try {
-        return HTTP.get(`https://${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`);
+        const url = `${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`
+        console.log(url);
+        return HTTP.get(url);
       } catch (err) {
         console.warn(err.message, err.stack);
       }
