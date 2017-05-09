@@ -95,39 +95,41 @@ calc = {
   getPayRef(txId){
     check(txId, String);
     const tx = transactions.findOne(txId);
-    const totalPrice = this.orderTotal(tx.order);
-    switch (tx.method) {
-      case 'Pickup':
-        const pickupMealAmount = this.calcMealAmount(this.platformRevenue.pickup(totalPrice), tx);
-        return {
-          tp: totalPrice,
-          tax: this.tax(totalPrice),
-          chargeFee: this.serviceCharge.pickup,
-          platformRevenue: !pickupMealAmount ? this.platformRevenue.pickup(totalPrice) : pickupMealAmount.diff,
-          mealInfo: !pickupMealAmount ? null : pickupMealAmount,
-        };
-      case 'Delivery':
-        const deliveryMealAmount = this.calcMealAmount(this.platformRevenue.delivery(totalPrice, tx), tx);
-        const payRef = {
-          tp: totalPrice,
-          tax: this.tax(totalPrice),
-          deliveryFee: this._deliveryFee(tx),
-          promoAmount: this._promoAmount(tx),
-          chargeFee: 0,
-          tip: this._tip(tx),
-          platformRevenue: !deliveryMealAmount ? this.platformRevenue.delivery(totalPrice, tx) : deliveryMealAmount.diff,
-          mealInfo: deliveryMealAmount ? deliveryMealAmount : null
-        };
-        return payRef;
-      default: //method is not set, default to pickup
-        return {
-          tp: totalPrice,
-          tax: this.tax(totalPrice),
-          chargeFee: this.serviceCharge.pickup,
-          platformRevenue: !pickupMealAmount ? this.platformRevenue.pickup(totalPrice) : pickupMealAmount.diff,
-          mealInfo: !pickupMealAmount ? null : pickupMealAmount,
-        };
-      }
+    if(!tx || !tx.order) { return; } else {
+      const totalPrice = this.orderTotal(tx.order);
+      switch (tx.method) {
+        case 'Pickup':
+          const pickupMealAmount = this.calcMealAmount(this.platformRevenue.pickup(totalPrice), tx);
+          return {
+            tp: totalPrice,
+            tax: this.tax(totalPrice),
+            chargeFee: this.serviceCharge.pickup,
+            platformRevenue: !pickupMealAmount ? this.platformRevenue.pickup(totalPrice) : pickupMealAmount.diff,
+            mealInfo: !pickupMealAmount ? null : pickupMealAmount,
+          };
+        case 'Delivery':
+          const deliveryMealAmount = this.calcMealAmount(this.platformRevenue.delivery(totalPrice, tx), tx);
+          const payRef = {
+            tp: totalPrice,
+            tax: this.tax(totalPrice),
+            deliveryFee: this._deliveryFee(tx),
+            promoAmount: this._promoAmount(tx),
+            chargeFee: 0,
+            tip: this._tip(tx),
+            platformRevenue: !deliveryMealAmount ? this.platformRevenue.delivery(totalPrice, tx) : deliveryMealAmount.diff,
+            mealInfo: deliveryMealAmount ? deliveryMealAmount : null
+          };
+          return payRef;
+        default: //method is not set, default to pickup
+          return {
+            tp: totalPrice,
+            tax: this.tax(totalPrice),
+            chargeFee: this.serviceCharge.pickup,
+            platformRevenue: !pickupMealAmount ? this.platformRevenue.pickup(totalPrice) : pickupMealAmount.diff,
+            mealInfo: !pickupMealAmount ? null : pickupMealAmount,
+          };
+        }
+    }
   },
 
   calcMealAmount(total, tx) {
