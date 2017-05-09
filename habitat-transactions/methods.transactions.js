@@ -859,7 +859,9 @@ Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
     if(Meteor.isServer){
       try {
-        return HTTP.get(`https://${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`);
+        const url = `${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`
+        console.log(url);
+        return HTTP.get(url);
       } catch (err) {
         console.warn(err.message, err.stack);
       }
@@ -871,4 +873,70 @@ getRatingSum = function(collection, key){
   return _.reduce(_.pluck(collection, key), (memo, num) => {
       return parseFloat(memo) + num;
   });
+};
+
+handleInitialVendorContact = (txId) => {
+	const transactionToSend = transactions.findOne(txId); check(transactionToSend._id, String);
+	const bizProfile = businessProfiles.findOne(transactionToSend.sellerId); check(bizProfile._id, String);
+	const pendingVendorAcceptCount = transactions.find({sellerId: transactionToSend.sellerId, status: 'pending_vendor'}).count();
+  const pref = bizProfile.notificationPreference; check(pref, String);
+
+	switch (pref) {
+		case 'sms':
+		// if theres more than one transaction dont send
+			if (pendingVendorAcceptCount === 1) {
+				Meteor.call('sendReceiptText', transactionToSend);
+			}
+			break;
+		case 'fax':
+      HTTP.call(`GET`, urls.vendor.single_receipt_fax(txId), (err, res) => {
+        if(err){
+          Email.send({
+            from: "sender@somewhere.net",
+            to: "mike@tryhabitat.com",
+            cc: "carboncopy@elsewhere.io",
+            bcc: "lurker@somewhere.io",
+            replyTo: "public@somewhere.net",
+            subject: "Missed Fax",
+            text: JSON.stringify(err, null, 2),
+            html: "",
+            headers: "",
+          });
+        } else {
+          phaxio.sendFax({
+            to: Meteor.settings.devMode ?
+            '+18884732963' :
+            `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
+            string_data: res.content,
+            string_data_type: 'html'
+          }, (error, data) => {
+            if(error) {
+              Email.send({
+                from: "fax@tryhabitat.com",
+                to: Meteor.settings.devMode ? 'mike@tryhabitat.com' : 'info@tryhabitat.com',
+                subject: "Fax Failure",
+                text: JSON.stringify(error, null, 2),
+              });
+            }
+          });
+        }
+      });
+			break;
+		case 'email':
+			Meteor.call('sendSingleVendorTxEmail', txId);
+			break;
+		default:
+			if (pendingVendorAcceptCount === 1) {
+				Meteor.call('sendReceiptText', transactionToSend);
+			}
+			break;
+		}
+    slm(`ORDER UP
+
+    Vendor: ${bizProfile.company_name}
+    Vendor Phone: ${bizProfile.orderPhone}
+    Contact Type: ${bizProfile.notificationPreference}
+
+    ${transactionToSend.textMessage}`);
+
 };
