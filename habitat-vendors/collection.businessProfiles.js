@@ -204,7 +204,9 @@ businessProfiles.initEasySearch( ['company_name', 'company_type'], {
 });
 
 businessProfiles.escape = company_name => company_name.replace(/,/g , " ").replace('&', ' and ');
-
+if (Meteor.isServer) {
+  businessProfiles._ensureIndex({ 'geometry.coordinates': '2d'});  
+}
 generateBizPass = function (company_name) {
   return  company_name
           .toLowerCase()

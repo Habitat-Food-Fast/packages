@@ -257,7 +257,7 @@ class transactionsCollection extends Mongo.Collection {
   active(){ return [ 'pending_vendor', 'pending_runner', 'in_progress' ]; }
   userVisible() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress', 'completed']; }
   closedAndDiscarded() { return ['completed', 'archived', 'discarded']; }
-  pin() { return Math.abs(Math.floor(Math.random() * (10000 - 99999 +1)) + 10000); }
+  pin() { return Math.floor(1000 + Math.random() * 9000); }
 }
 
 transactions = new transactionsCollection("transactions");
