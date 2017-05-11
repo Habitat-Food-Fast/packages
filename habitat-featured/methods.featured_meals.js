@@ -25,3 +25,38 @@ removeFeaturedMeal(mealId) {
 },
 
 });
+
+FeaturedMeals.methods = {
+  insert: new ValidatedMethod({
+    name: 'FeaturedMeals.methods.insert',
+    validate: new SimpleSchema({
+      'uid': { type: String},
+      'title': { type: String },
+      'tag': { type: String },
+      'description': { type: String },
+      'saleItem': { type: String },
+      'image': { type: String },
+      'featured': { type: Boolean },
+      'deals': { type: [String] , optional: true, allowedValues: ['free delivery', 'free drink', 'free side']},
+    }).validator(),
+    run() {
+      if(!Meteor.user() || !Meteor.user().roles.includes('admin')) {
+        throwError('Must be admin to insert DaaS');
+      } else {
+        if(!this.isSimulation){
+          query = arguments[0]
+          bp = businessProfiles.findOne({_id: query.uid});
+          if(!bp){
+            console.warn(`no bp for ${query.uid}`);
+          }
+          query.company_name = bp? bp.company_name : false;
+          query.timesRedeemed = 0;
+          query.createdAt = new Date();
+          return FeaturedMeals.insert(query, (err) => {
+            if(err) { console.warn(err.message); }
+          });
+        }
+      }
+    }
+  }),
+}

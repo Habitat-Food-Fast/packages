@@ -32,3 +32,8 @@ class saleItemsCollection extends Mongo.Collection {
 }
 
 saleItems = new saleItemsCollection("saleitems");
+saleItems.initEasySearch(['name'], {
+  'limit': 100,
+  'use': 'mongo-db',
+  'convertNumbers': true
+});

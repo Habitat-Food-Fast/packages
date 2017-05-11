@@ -120,6 +120,10 @@ Meteor.users.schema = new SimpleSchema({
     regEx: SimpleSchema.RegEx.Id,
     optional: true
   },
+  'profile.runOrdersCompleted': {
+    type: Number,
+    optional: true,
+  },
   'profile.runnerApproved': {
     type: Boolean,
     optional: true,

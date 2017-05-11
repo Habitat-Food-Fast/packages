@@ -857,7 +857,7 @@ Meteor.methods({
 
 Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
-    if(Meteor.isServer){
+    if(Meteor.isServer && Meteor.user() && Meteor.user().roles.includes('admin')){
       try {
         const url = `${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`
         console.log(url);
