@@ -3,7 +3,6 @@ class businessProfilesCollection extends Mongo.Collection {
   insert(doc, callback) {
     transactions.methods.searchForAddress.call({address: doc.company_address}, (err, res) => {
       if(err) { throwError(err.message); } else if(res && res.features.length){
-        const newId = Random.id();
         return super.insert(_.extend(doc, {
           prep_time: parseInt(doc.prep_time),
           open: false,
@@ -19,29 +18,33 @@ class businessProfilesCollection extends Mongo.Collection {
           geometry: res.features[0].geometry,
         }), (err, newBizId) => {
           if(err) { throwError(err.message); }
-          if(Meteor.isServer){
             const bp = businessProfiles.findOne(newBizId);
             const bizArr = [newBizId];
             const pw = `${generateBizPass(doc.company_name)}`;
-            Accounts.createUser({
-              _id: newId,
-              email: bp.company_email,
+            const newid = Random.id();
+            const obj = {
+              _id: newid,
+              fn: doc.company_name,
+              email: doc.company_email,
+              phone: doc.orderPhone,
               password: pw,
-              company_name: bp.company_name,
-              profile: {
-                orderPhone: parseInt(bp.orderPhone),
-                habitat: Habitats.findOne(bp.habitat[0])._id
-              },
+              habitat: doc.habitat[0],
+              businesses: bizArr
+            };
+            Accounts.createUser(obj);
+            console.log(newid);
+            Meteor.users.update(newid, {$set: {'profile.businesses': bizArr}}, (err, res) => {
+              if (err) {
+                console.warn(err);
+              }
             });
-            Meteor.users.update(newId, {$set: {'profile.businesses': bizArr}}, err => err ? console.warn(err.message) : console.log('success'));
             businessProfiles.update(newBizId, {$set: {
-              uid: newId
+              uid: newid
             }}, (err, res) => {
               if(err) { throwError(err.message); }
-              Roles.addUsersToRoles(newId, 'vendor');
+              Roles.addUsersToRoles(newid, 'vendor');
               mailman.onboard.biz(bp, pw);
             });
-          }
         }, callback);
       }
     });
@@ -204,7 +207,9 @@ businessProfiles.initEasySearch( ['company_name', 'company_type'], {
 });
 
 businessProfiles.escape = company_name => company_name.replace(/,/g , " ").replace('&', ' and ');
-
+if (Meteor.isServer) {
+  businessProfiles._ensureIndex({ 'geometry.coordinates': '2d'});  
+}
 generateBizPass = function (company_name) {
   return  company_name
           .toLowerCase()

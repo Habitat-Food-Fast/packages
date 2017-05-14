@@ -257,8 +257,9 @@ confirmDropoff: new ValidatedMethod({
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
       settledByAdmin: isAdmin,
+      payRef: {}
     };
-    if(tip) { update.tip = tip; }
+    if(tip) { update.payRef.tip = tip; }
     transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
@@ -507,8 +508,7 @@ sendReceiptImage: new ValidatedMethod({
           // TODO: delivery and tip reflect in final page?
           transactions.update(tx._id, {$set:
             _.extend(_.omit(arguments[0], '_id'), {
-            method: 'Delivery',
-            tip: Settings.findOne({name: 'globalTipAmount'}).amount,
+            method: 'Delivery'
           }) }, (e) => { if (e) { throwError( e.message ); }
           });
           return { _id: tx._id };
@@ -934,9 +934,9 @@ Meteor.methods({
 
 Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
-    if(Meteor.isServer){
+    if(Meteor.isServer && Meteor.user() && Meteor.user().roles.includes('admin')){
       try {
-        const url = `${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`
+        const url = `${Meteor.absoluteUrl()}mastertransactions/${weekId}/${weekNum}/${token}`
         console.log(url);
         return HTTP.get(url);
       } catch (err) {

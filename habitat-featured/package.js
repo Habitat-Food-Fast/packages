@@ -12,6 +12,10 @@ Package.onUse(function(api) {
   api.use('ecmascript');
   api.use(["aldeed:simple-schema", "aldeed:collection2", "underscore"]);
   api.use('mongo', ['client', 'server']);
+  api.use('mdg:validated-method');
+  api.use('alanning:roles');
+  api.use('didericis:permissions-mixin', ['client', 'server']);
+  api.use('mdg:validated-method', ['client', 'server']);
   api.use('tracker', 'server');
   api.addFiles('collection.featured_meals.js');
   api.addFiles('methods.featured_meals.js');
