@@ -1,10 +1,6 @@
 class supportTicketsCollection extends Mongo.Collection {
   user(){ return Meteor.user(); }
-<<<<<<< HEAD
-  userId(){ return Meteor.userId() || remoteClient.userId(); }
-=======
   userId(){ return Meteor.userId(); }
->>>>>>> c712a835f28c6b74b93e3aee19e7efcf603dddec
   insert(doc) {
     const usr = Meteor.users.findOne(doc.userId);
     const supportReq = {
