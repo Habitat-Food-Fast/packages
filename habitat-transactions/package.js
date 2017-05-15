@@ -23,6 +23,6 @@ Package.onUse(function (api) {
   api.addFiles('util.transactions.js', ['client', 'server']);
 
 
-
+  api.export('gmapsUrl');
   api.export('transactions');
 });

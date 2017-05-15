@@ -11,6 +11,26 @@ Meteor.startup(function(){
   }
 });
 
+zones = () => ([
+  {
+    name: 'Plus',
+    multiplier: 1.5,
+    min: 1,
+    max: 799,
+  },
+  {
+    name: 'Distance',
+    multiplier: 2.0,
+    min: 800,
+    max: 1999,
+  },
+  {
+    name: 'Premium',
+    multiplier: 2.5,
+    min: 2000,
+    max: 5000,
+  }
+]);
 Habitats.defaults = [
   {
     "_id" : "zfY5SkgFSjXcjXbgW",
@@ -140,6 +160,7 @@ Habitats.defaults = [
         }
     },
     "weeklyHours" : Habitats.setHours(),
+    "zones": zones(),
   },
   {
     "_id" : "g77XEv8LqxJKjTT8k",
@@ -196,6 +217,7 @@ Habitats.defaults = [
         }
     },
     "weeklyHours" : Habitats.setHours(),
+    "zones": zones(),
   },
   {
     "_id": "TMdKN6FhxdbyoXodY",
@@ -251,5 +273,6 @@ Habitats.defaults = [
         }
     },
     "weeklyHours" : Habitats.setHours(),
+    "zones": zones(),
   }
 ];

@@ -302,3 +302,37 @@ class transactionsCollection extends Mongo.Collection {
 }
 
 transactions = new transactionsCollection("transactions");
+
+const apiKey = 'AIzaSyCyFtEt80IOFCQ_mgvXDwAFKNNCewjeEWo';
+
+deliveryAddressCoords = (txId) => {
+  const coords = transactions.findOne(txId).geometry.coordinates,
+        lng = coords[1],
+        lat = coords[0];
+  return { lng, lat };
+};
+
+gmapsUrl = (tx) => {
+  const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
+  const originCoords = biz.geometry.coordinates;
+
+  console.log(`${biz.company_address} to ${tx.deliveryAddress}`);
+  const origin = `origin=${originCoords[1]},${originCoords[0]}`;
+  const coords = deliveryAddressCoords(tx._id);
+
+  const destination = `destination=${coords.lng},${coords.lat}`;
+
+  compass = geolib.getCompassDirection(
+      {latitude: 52.518611, longitude: 13.408056},
+      {latitude: 51.519475, longitude: 7.46694444}
+  );
+  console.log(compass);
+  transactions.update(tx._id, {$set: {
+    compassDirection: compass
+  }});
+
+  const stopsAlongTheWay = false;
+  const wayPoints = !stopsAlongTheWay ? '' : `&waypoints=optimize:true|${stopsAlongTheWay}`;
+  const url = `https://maps.googleapis.com/maps/api/directions/json?${origin}&${destination}${wayPoints}&key=${apiKey}`;
+  return url;
+};
