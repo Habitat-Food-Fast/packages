@@ -113,6 +113,47 @@ class transactionsCollection extends Mongo.Collection {
       prepTime + delTime :
       tx.timeRequested ? tx.timeRequested : Date.now() + (60000 * prepTime) + (60000 * delTime);
   }
+  addRouteInfo(txId, count, i) {
+    if(Meteor.isClient){
+      console.warn(`can't add route info on client`);
+    } else {
+      tx = transactions.findOne(txId);
+      HTTP.call('GET', gmapsUrl(tx), (err, result) => {
+        if(err){ console.warn(err.message); } else {
+          console.log(result.data)
+          if(!result.data.routes.length){
+              console.warn(`no routes found for ${txId}`);
+          } else {
+            dirs = result.data.routes[0];
+            if(!dirs.legs.length){
+              console.warn(`no legs found for ${txId}`);
+            } else {
+              journey = dirs.legs[0];
+              transactions.update(txId, { $set: {
+                routeInfo: {
+                  car: {
+                    distance: {
+                      text: journey.distance.text,
+                      meters: journey.distance.value,
+                    },
+                    duration: {
+                      text: journey.duration.text,
+                      seconds: journey.duration.value,
+                    }
+                  }
+                }
+              } }, (err) => {
+                if(err) { console.warn(err.message); } else {
+                  console.log(calc._roundToTwo((i / count) * 100) + '%');
+                  console.log(`set ${tx.orderNumber} to`, transactions.findOne(txId).routeInfo.car.distance.text);
+                }
+              });
+            }
+          }
+        }
+      });
+    }
+  }
   getStatus(txId) {
     tx = transactions.findOne(txId);
   }
