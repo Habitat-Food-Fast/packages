@@ -423,7 +423,6 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
-
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
@@ -782,15 +781,6 @@ Meteor.methods({
       if (transactions.findOne(id).sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
         return transactions.update(id, {$set: obj});
       }
-    },
-    searchRemoteDaas(addr) {
-      let results;
-      transactions.methods.searchForAddress.call({address: addr}, (err, res) => {
-        if (res && res.features.length) {
-          results = mappr.shared.filterAddresses(err, res).map(r => ({address: r.place_name}));
-        }
-      });
-      return results;
     },
     setTransactionClosed(id) {
       if (this.userId) {

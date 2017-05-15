@@ -120,7 +120,7 @@ class transactionsCollection extends Mongo.Collection {
       tx = transactions.findOne(txId);
       HTTP.call('GET', gmapsUrl(tx), (err, result) => {
         if(err){ console.warn(err.message); } else {
-          console.log(result.data)
+          console.log(result.data);
           if(!result.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
