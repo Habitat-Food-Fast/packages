@@ -502,7 +502,7 @@ sendReceiptImage: new ValidatedMethod({
         if(!_.contains(biz.habitat, habId) || usr && habId !== usr.profile.habitat ){
           throw new Meteor.Error('503', 'Unauthorized update');
         } else if(this.userId && !mappr.student.isInsideHabitat(geometry)) {
-          throw new Meteor.Error('503', 'Unauthorized location for current habitat');
+          throw new Meteor.Error('503', 'You can\'t use that location for current order');
         } else {
           // TODO: delivery and tip reflect in final page?
           transactions.update(tx._id, {$set:
