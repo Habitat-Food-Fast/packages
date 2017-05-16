@@ -257,8 +257,9 @@ confirmDropoff: new ValidatedMethod({
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
       settledByAdmin: isAdmin,
+      payRef: {}
     };
-    if(tip) { update.tip = tip; }
+    if(tip) { update.payRef.tip = tip; }
     transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
@@ -422,7 +423,6 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
-
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
@@ -507,8 +507,7 @@ sendReceiptImage: new ValidatedMethod({
           // TODO: delivery and tip reflect in final page?
           transactions.update(tx._id, {$set:
             _.extend(_.omit(arguments[0], '_id'), {
-            method: 'Delivery',
-            tip: Settings.findOne({name: 'globalTipAmount'}).amount,
+            method: 'Delivery'
           }) }, (e) => { if (e) { throwError( e.message ); }
           });
           return { _id: tx._id };
@@ -783,15 +782,6 @@ Meteor.methods({
         return transactions.update(id, {$set: obj});
       }
     },
-    searchRemoteDaas(addr) {
-      let results;
-      transactions.methods.searchForAddress.call({address: addr}, (err, res) => {
-        if (res && res.features.length) {
-          results = mappr.shared.filterAddresses(err, res).map(r => ({address: r.place_name}));
-        }
-      });
-      return results;
-    },
     setTransactionClosed(id) {
       if (this.userId) {
         if (transactions.findOne(id).sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
@@ -841,6 +831,83 @@ Meteor.methods({
         transactions.update(id, {$push: {order: order}});
       }
     },
+    sendStatusUpdateText(phone, firstName, msg, isAdmin){
+      if(isAdmin){
+        const result = HTTP.post(
+          `https://slack.com/api/chat.postMessage?token=${Meteor.settings.slackToken}&channel=${
+            Meteor.settings.devMode ? "dev-operations" : "orderup"
+          }&text=${msg}&pretty=1`);
+      }
+      else{
+        twilio.messages.create({
+          to:'+1' + phone , // Any number Twilio can deliver to
+          from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+          body: msg // body of the SMS message
+        }, (err, responseData) => {
+            if (!err) {
+              // console.log(responseData.body);
+            }
+          }
+        );
+      }
+    },
+
+    sendPickupAcceptedUserText(phoneNumber, txId) {
+      //  RANK 3 TODO - check the args
+      const tx = transactions.findOne(txId);
+      const biz = businessProfiles.findOne(tx.sellerId);
+
+      twilio.messages.create({
+        to: phoneNumber, // Any number Twilio can deliver to
+        from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+        body: `Thanks for ordering Habitat!
+    Your order from ${tx.company_name} will be ready in about ${biz.prep_time} minutes.
+    Order #: ${tx.orderNumber}
+    Location: ${biz.company_address}
+    Just let them know you ordered on Habitat & your order number when you arrive!`.trim()
+        }, (err, responseData) => { console.log(responseData); });
+    },
+
+    orderAcceptedBuyerText (txId) {
+      //  RANK 3 TODO - check the args
+      console.log(`inside orderAcceptedbyuyer text`);
+
+      const tx = transactions.findOne(txId);
+      const estimate = transactions.deliveryEstimate(tx._id, inMinutes=true);
+      const body = `${tx.company_name} has accepted your order! It should arrive in ${estimate} to ${estimate + 10} minutes.`;
+      console.log(`body ${body}`);
+
+      twilio.messages.create({
+        to: Meteor.users.findOne(tx.buyerId).profile.phone, // Any number Twilio can deliver to
+        from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+        body: body
+      }, (err, responseData) => {
+          var textObj = responseData;
+          if (!err) {
+            // console.log(responseData);
+            // console.log(responseData.body);
+          } else {
+            console.log("twilio error.orderAcceptedBuyerText" + err);
+            console.log("twilio error" + err.message);
+          }
+      });
+    },
+
+    orderDeclinedBuyerText(buyerId, sellerId) {
+      Meteor.users.update(buyerId, {$inc: {'profile.mealCount': calc.cancelCredits}}, (err) => {
+        if(err) { throw new Meteor.Error(err.message); } else {
+          var bizProf = businessProfiles.findOne(sellerId);
+          var userProf = Meteor.users.findOne(buyerId);
+          var customerMessage = `Hey ${userProf.profile.fn}, ${bizProf.company_name} was unable to accept your order. Don't worry, we've refunded your order and given you $1 in credit for you next order :)`;
+          const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
+          const result = sendMessageSync({
+            to: Meteor.users.findOne(buyerId).profile.phone, // Any number Twilio can deliver to
+            from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+            body: customerMessage
+          });
+        }
+      });
+    },
     sendUserReceiptEmail(transId) {
       var transToSend = transactions.findOne(transId);
       var buyer = Meteor.users.findOne(transToSend.buyerId);
@@ -859,7 +926,7 @@ Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
     if(Meteor.isServer && Meteor.user() && Meteor.user().roles.includes('admin')){
       try {
-        const url = `${Meteor.absoluteUrl()}/mastertransactions/${weekId}/${weekNum}/${token}`
+        const url = `${Meteor.absoluteUrl()}mastertransactions/${weekId}/${weekNum}/${token}`
         console.log(url);
         return HTTP.get(url);
       } catch (err) {

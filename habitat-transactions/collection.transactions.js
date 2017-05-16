@@ -113,6 +113,47 @@ class transactionsCollection extends Mongo.Collection {
       prepTime + delTime :
       tx.timeRequested ? tx.timeRequested : Date.now() + (60000 * prepTime) + (60000 * delTime);
   }
+  addRouteInfo(txId, count, i) {
+    if(Meteor.isClient){
+      console.warn(`can't add route info on client`);
+    } else {
+      tx = transactions.findOne(txId);
+      HTTP.call('GET', gmapsUrl(tx), (err, result) => {
+        if(err){ console.warn(err.message); } else {
+          console.log(result.data);
+          if(!result.data.routes.length){
+              console.warn(`no routes found for ${txId}`);
+          } else {
+            dirs = result.data.routes[0];
+            if(!dirs.legs.length){
+              console.warn(`no legs found for ${txId}`);
+            } else {
+              journey = dirs.legs[0];
+              transactions.update(txId, { $set: {
+                routeInfo: {
+                  car: {
+                    distance: {
+                      text: journey.distance.text,
+                      meters: journey.distance.value,
+                    },
+                    duration: {
+                      text: journey.duration.text,
+                      seconds: journey.duration.value,
+                    }
+                  }
+                }
+              } }, (err) => {
+                if(err) { console.warn(err.message); } else {
+                  console.log(calc._roundToTwo((i / count) * 100) + '%');
+                  console.log(`set ${tx.orderNumber} to`, transactions.findOne(txId).routeInfo.car.distance.text);
+                }
+              });
+            }
+          }
+        }
+      });
+    }
+  }
   getStatus(txId) {
     tx = transactions.findOne(txId);
   }
@@ -261,3 +302,37 @@ class transactionsCollection extends Mongo.Collection {
 }
 
 transactions = new transactionsCollection("transactions");
+
+const apiKey = 'AIzaSyCyFtEt80IOFCQ_mgvXDwAFKNNCewjeEWo';
+
+deliveryAddressCoords = (txId) => {
+  const coords = transactions.findOne(txId).geometry.coordinates,
+        lng = coords[1],
+        lat = coords[0];
+  return { lng, lat };
+};
+
+gmapsUrl = (tx) => {
+  const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
+  const originCoords = biz.geometry.coordinates;
+
+  console.log(`${biz.company_address} to ${tx.deliveryAddress}`);
+  const origin = `origin=${originCoords[1]},${originCoords[0]}`;
+  const coords = deliveryAddressCoords(tx._id);
+
+  const destination = `destination=${coords.lng},${coords.lat}`;
+
+  compass = geolib.getCompassDirection(
+      {latitude: 52.518611, longitude: 13.408056},
+      {latitude: 51.519475, longitude: 7.46694444}
+  );
+  console.log(compass);
+  transactions.update(tx._id, {$set: {
+    compassDirection: compass
+  }});
+
+  const stopsAlongTheWay = false;
+  const wayPoints = !stopsAlongTheWay ? '' : `&waypoints=optimize:true|${stopsAlongTheWay}`;
+  const url = `https://maps.googleapis.com/maps/api/directions/json?${origin}&${destination}${wayPoints}&key=${apiKey}`;
+  return url;
+};

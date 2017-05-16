@@ -20,6 +20,9 @@ FeaturedMeals.schema = new SimpleSchema({
     type: String,
     regEx: SimpleSchema.RegEx.Id
   },
+  saleItemName: {
+    type: String
+  },
   image: {
     type: String
   },

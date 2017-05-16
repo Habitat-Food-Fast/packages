@@ -153,7 +153,6 @@ runner = {
       transactions.methods.confirmDropoff.call({
         txId: tx._id,
         isAdmin: false,
-        tip: tip,
       }, (err) => { if(err) {console.warn(err.message);} else {
         if(transactions.find({status: 'pending_runner'}).count()){ this.alertShifted(tx._id, tx.habitat); }
         if(req.response){
@@ -360,35 +359,41 @@ runnerPayout = {
   },
   getTotalOwed(shifts, timespan, runnerId){
     check(runnerId, String);
-    return this.getTotalHourlyOwed(shifts, timespan, runnerId)  +
-           this.perOrderRate(runnerId, timespan) +
-           this.getTotalTips(runnerId, timespan);
-  },
+    hourly = this.getTotalHourlyOwed(shifts, timespan, runnerId); console.log(`hourly rate is ${hourly}`)
+    perOrder = this.perOrderRate(runnerId, timespan); console.log(`perOrder owed ${perOrder}`);
+    tipTotal = this.getTotalTips(runnerId, timespan); console.log(`tiptotal is ${tipTotal}`);
+    owed = hourly + perOrder+ tipTotal; console.warn(`owed is ${owed}`);
+      return owed;
+    },
   filterInactive(worker){ return worker.transactionCount === 0 || worker.daasCount === 0; },
-  getRunnerPayout(worker, shifts, timespan){
-    const runnerId = Meteor.users.findOne({username: worker.email})._id;
-    return _.extend(worker, {
-      runnerId: runnerId,
-      hoursWorked: this.getTotalHours(shifts, timespan, runnerId),
-      transactionCount: this.getOrders(runnerId, timespan).length,
-      daasCount: this.getOrders(runnerId, timespan).filter(t => t.DaaS).length,
-      hourlyRate: this._hourlyRate,
-      owedHourTotal: accounting.formatMoney(this.getTotalHours(shifts, timespan, runnerId) * this._hourlyRate),
-      owedDeliveryFee: accounting.formatMoney(this._perOrderRate),
-      owedTips: accounting.formatMoney(runner.getTotalTips(runnerId, timespan)),
-      runnerOwed: accounting.formatMoney(this.getTotalOwed(shifts, timespan, runnerId)),
-    });
-  },
-  sort(payout){ return _.sortBy(payout, 'hoursWorked').reverse(); },
-  payout(workers, shifts, timespan){
-
-    const payout = this.sort(
-      staffJoy.getWorkers(workers).map(worker => this.getRunnerPayout(worker, shifts, timespan))
-      // .filter(worker => this.filterInactive(worker))
-    );
-
-    return payout;
-  }
+  // getRunnerPayout(worker, shifts, timespan){
+  //   console.log(timespan);
+  //   console.log(`getRunnerPayout start ${timespan.startTime}`)
+  //   const runnerId = Meteor.users.findOne({username: worker.email})._id;
+  //   return _.extend(worker, {
+  //     runnerId: runnerId,
+  //     start: timespan.startTime,
+  //     end: timespan.endTime,
+  //     hoursWorked: this.getTotalHours(shifts, timespan, runnerId),
+  //     transactionCount: this.getOrders(runnerId, timespan).length,
+  //     daasCount: this.getOrders(runnerId, timespan).filter(t => t.DaaS).length,
+  //     hourlyRate: this._hourlyRate,
+  //     owedHourTotal: accounting.formatMoney(this.getTotalHours(shifts, timespan, runnerId) * this._hourlyRate),
+  //     owedDeliveryFee: accounting.formatMoney(this._perOrderRate),
+  //     owedTips: accounting.formatMoney(runner.getTotalTips(runnerId, timespan)),
+  //     runnerOwed: accounting.formatMoney(this.getTotalOwed(shifts, timespan, runnerId)),
+  //   });
+  // },
+  // sort(payout){ return _.sortBy(payout, 'hoursWorked').reverse(); },
+  // payout(workers, shifts, timespan){
+  //
+  //   const payout = this.sort(
+  //     staffJoy.getWorkers(workers).map(worker => this.getRunnerPayout(worker, shifts, timespan))
+  //     // .filter(worker => this.filterInactive(worker))
+  //   );
+  //
+  //   return payout;
+  // }
 };
 
 
@@ -467,20 +472,29 @@ runner.payouts = {
       .reduce((sum, num) => { return sum + num; }, 0);
   },
   _totalOwed(runnerTxs, allShifts, staffJoyId){
-    return (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4) +
-            this._perTxKeep(runnerTxs) +
-            this._onDemandOwed(runnerTxs) +
-            this._tips(runnerTxs);
+    hourlyRate = (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4); console.log(`hourlyRate ${hourlyRate}`)
+    perTxKeep = this._perTxKeep(runnerTxs); console.log(`pertx keep ${perTxKeep}`)
+    onDemandOwed = this._onDemandOwed(runnerTxs); console.log(`ondemand owed ${onDemandOwed}`)
+    tips = this._tips(runnerTxs); console.log(`tips: ${tips}`);
+    total = hourlyRate +
+            perTxKeep +
+            onDemandOwed +
+            tips; console.warn(total)
+
+    return total;
   },
   _progress(token, progress) {
     console.log(`hit stream prog for ${token}`);
     streamer.emit(token, progress);
   },
   payRef(worker, allShifts, runnerTxs, runnerId, week){
+    wk = weeks.findOne({week: week});
     query = _.extend(worker, {
-      week: week,
+      week: wk.week,
       hoursWorked: this._totalHoursWorked(runnerTxs, allShifts, worker.id),
       transactionCount: runnerTxs.length,
+      start: wk.startTime,
+      end: wk.endTime,
       templeCount: runnerTxs.filter(t => t.habitat === 'g77XEv8LqxJKjTT8k').length,
       ucCount: runnerTxs.filter(t => t.habitat === 'zfY5SkgFSjXcjXbgW').length,
       daasCount: runnerTxs.filter(t => t.DaaS).length,
@@ -491,7 +505,7 @@ runner.payouts = {
       owedDeliveryFee: accounting.formatMoney(this._perTxKeep(runnerTxs)),
       owedTips: accounting.formatMoney(this._tips(runnerTxs)),
       runnerOwed: this._totalOwed(runnerTxs, allShifts, worker.id),
-    }); console.log(query);
+    }); console.log(worker.name)
     return query;
   },
   getAll(week, token){

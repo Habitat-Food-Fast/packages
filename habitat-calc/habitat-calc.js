@@ -30,7 +30,13 @@ calc = {
   },
   _customerCommission(tp){ return this._roundToTwo(tp * 0.05); },
   _mealServiceCharge(tp){ return this._roundToTwo((tp * 0.029) + 0.30); },
-  _tip(tx){ return tx.payRef && tx.payRef.tip ? tx.payRef.tip : 0; },
+  _tip(tx){
+    if(tx && tx.method === 'Pickup'){
+      return 0;
+    } else {
+      return tx && tx.payRef && tx.payRef.tip ? tx.payRef.tip : 0;
+    }
+  },
   _promoAmount(tx){ return Instances.getPromoValue(tx.sellerId, tx.promoId); },
   _deliveryFee(tx){
     const today = businessProfiles.getToday(tx.sellerId);
@@ -103,6 +109,7 @@ calc = {
           return {
             tp: totalPrice,
             tax: this.tax(totalPrice),
+            tip: 0,
             chargeFee: this.serviceCharge.pickup,
             platformRevenue: !pickupMealAmount ? this.platformRevenue.pickup(totalPrice) : pickupMealAmount.diff,
             mealInfo: !pickupMealAmount ? null : pickupMealAmount,

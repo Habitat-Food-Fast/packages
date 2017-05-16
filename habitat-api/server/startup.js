@@ -1,6 +1,6 @@
 Meteor.startup(function(){
   // customBrowserPolicies();
-  generateTestAccounts();
+  // generateTestAccounts();
 });
 
 // customBrowserPolicies = () => BrowserPolicy.content.allowOriginForAll('maxcdn.bootstrapcdn.com');
