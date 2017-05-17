@@ -180,14 +180,16 @@ transactions.methods = {
   removeTransaction: new ValidatedMethod({
     name: 'transactions.methods.removeTransaction',
     validate: new SimpleSchema({
-      txIds: { type: [String] }
+      txId: { type: String }
     }).validator(),
-    run({ txIds }) {
-      transactions.update({_id: {$in: txIds}}, {$set: {
-        status: 'discarded',
-        promoId: null,
-      }}, (err, res) => { if(err) { throwError(err.message); } else {
-      }});
+    run({ txId }) {
+      if (transactions.findOne(txId).buyerId === Meteor.userId()) {
+        transactions.update({_id: txId}, {$set: {
+          status: 'discarded',
+          promoId: null,
+        }}, (err, res) => { if(err) { throwError(err.message); } else {
+        }});  
+      }
     }
   }),
 
@@ -914,6 +916,15 @@ Meteor.methods({
       });
     },
 });
+
+getBizNumberArray = (bizId) => {
+  const bp = businessProfiles.findOne(bizId);
+  if(bp.employees){
+    return bp.employees.filter(e => e.text).map(e => e.phone).concat(bp.orderPhone);
+  } else {
+    return [bp.orderPhone];
+  }
+};
 
 Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
