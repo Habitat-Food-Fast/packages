@@ -29,6 +29,11 @@ removeFeaturedMeal(mealId) {
 FeaturedMeals.methods = {
   insert: new ValidatedMethod({
     name: 'FeaturedMeals.methods.insert',
+    mixins: [PermissionsMixin],
+    allow: [{
+      group: true,
+      roles: ['admin', 'vendor'],
+    }],
     validate: new SimpleSchema({
       'uid': { type: String},
       'title': { type: String },
@@ -40,25 +45,25 @@ FeaturedMeals.methods = {
       'deals': { type: [String] , optional: true, allowedValues: ['free delivery', 'free drink', 'free side']},
     }).validator(),
     run() {
-      if(!Meteor.user() || !Meteor.user().roles.includes('admin')) {
-        throwError('Must be admin to insert DaaS');
-      } else {
-        if(!this.isSimulation){
-          query = arguments[0]
-          bp = businessProfiles.findOne({_id: query.uid});
-          if(!bp){
-            console.warn(`no bp for ${query.uid}`);
-          } else {
-            query.company_name = bp? bp.company_name : false;
-            query.timesRedeemed = 0;
-            query.createdAt = new Date();
-            query.saleItemName = saleItems.findOne(query.saleItem) ? saleItems.findOne(query.saleItem).name : '';
-            return FeaturedMeals.insert(query, (err) => {
-              if(err) { console.warn(err.message); }
-            });
-          }
+      if(!this.isSimulation){
+        query = arguments[0]
+        bp = businessProfiles.findOne({_id: query.uid});
+        if(!bp){
+          console.warn(`no bp for ${query.uid}`);
+        } else {
+          query.company_name = bp? bp.company_name : false;
+          query.timesRedeemed = 0;
+          query.createdAt = new Date();
+          query.saleItemName = saleItems.findOne(query.saleItem) ? saleItems.findOne(query.saleItem).name : '';
+          query.order = FeaturedMeals.find().count() + 1;
+          query.habitat = bp.habitat[0];
+          console.log(query);
+          return FeaturedMeals.insert(query, (err) => {
+            if(err) { throwError(err.message); }
+          });
         }
       }
+
     }
   }),
   update: {
@@ -79,5 +84,25 @@ FeaturedMeals.methods = {
         });
       }
     }),
-  }
+    info: new ValidatedMethod({
+      name: 'FeaturedMeals.methods.update.info',
+      mixins: [PermissionsMixin],
+      allow: [{
+        group: true,
+        roles: ['admin', 'vendor'],
+      }],
+      validate: new SimpleSchema({
+        '_id': { type: String },
+        'title': { type: String, optional: true, min: 4},
+        'tag': { type: String, optional: true },
+        'description': { type: String, optional: true, },
+        'deals': { type: [String], optional: true },
+      }).validator(),
+      run({_id}) {
+        FeaturedMeals.update(_id, {$set: arguments[0]}, (err) => {
+          if(err) { throwError(err.message); }
+        });
+      }
+    })
+  },
 }

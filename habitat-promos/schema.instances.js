@@ -26,6 +26,25 @@ Instances.schema = new SimpleSchema({
   redeemedBy: {
     type: [String],
   }, //who has used the promo added to their 'bank'
+  redeemedByCount: {
+    type: Number,
+    optional: true,
+  },
+  ownersCount: {
+    type: Number,
+    optional: true,
+  },
+  habitat: {
+    type: String,
+  },
+  ownerRole: {
+    type: String,
+  },
+  adUnits: {
+    type: Number,
+    decimal: false
+  },
+  notes: {type: String},
   acquisition: {
     type: Boolean,
   },
