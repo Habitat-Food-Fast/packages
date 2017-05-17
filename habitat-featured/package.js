@@ -12,6 +12,7 @@ Package.onUse(function(api) {
   api.use('ecmascript');
   api.use(["aldeed:simple-schema", "aldeed:collection2", "underscore"]);
   api.use('mongo', ['client', 'server']);
+  api.use('matteodem:easy-search@=1.6.4');
   api.use('mdg:validated-method');
   api.use('alanning:roles');
   api.use('didericis:permissions-mixin', ['client', 'server']);
