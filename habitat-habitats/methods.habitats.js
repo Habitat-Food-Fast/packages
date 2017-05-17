@@ -103,5 +103,5 @@ Meteor.methods({
       Habitats.update({_id: id, 'weeklyHours.day': day}, {$set: {'weeklyHours.$.closeTime': closeTime, 'weeklyHours.$.closeHr': time}});
     }
   }
-},
+  }
 });

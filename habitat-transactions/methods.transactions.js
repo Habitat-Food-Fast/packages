@@ -497,21 +497,14 @@ sendReceiptImage: new ValidatedMethod({
         const newUserId = this.userId ? false : tx.buyerId;
         const usr = Meteor.users.findOne(tx.buyerId);
         if(!newUserId) { check(usr, Object); }
-
         const biz = businessProfiles.findOne(tx.sellerId); check(biz._id, String);
-        if(!_.contains(biz.habitat, habId) || usr && habId !== usr.profile.habitat ){
-          throw new Meteor.Error('503', 'Unauthorized update');
-        } else if(this.userId && !mappr.student.isInsideHabitat(geometry)) {
-          throw new Meteor.Error('503', 'Unauthorized location for current habitat');
-        } else {
           // TODO: delivery and tip reflect in final page?
-          transactions.update(tx._id, {$set:
-            _.extend(_.omit(arguments[0], '_id'), {
-            method: 'Delivery'
-          }) }, (e) => { if (e) { throwError( e.message ); }
-          });
-          return { _id: tx._id };
-        }
+        transactions.update(tx._id, {$set:
+          _.extend(_.omit(arguments[0], '_id'), {
+          method: 'Delivery'
+        }) }, (e) => { if (e) { throwError( e.message ); }
+        });
+        return { _id: tx._id };
       }
     }
   }),
