@@ -24,11 +24,12 @@ export default class instancesCollection extends Mongo.Collection {
     };
   }
   insertAcquisitionCode(name, a){
+    console.log(a);
     query = _.extend(this.interface(a), {
       dollarAmount: 5, // TODO: add back a habitat.deliveryFee to customise
       acquisition: true,
-      giveOwnerDiscountOnRedeem: a.giveOwnerDiscountOnRedeem || false,
-    }); console.log(query)
+      giveOwnerDiscountOnRedeem: a.giveOwnerDiscountOnRedeem,
+    }); console.log(query);
     return super.insert(query, { validate: false }, (err) => {
       if(err) { throwError(err); }});
   }
