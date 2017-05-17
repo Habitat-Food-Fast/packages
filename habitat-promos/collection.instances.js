@@ -4,35 +4,44 @@ export default class instancesCollection extends Mongo.Collection {
   channelObj(channelName){ return _.findWhere(this.parentType(channelName).channels, {name: channelName}); }
   subChannels(channelName){ return this.channelObj(channelName).subChannels; }
 
-  interface(name, ownerId, channel, subChannel){
+  interface(name, a){
     return {
       name: name,
-      ownedBy: ownerId,
+      ownedBy: a.ownerId,
       dateIssued: new Date(),
       expired: false,
       owners: [],
+      ownersCount: 0,
+      redeemedByCount: 0,
       redeemedBy: [],
-      channel: channel,
-      subChannel: subChannel,
-      channelType: this.parentType(channel).type,
+      channel: a.channel,
+      subChannel: a.subChannel,
+      channelType: this.parentType(a.channel).type,
+      ownerRole: a.ownerRole,
+      habitat: a.habitat,
+      adUnits: a.adUnits,
+      notes: a.notes,
     };
   }
-  insertAcquisitionCode(name, ownerId, giveOwnerDiscountOnRedeem, channel, subChannel){
-    return super.insert(_.extend(this.interface(name, ownerId, channel, subChannel), {
+  insertAcquisitionCode(name, a){
+    query = _.extend(this.interface(a), {
       dollarAmount: 5, // TODO: add back a habitat.deliveryFee to customise
       acquisition: true,
-      giveOwnerDiscountOnRedeem: giveOwnerDiscountOnRedeem,
-    }), (err) => { if(err) { throwError(err.message); }});
+      giveOwnerDiscountOnRedeem: a.giveOwnerDiscountOnRedeem || false,
+    }); console.log(query)
+    return super.insert(query, { validate: false }, (err) => {
+      if(err) { throwError(err); }});
   }
-  insertRetentionCode(name, ownerId, amount, channel, subChannel) {
-    return super.insert(_.extend(this.interface(name, ownerId, channel, subChannel), {
-      dollarAmount: amount,
+  insertRetentionCode(name, a) {
+    query = _.extend(this.interface(name, a), {
+      dollarAmount: a.dollarAmount,
       acquisition: false,
       giveOwnerDiscountOnRedeem: false,
-    }), (err) => {
-      if(err) { throwError(err.message); }});
+    }); console.log(query);
+    return super.insert(query, { validate: false }, (err) => {
+      if(err) { throwError(err); }
+    });
   }
-
   addOwner(promoName){
     if(!promoName) { throwError(`Error: Missing promoId`); }
     if(!Meteor.userId()) { throwError(`Error: Need valid userId to redeem promos.`); }
@@ -78,7 +87,12 @@ export default class instancesCollection extends Mongo.Collection {
   }
   redeem(promoId, buyerId, redeem) {
     const inst = Instances.findOne(promoId); check(inst, Object);
-    Instances.update(promoId, this.toggle(redeem, buyerId), (err) => {
+    Instances.update(promoId, _.extend(this.toggle(redeem, buyerId), {
+      $inc: {
+        redeemedByCount: redeem ? 1 : -1,
+        ownersCount: redeem ? -1 : 1,
+      }
+    }), (err) => {
       if(err) { throwError(err.message); } else if(inst.acquisition && inst.giveOwnerDiscountOnRedeem){
         this.notify(inst.ownedBy, redeem);
       }
