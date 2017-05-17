@@ -103,6 +103,23 @@ FeaturedMeals.methods = {
           if(err) { throwError(err.message); }
         });
       }
-    })
+    }),
+    featured: new ValidatedMethod({
+      name: 'FeaturedMeals.methods.update.featured',
+      mixins: [PermissionsMixin],
+      allow: [{
+        group: true,
+        roles: ['admin'],
+      }],
+      validate: new SimpleSchema({
+        'featuredId': { type: String},
+        'feature': { type: Boolean },
+      }).validator(),
+      run({featuredId, feature}) {
+        FeaturedMeals.update(featuredId, {$set: {featured: feature}}, (err) => {
+          if(err) { throwError(err); }
+        });
+      }
+    }),
   },
 }
