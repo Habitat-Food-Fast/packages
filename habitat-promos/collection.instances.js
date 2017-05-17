@@ -4,31 +4,35 @@ export default class instancesCollection extends Mongo.Collection {
   channelObj(channelName){ return _.findWhere(this.parentType(channelName).channels, {name: channelName}); }
   subChannels(channelName){ return this.channelObj(channelName).subChannels; }
 
-  interface(name, a){
+  interface(name, args){
+    console.log('inside interface', args);
     return {
       name: name,
-      ownedBy: a.ownerId,
+      ownedBy: args.ownerId,
       dateIssued: new Date(),
       expired: false,
       owners: [],
       ownersCount: 0,
       redeemedByCount: 0,
       redeemedBy: [],
-      channel: a.channel,
-      subChannel: a.subChannel,
-      channelType: this.parentType(a.channel).type,
-      ownerRole: a.ownerRole,
-      habitat: a.habitat,
-      adUnits: a.adUnits,
-      notes: a.notes,
+      channel: args.channel,
+      subChannel: args.subChannel,
+      channelType: this.parentType(args.channel).type,
+      ownerRole: args.ownerRole,
+      habitat: args.habitat,
+      adUnits: args.adUnits,
+      notes: args.notes,
     };
   }
-  insertAcquisitionCode(name, a){
-    query = _.extend(this.interface(a), {
+  insertAcquisitionCode(name, args){
+    console.log(args);
+    inter = this.interface(name, args);
+    console.log(`interface`, inter);
+    query = _.extend(inter, {
       dollarAmount: 5, // TODO: add back a habitat.deliveryFee to customise
       acquisition: true,
-      giveOwnerDiscountOnRedeem: a.giveOwnerDiscountOnRedeem || false,
-    }); console.log(query)
+      giveOwnerDiscountOnRedeem: args.giveOwnerDiscountOnRedeem,
+    }); console.log('query', query);
     return super.insert(query, { validate: false }, (err) => {
       if(err) { throwError(err); }});
   }

@@ -180,14 +180,16 @@ transactions.methods = {
   removeTransaction: new ValidatedMethod({
     name: 'transactions.methods.removeTransaction',
     validate: new SimpleSchema({
-      txIds: { type: [String] }
+      txId: { type: String }
     }).validator(),
-    run({ txIds }) {
-      transactions.update({_id: {$in: txIds}}, {$set: {
-        status: 'discarded',
-        promoId: null,
-      }}, (err, res) => { if(err) { throwError(err.message); } else {
-      }});
+    run({ txId }) {
+      if (transactions.findOne(txId).buyerId === Meteor.userId()) {
+        transactions.update({_id: txId}, {$set: {
+          status: 'discarded',
+          promoId: null,
+        }}, (err, res) => { if(err) { throwError(err.message); } else {
+        }});  
+      }
     }
   }),
 
