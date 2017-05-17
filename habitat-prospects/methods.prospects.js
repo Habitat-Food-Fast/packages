@@ -32,7 +32,7 @@ Prospects.methods = {
       menu_difficulty: { type: String, optional: true },
       eat24: { type: Boolean, optional: true },
       reviews: { type: String, optional: true },
-      yelp_rating: { type: Number, optional: true },
+      yelp_rating: { type: Number, optional: true, decimal: true },
       grubhub: { type: Boolean, optional: true },
       uberEats: { type: Boolean, optional: true },
       postmates: { type: Boolean, optional: true },
@@ -51,7 +51,9 @@ Prospects.methods = {
       // } else {
         try {
           const insert = Prospects.insert(arguments[0], {validate: false});
-          console.log(insert);
+          // console.log(insert);
+          console.log(arguments[0].yelp_rating);
+
           return insert;
         } catch(e) {
           throwError(e);
