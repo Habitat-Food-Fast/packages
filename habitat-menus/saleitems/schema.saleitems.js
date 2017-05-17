@@ -30,6 +30,9 @@ saleItems.schema = new SimpleSchema({
   },
   modifiers: {
     type: [String],
+  },
+  company_name: {
+    type: String,
   }
 });
 

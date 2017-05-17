@@ -139,7 +139,7 @@ Messages.methods = {
 
 Notifications = new Mongo.Collection("notifications");
 Notifications.methods = {
-  user(){ return Meteor.user() || remoteClient.user(); },
+  user(){ return Meteor.user(); },
   push(docId, messageId){
     const tx = transactions.findOne(docId);
     const supp = SupportTickets.findOne(docId);

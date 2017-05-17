@@ -22,7 +22,7 @@ Package.onUse(function (api) {
   api.addFiles('resolvers.transactions.js', ['client', 'server']);
   api.addFiles('util.transactions.js', ['client', 'server']);
 
-
-
+  api.export('handleInitialVendorContact');
+  api.export('gmapsUrl');
   api.export('transactions');
 });

@@ -31,7 +31,7 @@ businessProfiles.methods = {
       geometry: {type: Object },
       'geometry.type': { type: String },
       'geometry.coordinates': { type: [ Number ], decimal: true },
-      'geometry.interpolated': {type: Boolean },
+      'geometry.interpolated': {type: Boolean, optional: true },
       notificationPreference: { type: String },
       prep_time: { type: Number },
     }).validator(),
@@ -39,13 +39,8 @@ businessProfiles.methods = {
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
-        try {
-          const insert = businessProfiles.insert(arguments[0]);
-          console.log(insert);
-          return insert;
-        } catch(e) {
-          throwError(e);
-        }
+        console.log('just before it');
+        return businessProfiles.insert(arguments[0]);
       }
   }
   }),
@@ -90,33 +85,30 @@ businessProfiles.methods = {
 
  validatePassword: new ValidatedMethod({
    name: 'businessProfiles.methods.validatePassword',
-  //  mixins: [PermissionsMixin],
-  //  allow: [{
-  //    roles: 'admin',
-  //    group: Roles.GLOBAL_GROUP
-  //    allow:            function that accepts the methods input and returns a boolean
-  //  }],
    validate: new SimpleSchema({
      uid: { type: String },
      pass: { type: String, min: 6 },
    }).validator(),
-   run({id, newPassword}) {
-     if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
-       Accounts.setPassword(id, newPassword);
-       const usr = Meteor.users.findOne(id);
-       const biz = businessProfiles.findOne({uid: id});
+   run({uid, password}) {
+     if (Meteor.isServer) {
+       if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
+         console.log(password);
+         Accounts.setPassword(uid, password);
+         const usr = Meteor.users.findOne(id);
+         const biz = businessProfiles.findOne({uid: id});
 
-       if(biz){
-         Email.send({
-           from: "app@market.tryhabitat.com",
-           to: "info@tryhabitat.com",
-           subject: `${biz.company_name} password reset`,
-           text: `${biz.company_name} new login info:
-           Username: ${usr.profile.email}
-           Password: ${newPassword}`,
-           html: "",
-           headers: "",
-         });
+         if(biz){
+           Email.send({
+             from: "app@market.tryhabitat.com",
+             to: "info@tryhabitat.com",
+             subject: `${biz.company_name} password reset`,
+             text: `${biz.company_name} new login info:
+             Username: ${usr.profile.email}
+             Password: ${newPassword}`,
+             html: "",
+             headers: "",
+           });
+         }
        }
      }
    }
@@ -142,6 +134,33 @@ Meteor.methods({
     return businessProfiles.update({_id: id}, {$set: newState});
   },
 
+  vendorsNear() {
+    if (Meteor.isServer) {
+      const co = Meteor.user().profile.geometry.coordinates;
+      const rad = Settings.findOne({'name': 'userRadius'}) || {delivery: 1.3, pickup: 2};
+      if (!rad.name) {console.warn('NO USER RADIUS SETTING FOUND, REVERTING TO HARD CODED NUMBERS');}
+      const ids = businessProfiles.find({
+        'geometry.coordinates': {
+          $geoWithin: { $centerSphere: [co, rad.delivery/3963.2] }
+          }
+      }, {fields: {_id: 1}}).fetch();
+      return _.pluck(ids, '_id');
+    }
+  },
+
+  vendorsFar() {
+    if (Meteor.isServer) {
+      const co = Meteor.user().profile.geometry.coordinates;
+      const rad = Settings.findOne({'name': 'userRadius'}) || {delivery: 1.3, pickup: 2};
+      if (!rad.name) {console.warn('NO USER RADIUS SETTING FOUND, REVERTING TO HARD CODED NUMBERS');}
+      const ids = businessProfiles.find({
+        'geometry.coordinates': {
+          $geoWithin: { $centerSphere: [co, rad.pickup/3963.2] }
+          }
+      }, {fields: {_id: 1}}).fetch();
+      return _.pluck(ids, '_id');
+    }
+  },
   updateWeeklyHours (biz, myDay, field, val) {
   if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
   var weekArray = businessProfiles.findOne(biz).weeklyHours;
