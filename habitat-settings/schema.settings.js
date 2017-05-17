@@ -90,7 +90,13 @@ Settings.schema = [
     "_id" : "56b382a1a826caa93dd9765g",
     "name" : "newAppIsAvailable",
     "is" : false
+  }, {
+    "_id" : "67b382a1a566cab93dd987f",
+    "name" : "userRadius",
+    "delivery" : 1.3,
+    "pickup" : 2
   }
+
 ];
 
 Meteor.startup(function(){
