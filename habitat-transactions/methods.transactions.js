@@ -937,24 +937,24 @@ Meteor.methods({
     }
   },
   sendReceiptText(txObj){
-  var res;
-  getBizNumberArray(txObj.sellerId).forEach((n) => {
-    twilio.messages.create({
-      to: n, // Any number Twilio can deliver to
-      from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
-      body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
-    }, (err, responseData) => {
-        res = responseData;
-        if (!err) {
-          console.log(responseData.body);
-        } else {
-          console.log("twilio error" + err.message);
+    var res;
+    getBizNumberArray(txObj.sellerId).forEach((n) => {
+      twilio.messages.create({
+        to: n, // Any number Twilio can deliver to
+        from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+        body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
+      }, (err, responseData) => {
+          res = responseData;
+          if (!err) {
+            console.log(responseData.body);
+          } else {
+            console.log("twilio error" + err.message);
+          }
         }
-      }
-    );
-  });
-  return res;
-},
+      );
+    });
+    return res;
+  },
 });
 
 getRatingSum = function(collection, key){
