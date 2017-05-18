@@ -93,7 +93,7 @@ Settings.schema = [
   }, {
     "_id" : "67b382a1a566cab93dd987f",
     "name" : "userRadius",
-    "delivery" : 1.3,
+    "delivery" : 1,
     "pickup" : 2
   }
 
