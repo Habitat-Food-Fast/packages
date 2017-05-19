@@ -16,7 +16,6 @@ Package.onUse(function (api) {
   api.use('momentjs:moment');
   api.use('mdg:validated-method');
   api.use('lepozepo:accounting');
-  api.use('rocketchat:streamer');
   api.use('habitat-calc');
   api.addFiles('collection.transactions.js', ['client', 'server']);
   api.addFiles('methods.transactions.js', ['client', 'server']);
