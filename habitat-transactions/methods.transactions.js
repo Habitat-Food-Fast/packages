@@ -258,8 +258,7 @@ confirmDropoff: new ValidatedMethod({
       dropoffVariationMin: calc._roundToTwo(
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
-      settledByAdmin: isAdmin,
-      payRef: {}
+      settledByAdmin: isAdmin
     };
     if(tip) { update.payRef.tip = tip; }
     transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
