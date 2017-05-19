@@ -960,6 +960,33 @@ Meteor.methods({
     });
     return res;
   },
+
+  declineTransaction(tx, from, missed){
+    if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
+    if (!tx.DaaS) {
+      Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
+        console.log(JSON.stringify(err, null, 2));
+        console.log(JSON.stringify(res, null, 2));
+          });
+      Meteor.call('orderDeclinedBuyerText', tx.buyerId, tx.sellerId, (err, res) => {
+        console.log('inside of the send buyer text');
+        console.log(JSON.stringify(err, null, 2));
+        console.log(JSON.stringify(res, null, 2));
+        });
+      return Meteor.call('voidTransaction', tx.braintreeId, (err) => {
+        if(err && tx.braintreeId) { throw new Meteor.Error(err.message); } else {
+          console.log('transaction voided');
+          Meteor.call('nullifyTransaction', tx._id, (err, res) => {
+            if(err) { throw new Meteor.Error(err.message); }
+          });
+        }
+      });
+    } else {
+      Meteor.call('nullifyTransaction', tx._id, (err, res) => {
+        if(err) { throw new Meteor.Error(err.message); }
+      });
+    }
+  }
 });
 
 getRatingSum = function(collection, key){
