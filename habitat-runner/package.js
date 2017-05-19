@@ -14,6 +14,7 @@ Package.onUse(function (api) {
   api.use('momentjs:moment');
   api.use('mdg:validated-method');
   api.use('iron:router');
+  api.use('rocketchat:streamer');
   api.use('habitat-calc');
   api.addFiles('runner.js', ['client', 'server']);
   api.export('runner');
