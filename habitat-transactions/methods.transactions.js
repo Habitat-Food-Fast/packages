@@ -283,8 +283,6 @@ sendReceiptImage: new ValidatedMethod({
       const tx = transactions.findOne(txId);
       runner.sendReceipt(req=false, tx, tx.orderNumber, image, tx.runnerId, tip, textResponse=false);
     }
-
-
   }
 }),
 
@@ -841,9 +839,7 @@ Meteor.methods({
           from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
           body: msg // body of the SMS message
         }, (err, responseData) => {
-            if (!err) {
-              // console.log(responseData.body);
-            }
+            if (!err) { }
           }
         );
       }
@@ -932,7 +928,7 @@ Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
     if(Meteor.isServer && Meteor.user() && Meteor.user().roles.includes('admin')){
       try {
-        const url = `${Meteor.absoluteUrl()}mastertransactions/${weekId}/${weekNum}/${token}`
+        const url = `${Meteor.absoluteUrl()}mastertransactions/${weekId}/${weekNum}/${token}`;
         console.log(url);
         return HTTP.get(url);
       } catch (err) {
