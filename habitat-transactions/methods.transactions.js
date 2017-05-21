@@ -260,7 +260,12 @@ confirmDropoff: new ValidatedMethod({
       ),
       settledByAdmin: isAdmin
     };
-    if(tip) { update.payRef.tip = tip; }
+    if(tip) {
+      update.payRef.tip = tip;
+    } else if(tx.DaaS && tx.DaaSType === 'cash'){
+      update.payRef.tip = 0;
+      update.cashTip = true;
+    }
     transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
