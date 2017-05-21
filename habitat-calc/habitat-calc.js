@@ -101,7 +101,6 @@ calc = {
   getPayRef(txId){
     check(txId, String);
     const tx = transactions.findOne(txId);
-    if(!tx || !tx.order) { return; } else {
       const totalPrice = this.orderTotal(tx.order);
       switch (tx.method) {
         case 'Pickup':
@@ -136,7 +135,7 @@ calc = {
             mealInfo: !pickupMealAmount ? null : pickupMealAmount,
           };
         }
-    }
+
   },
 
   calcMealAmount(total, tx) {
