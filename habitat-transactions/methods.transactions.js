@@ -258,15 +258,17 @@ confirmDropoff: new ValidatedMethod({
       dropoffVariationMin: calc._roundToTwo(
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
-      settledByAdmin: isAdmin
+      settledByAdmin: isAdmin,
+      cashTip: tx.DaaS && tx.DaaSType === 'cash'
+
     };
-    if(tip) {
-      update.payRef.tip = tip;
-    } else if(tx.DaaS && tx.DaaSType === 'cash'){
-      update.payRef.tip = 0;
-      update.cashTip = true;
-    }
+
     transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
+      if(!tx.payRef.tip){
+        transactions.update(txId, { $set: {
+          'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
+        }})
+      }
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
       });
