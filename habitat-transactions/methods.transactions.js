@@ -981,7 +981,25 @@ Meteor.methods({
         if(err) { throw new Meteor.Error(err.message); }
       });
     }
-  }
+  },
+  nullifyTransaction(id){
+    //  RANK 2 TODO - check the args
+    var myTx = transactions.findOne(id);
+    const mInfo = myTx.payRef.mealInfo;
+    if (mInfo && mInfo.used > 0) {
+      Meteor.users.update(myTx.buyerId, {$inc: {'profile.mealCount': mInfo.used}});
+    }
+    return transactions.update(id,
+      {
+        $unset: {
+          latestVendorCall: '',
+        },
+        $set: {
+          status: 'cancelled'
+        }
+      }
+    );
+  },
 });
 
 getRatingSum = function(collection, key){
