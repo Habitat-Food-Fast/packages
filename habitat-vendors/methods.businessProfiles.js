@@ -89,14 +89,12 @@ businessProfiles.methods = {
      uid: { type: String },
      pass: { type: String, min: 6 },
    }).validator(),
-   run({uid, password}) {
+   run({uid, pass}) {
      if (Meteor.isServer) {
        if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
-         console.log(password);
-         Accounts.setPassword(uid, password);
-         const usr = Meteor.users.findOne(id);
-         const biz = businessProfiles.findOne({uid: id});
-
+         Accounts.setPassword(uid, pass);
+         const usr = Meteor.users.findOne(uid);
+         const biz = businessProfiles.findOne({uid: uid});
          if(biz){
            Email.send({
              from: "app@market.tryhabitat.com",
@@ -104,7 +102,7 @@ businessProfiles.methods = {
              subject: `${biz.company_name} password reset`,
              text: `${biz.company_name} new login info:
              Username: ${usr.profile.email}
-             Password: ${newPassword}`,
+             Password: ${pass}`,
              html: "",
              headers: "",
            });

@@ -317,11 +317,7 @@ sendReceiptImage: new ValidatedMethod({
 
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
       const rnr = Meteor.users.findOne(runnerId);
-      const runnerObj = {
-        phone: rnr.profile.phone,
-        pic: rnr.profile.profile_pic,
-        name: rnr.profile.fn
-      };
+      const runnerObj = transactions.grabRunnerObj(runnerId);
       transactions.update(tx._id, { $set: {
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
@@ -347,6 +343,7 @@ sendReceiptImage: new ValidatedMethod({
         transactions.update(txId, {$set: {
           runnerId: runId,
           reassignCount: tx.reassignCount && tx.reassignCount.length ? tx.reassignCount.length : 1,
+          runnerObj: transactions.grabRunnerObj(runId)
         }}, (err) => {
           if(err) { throwError(err.message); } else {
             if(!this.isSimulation) {
