@@ -26,6 +26,10 @@ Meteor.users.schema = new SimpleSchema({
     type: Date,
     optional: true,
   },
+  'location.address': {
+    type: String,
+    optional: true,
+  },
   'profile.gender': {
     type: String,
     optional: true,
