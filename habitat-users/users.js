@@ -22,6 +22,10 @@ Meteor.users.schema = new SimpleSchema({
     optional: true,
     decimal: true,
   },
+  'location.lastUpdated': {
+    type: Date,
+    optional: true,
+  },
   'profile.gender': {
     type: String,
     optional: true,
@@ -210,19 +214,10 @@ Meteor.users.getOpenTx = (buyerId) => {
   if(Meteor.isClient){
     DDPenv().subscribe('openTx', buyerId);
   }
-  const hab = Meteor.user() ? Meteor.users.findOne(buyerId).profile.habitat : null;
-  if (hab) {
-    return transactions.findOne({
-      buyerId: buyerId,
-      status: 'created',
-      habitat: hab
-    }, {sort: {createdAt: -1}});
-  } else {
-    return transactions.findOne({
-      buyerId: buyerId,
-      status: 'created'
-    }, {sort: {createdAt: -1}});
-  }
+  return transactions.findOne({
+    buyerId: buyerId,
+    status: 'created'
+  }, {sort: {createdAt: -1}});
 };
 
 Meteor.users.getInProgressTxs = (buyerId) => {

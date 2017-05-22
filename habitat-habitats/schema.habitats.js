@@ -220,6 +220,86 @@ Habitats.defaults = [
     "zones": zones(),
   },
   {
+    "_id": "FAIRN6FhxdbyoXodY",
+    "staffJoyId": 6,
+    "staffJoyRunnerRole": 13,
+    "staffJoyDispatchRole": 14,
+    "name" : "Fairmount",
+    "icon" : "owl",
+    "orderType" : "either",
+    "order" : 0,
+    "featured" : true,
+    "mealsEnabled" : true,
+    "open" : true,
+    "surge" : false,
+    "bounds" : {
+        "type" : "geojson",
+        "data" : {
+            "type" : "Feature",
+            "properties" : {
+                "name" : "Fairmount"
+            },
+            "geometry" : {
+                "type" : "Polygon",
+                "coordinates" :  [
+          [
+            [
+              -75.15978813171387,
+              39.971003014917976
+            ],
+            [
+              -75.16785621643066,
+              39.97231856296058
+            ],
+            [
+              -75.16948699951172,
+              39.97554154865434
+            ],
+            [
+              -75.17807006835938,
+              39.97462071110789
+            ],
+            [
+              -75.17961502075194,
+              39.974489161874125
+            ],
+            [
+              -75.18141746520996,
+              39.96751669015106
+            ],
+            [
+              -75.18407821655273,
+              39.96481959995776
+            ],
+            [
+              -75.18176078796387,
+              39.96106980997141
+            ],
+            [
+              -75.17798423767088,
+              39.96008298895259
+            ],
+            [
+              -75.1710319519043,
+              39.95935931115414
+            ],
+            [
+              -75.16227722167969,
+              39.958306675229906
+            ],
+            [
+              -75.15978813171387,
+              39.971003014917976
+            ]
+          ]
+        ]
+            }
+        }
+    },
+    "weeklyHours" : Habitats.setHours(),
+    "zones": zones(),
+  },
+  {
     "_id": "TMdKN6FhxdbyoXodY",
     "staffJoyId": 6,
     "staffJoyRunnerRole": 13,

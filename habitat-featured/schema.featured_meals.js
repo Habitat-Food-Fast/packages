@@ -34,6 +34,7 @@ FeaturedMeals.schema = new SimpleSchema({
   },
   description: {
     type: String,
+    optional: true,
   },
   timesRedeemed: {
     type: Number

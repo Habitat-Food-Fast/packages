@@ -118,7 +118,6 @@ class habitatsCollection extends Mongo.Collection {
     };
   }
 }
-
 // Habitats.attachSchema(Habitats.schema); breaks app, method is very secure now though
 
 Habitats = new habitatsCollection('habitats');
@@ -126,3 +125,7 @@ Habitats.before.insert(function(userId, doc) {
   var habitatsCount = Habitats.find().count();
   doc.order = habitatsCount;
 });
+
+if (Meteor.isServer) {
+  Habitats._ensureIndex({ 'bounds.data.geometry': '2dsphere'});  
+}

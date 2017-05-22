@@ -180,14 +180,16 @@ transactions.methods = {
   removeTransaction: new ValidatedMethod({
     name: 'transactions.methods.removeTransaction',
     validate: new SimpleSchema({
-      txIds: { type: [String] }
+      txId: { type: String }
     }).validator(),
-    run({ txIds }) {
-      transactions.update({_id: {$in: txIds}}, {$set: {
-        status: 'discarded',
-        promoId: null,
-      }}, (err, res) => { if(err) { throwError(err.message); } else {
-      }});
+    run({ txId }) {
+      if (transactions.findOne(txId).buyerId === Meteor.userId()) {
+        transactions.update({_id: txId}, {$set: {
+          status: 'discarded',
+          promoId: null,
+        }}, (err, res) => { if(err) { throwError(err.message); } else {
+        }});
+      }
     }
   }),
 
@@ -257,10 +259,16 @@ confirmDropoff: new ValidatedMethod({
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
       settledByAdmin: isAdmin,
-      payRef: {}
+      cashTip: tx.DaaS && tx.DaaSType === 'cash'
+
     };
-    if(tip) { update.payRef.tip = tip; }
+
     transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
+      if(!tx.payRef.tip){
+        transactions.update(txId, { $set: {
+          'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
+        }})
+      }
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
       });
@@ -282,8 +290,6 @@ sendReceiptImage: new ValidatedMethod({
       const tx = transactions.findOne(txId);
       runner.sendReceipt(req=false, tx, tx.orderNumber, image, tx.runnerId, tip, textResponse=false);
     }
-
-
   }
 }),
 
@@ -497,21 +503,14 @@ sendReceiptImage: new ValidatedMethod({
         const newUserId = this.userId ? false : tx.buyerId;
         const usr = Meteor.users.findOne(tx.buyerId);
         if(!newUserId) { check(usr, Object); }
-
         const biz = businessProfiles.findOne(tx.sellerId); check(biz._id, String);
-        if(!_.contains(biz.habitat, habId) || usr && habId !== usr.profile.habitat ){
-          throw new Meteor.Error('503', 'Unauthorized update');
-        } else if(this.userId && !mappr.student.isInsideHabitat(geometry)) {
-          throw new Meteor.Error('503', 'Unauthorized location for current habitat');
-        } else {
           // TODO: delivery and tip reflect in final page?
-          transactions.update(tx._id, {$set:
-            _.extend(_.omit(arguments[0], '_id'), {
-            method: 'Delivery'
-          }) }, (e) => { if (e) { throwError( e.message ); }
-          });
-          return { _id: tx._id };
-        }
+        transactions.update(tx._id, {$set:
+          _.extend(_.omit(arguments[0], '_id'), {
+          method: 'Delivery'
+        }) }, (e) => { if (e) { throwError( e.message ); }
+        });
+        return { _id: tx._id };
       }
     }
   }),
@@ -685,6 +684,9 @@ New on-demand order #${tx.orderNumber} in ${hab.name} for ${tx.company_name}. Re
 };
 
 Meteor.methods({
+  fetchMasterTransactions() {
+    return masterTransactions.find({deliveryX: {$exists: true}}).fetch();
+  },
   acceptOrder(id, method, role) {
       if(Meteor.isServer){
         const tx = transactions.findOne(id);
@@ -880,9 +882,7 @@ Meteor.methods({
           from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
           body: msg // body of the SMS message
         }, (err, responseData) => {
-            if (!err) {
-              // console.log(responseData.body);
-            }
+            if (!err) { }
           }
         );
       }
@@ -958,16 +958,71 @@ Meteor.methods({
     },
 });
 
+getBizNumberArray = (bizId) => {
+  const bp = businessProfiles.findOne(bizId);
+  if(bp.employees){
+    return bp.employees.filter(e => e.text).map(e => e.phone).concat(bp.orderPhone);
+  } else {
+    return [bp.orderPhone];
+  }
+};
+
 Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
     if(Meteor.isServer && Meteor.user() && Meteor.user().roles.includes('admin')){
       try {
-        const url = `${Meteor.absoluteUrl()}mastertransactions/${weekId}/${weekNum}/${token}`
+        const url = `${Meteor.absoluteUrl()}mastertransactions/${weekId}/${weekNum}/${token}`;
         console.log(url);
         return HTTP.get(url);
       } catch (err) {
         console.warn(err.message, err.stack);
       }
+    }
+  },
+  sendReceiptText(txObj){
+    var res;
+    getBizNumberArray(txObj.sellerId).forEach((n) => {
+      twilio.messages.create({
+        to: n, // Any number Twilio can deliver to
+        from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+        body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
+      }, (err, responseData) => {
+          res = responseData;
+          if (!err) {
+            console.log(responseData.body);
+          } else {
+            console.log("twilio error" + err.message);
+          }
+        }
+      );
+    });
+    return res;
+  },
+
+  declineTransaction(tx, from, missed){
+    if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
+    if (!tx.DaaS) {
+      Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
+        console.log(JSON.stringify(err, null, 2));
+        console.log(JSON.stringify(res, null, 2));
+          });
+      Meteor.call('orderDeclinedBuyerText', tx.buyerId, tx.sellerId, (err, res) => {
+        console.log('inside of the send buyer text');
+        console.log(JSON.stringify(err, null, 2));
+        console.log(JSON.stringify(res, null, 2));
+        });
+      return Meteor.call('voidTransaction', tx.braintreeId, (err) => {
+        if(err && tx.braintreeId) { throw new Meteor.Error(err.message); } else {
+          console.log('transaction voided');
+          Meteor.call('nullifyTransaction', tx._id, (err, res) => {
+            if(err) { throw new Meteor.Error(err.message); }
+          });
+        }
+      });
+    } else {
+      Meteor.call('nullifyTransaction', tx._id, (err, res) => {
+        if(err) { throw new Meteor.Error(err.message); }
+      });
     }
   }
 });

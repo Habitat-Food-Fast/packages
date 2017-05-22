@@ -13,6 +13,7 @@ Package.onUse(function (api) {
   api.use('aldeed:collection2');
   api.use('aldeed:simple-schema');
   api.use('momentjs:moment');
+  api.use('didericis:permissions-mixin', ['client', 'server']);
   api.addFiles('collection.instances.js', ['client', 'server']);
   api.addFiles('methods.instances.js', ['client', 'server']);
   api.addFiles('schema.instances.js', ['client', 'server']);

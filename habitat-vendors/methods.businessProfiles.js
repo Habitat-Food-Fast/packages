@@ -137,15 +137,30 @@ Meteor.methods({
   vendorsNear() {
     if (Meteor.isServer) {
       const co = Meteor.user().profile.geometry.coordinates;
+      const rad = Settings.findOne({'name': 'userRadius'}) || {delivery: 1.3, pickup: 2};
+      if (!rad.name) {console.warn('NO USER RADIUS SETTING FOUND, REVERTING TO HARD CODED NUMBERS');}
       const ids = businessProfiles.find({
         'geometry.coordinates': {
-          $geoWithin: { $centerSphere: [co, 1.5/3963.2] }
+          $geoWithin: { $centerSphere: [co, rad.delivery/3963.2] }
           }
       }, {fields: {_id: 1}}).fetch();
-      return _.pluck(ids, '_id');  
+      return _.pluck(ids, '_id');
     }
   },
 
+  vendorsFar() {
+    if (Meteor.isServer) {
+      const co = Meteor.user().profile.geometry.coordinates;
+      const rad = Settings.findOne({'name': 'userRadius'}) || {delivery: 1.3, pickup: 2};
+      if (!rad.name) {console.warn('NO USER RADIUS SETTING FOUND, REVERTING TO HARD CODED NUMBERS');}
+      const ids = businessProfiles.find({
+        'geometry.coordinates': {
+          $geoWithin: { $centerSphere: [co, rad.pickup/3963.2] }
+          }
+      }, {fields: {_id: 1}}).fetch();
+      return _.pluck(ids, '_id');
+    }
+  },
   updateWeeklyHours (biz, myDay, field, val) {
   if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
   var weekArray = businessProfiles.findOne(biz).weeklyHours;
