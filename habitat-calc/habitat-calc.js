@@ -135,7 +135,6 @@ calc = {
             mealInfo: !pickupMealAmount ? null : pickupMealAmount,
           };
         }
-
   },
 
   calcMealAmount(total, tx) {

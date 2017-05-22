@@ -258,15 +258,17 @@ confirmDropoff: new ValidatedMethod({
       dropoffVariationMin: calc._roundToTwo(
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
-      settledByAdmin: isAdmin
+      settledByAdmin: isAdmin,
+      cashTip: tx.DaaS && tx.DaaSType === 'cash'
+
     };
-    if(tip) {
-      update.payRef.tip = tip;
-    } else if(tx.DaaS && tx.DaaSType === 'cash'){
-      update.payRef.tip = 0;
-      update.cashTip = true;
-    }
+
     transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
+      if(!tx.payRef.tip){
+        transactions.update(txId, { $set: {
+          'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
+        }})
+      }
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
       });
@@ -791,6 +793,42 @@ Meteor.methods({
         }
       }
     },
+    getRouteInfo(origin,destination,wayPoints,apiKey){
+      if(Meteor.isServer){
+        url = `https://maps.googleapis.com/maps/api/directions/json?${origin}&${destination}${wayPoints}&key=${apiKey}`;
+        console.log(url);
+        try {
+          res = HTTP.get(url);
+          console.log(res.data)
+          if(!res.data.routes.length){
+              console.warn(`no routes found for ${txId}`);
+          } else {
+            dirs = res.data.routes[0];
+            if(!dirs.legs.length){
+              console.warn(`no legs found for ${txId}`);
+            } else {
+              journey = dirs.legs[0];
+              query = {routeInfo: {
+                car: {
+                  distance: {
+                    text: journey.distance.text,
+                    meters: journey.distance.value,
+                  },
+                  duration: {
+                    text: journey.duration.text,
+                    seconds: journey.duration.value,
+                  }
+                }
+              }};
+              return query;
+            }
+          }
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+    },
+
     remoteVendorContact(txId, apiKey) {
       console.log('TEST');
       console.log(this.userId);
@@ -906,6 +944,37 @@ Meteor.methods({
         }
       });
     },
+
+    orderDeclinedVendorText(txId, from, missed) {
+      const tx = transactions.findOne(txId);
+      var res;
+      transactions.update(txId, {$set: {
+        cancelledByVendor:
+          (from === 'vendor' && !missed) ||
+          (from === 'email') ||
+          (from === 'call'),
+        missedByVendor: missed,
+        cancelledByAdmin: (from === 'god'),
+        status: 'created',
+        cancelledTime: Date(),
+      }}, (err, res) => {
+        if(err) { JSON.stringify(err, null, 2); } else {
+          const tx = transactions.findOne(txId);
+          if(missed) {
+            Meteor.call('sendStatusUpdateText', null, 'to admin', `Order # ${tx.orderNumber} cancelled. ${tx.company_name} missed texts and calls`, true);
+          }
+          const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
+          var result = sendMessageSync({
+            to: businessProfiles.findOne(tx.sellerId).orderPhone, // Any number Twilio can deliver to
+            from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+            body: `Order # ${tx.orderNumber} cancelled.`
+          });
+
+          res = result;
+        }
+      });
+      return res;
+    },
     sendUserReceiptEmail(transId) {
       var transToSend = transactions.findOne(transId);
       var buyer = Meteor.users.findOne(transToSend.buyerId);
@@ -986,7 +1055,27 @@ Meteor.methods({
         if(err) { throw new Meteor.Error(err.message); }
       });
     }
-  }
+  },
+  nullifyTransaction(id){
+    //  RANK 2 TODO - check the args
+    var myTx = transactions.findOne(id);
+    const mInfo = myTx.payRef.mealInfo;
+    if (mInfo && mInfo.used > 0) {
+      Meteor.users.update(myTx.buyerId, {$inc: {'profile.mealCount': mInfo.used}});
+    }
+    return transactions.update(id,
+      {
+        $unset: {
+          latestVendorCall: '',
+        },
+        $set: {
+          status: 'created',
+          braintreeId: null,
+          vendorCallCount: 0
+        }
+      }
+    );
+  },
 });
 
 getRatingSum = function(collection, key){
