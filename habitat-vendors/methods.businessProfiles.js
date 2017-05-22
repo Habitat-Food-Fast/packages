@@ -39,7 +39,6 @@ businessProfiles.methods = {
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
-        console.log('just before it');
         return businessProfiles.insert(arguments[0]);
       }
   }
@@ -122,16 +121,20 @@ Meteor.methods({
     }
   },
   updateProfile(id, newState){
-    console.log(id);
-    console.log(newState);
-    if(newState.habitat){
-      newState.habitat = newState.habitat.map((habitatIdentifier) => {
-        habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
-        return habitat._id;
+    if(Meteor.isServer){
+      console.log(id);
+      console.log(newState);
+      if(newState.habitat){
+        newState.habitat = newState.habitat.map((habitatIdentifier) => {
+          habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
+          return habitat._id;
+        });
+      }
+
+      return businessProfiles.update(id, {$set: newState}, (err) => {
+        if(err) { console.warn(err); }
       });
     }
-
-    return businessProfiles.update({_id: id}, {$set: newState});
   },
 
   vendorsNear() {

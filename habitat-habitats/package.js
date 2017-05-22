@@ -20,6 +20,7 @@ Package.onUse(function (api) {
   api.addFiles('methods.habitats.js', ['client', 'server']);
   api.addFiles('schema.habitats.js', ['client', 'server']);
   api.export('Habitats');
+  api.export('insertFairmount');
   api.export('zones');
 
 });
