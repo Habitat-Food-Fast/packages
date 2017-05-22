@@ -944,6 +944,37 @@ Meteor.methods({
         }
       });
     },
+
+    orderDeclinedVendorText(txId, from, missed) {
+      const tx = transactions.findOne(txId);
+      var res;
+      transactions.update(txId, {$set: {
+        cancelledByVendor:
+          (from === 'vendor' && !missed) ||
+          (from === 'email') ||
+          (from === 'call'),
+        missedByVendor: missed,
+        cancelledByAdmin: (from === 'god'),
+        status: 'created',
+        cancelledTime: Date(),
+      }}, (err, res) => {
+        if(err) { JSON.stringify(err, null, 2); } else {
+          const tx = transactions.findOne(txId);
+          if(missed) {
+            Meteor.call('sendStatusUpdateText', null, 'to admin', `Order # ${tx.orderNumber} cancelled. ${tx.company_name} missed texts and calls`, true);
+          }
+          const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
+          var result = sendMessageSync({
+            to: businessProfiles.findOne(tx.sellerId).orderPhone, // Any number Twilio can deliver to
+            from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+            body: `Order # ${tx.orderNumber} cancelled.`
+          });
+
+          res = result;
+        }
+      });
+      return res;
+    },
     sendUserReceiptEmail(transId) {
       var transToSend = transactions.findOne(transId);
       var buyer = Meteor.users.findOne(transToSend.buyerId);
@@ -1038,7 +1069,9 @@ Meteor.methods({
           latestVendorCall: '',
         },
         $set: {
-          status: 'cancelled'
+          status: 'created',
+          braintreeId: null,
+          vendorCallCount: 0
         }
       }
     );
