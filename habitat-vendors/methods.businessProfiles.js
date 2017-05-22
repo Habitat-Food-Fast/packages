@@ -39,7 +39,6 @@ businessProfiles.methods = {
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
-        console.log('just before it');
         return businessProfiles.insert(arguments[0]);
       }
   }
@@ -89,14 +88,12 @@ businessProfiles.methods = {
      uid: { type: String },
      pass: { type: String, min: 6 },
    }).validator(),
-   run({uid, password}) {
+   run({uid, pass}) {
      if (Meteor.isServer) {
        if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
-         console.log(password);
-         Accounts.setPassword(uid, password);
-         const usr = Meteor.users.findOne(id);
-         const biz = businessProfiles.findOne({uid: id});
-
+         Accounts.setPassword(uid, pass);
+         const usr = Meteor.users.findOne(uid);
+         const biz = businessProfiles.findOne({uid: uid});
          if(biz){
            Email.send({
              from: "app@market.tryhabitat.com",
@@ -104,7 +101,7 @@ businessProfiles.methods = {
              subject: `${biz.company_name} password reset`,
              text: `${biz.company_name} new login info:
              Username: ${usr.profile.email}
-             Password: ${newPassword}`,
+             Password: ${pass}`,
              html: "",
              headers: "",
            });
@@ -122,16 +119,20 @@ Meteor.methods({
     }
   },
   updateProfile(id, newState){
-    console.log(id);
-    console.log(newState);
-    if(newState.habitat){
-      newState.habitat = newState.habitat.map((habitatIdentifier) => {
-        habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
-        return habitat._id;
+    if(Meteor.isServer){
+      console.log(id);
+      console.log(newState);
+      if(newState.habitat){
+        newState.habitat = newState.habitat.map((habitatIdentifier) => {
+          habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
+          return habitat._id;
+        });
+      }
+
+      return businessProfiles.update(id, {$set: newState}, (err) => {
+        if(err) { console.warn(err); }
       });
     }
-
-    return businessProfiles.update({_id: id}, {$set: newState});
   },
 
   vendorsNear() {

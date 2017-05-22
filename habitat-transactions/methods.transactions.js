@@ -317,11 +317,7 @@ sendReceiptImage: new ValidatedMethod({
 
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
       const rnr = Meteor.users.findOne(runnerId);
-      const runnerObj = {
-        phone: rnr.profile.phone,
-        pic: rnr.profile.profile_pic,
-        name: rnr.profile.fn
-      };
+      const runnerObj = transactions.grabRunnerObj(runnerId);
       transactions.update(tx._id, { $set: {
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
@@ -347,6 +343,7 @@ sendReceiptImage: new ValidatedMethod({
         transactions.update(txId, {$set: {
           runnerId: runId,
           reassignCount: tx.reassignCount && tx.reassignCount.length ? tx.reassignCount.length : 1,
+          runnerObj: transactions.grabRunnerObj(runId)
         }}, (err) => {
           if(err) { throwError(err.message); } else {
             if(!this.isSimulation) {
@@ -947,6 +944,37 @@ Meteor.methods({
         }
       });
     },
+
+    orderDeclinedVendorText(txId, from, missed) {
+      const tx = transactions.findOne(txId);
+      var res;
+      transactions.update(txId, {$set: {
+        cancelledByVendor:
+          (from === 'vendor' && !missed) ||
+          (from === 'email') ||
+          (from === 'call'),
+        missedByVendor: missed,
+        cancelledByAdmin: (from === 'god'),
+        status: 'created',
+        cancelledTime: Date(),
+      }}, (err, res) => {
+        if(err) { JSON.stringify(err, null, 2); } else {
+          const tx = transactions.findOne(txId);
+          if(missed) {
+            Meteor.call('sendStatusUpdateText', null, 'to admin', `Order # ${tx.orderNumber} cancelled. ${tx.company_name} missed texts and calls`, true);
+          }
+          const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
+          var result = sendMessageSync({
+            to: businessProfiles.findOne(tx.sellerId).orderPhone, // Any number Twilio can deliver to
+            from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+            body: `Order # ${tx.orderNumber} cancelled.`
+          });
+
+          res = result;
+        }
+      });
+      return res;
+    },
     sendUserReceiptEmail(transId) {
       var transToSend = transactions.findOne(transId);
       var buyer = Meteor.users.findOne(transToSend.buyerId);
@@ -1027,7 +1055,27 @@ Meteor.methods({
         if(err) { throw new Meteor.Error(err.message); }
       });
     }
-  }
+  },
+  nullifyTransaction(id){
+    //  RANK 2 TODO - check the args
+    var myTx = transactions.findOne(id);
+    const mInfo = myTx.payRef.mealInfo;
+    if (mInfo && mInfo.used > 0) {
+      Meteor.users.update(myTx.buyerId, {$inc: {'profile.mealCount': mInfo.used}});
+    }
+    return transactions.update(id,
+      {
+        $unset: {
+          latestVendorCall: '',
+        },
+        $set: {
+          status: 'created',
+          braintreeId: null,
+          vendorCallCount: 0
+        }
+      }
+    );
+  },
 });
 
 getRatingSum = function(collection, key){

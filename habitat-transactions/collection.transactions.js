@@ -296,8 +296,16 @@ class transactionsCollection extends Mongo.Collection {
   completedAndArchived(){ return [ 'completed', 'archived' ]; }
   active(){ return [ 'pending_vendor', 'pending_runner', 'in_progress' ]; }
   userVisible() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress', 'completed']; }
-  closedAndDiscarded() { return ['completed', 'archived', 'discarded']; }
+  closedAndDiscarded() { return ['completed', 'archived', 'discarded', 'cancelled']; }
   pin() { return Math.floor(1000 + Math.random() * 9000); }
+  grabRunnerObj(runnerId) {
+    const rnr = Meteor.users.findOne(runnerId);
+    return {
+      phone: rnr.profile.phone,
+      pic: rnr.profile.profile_pic,
+      name: rnr.profile.fn
+    };
+  }
 }
 
 transactions = new transactionsCollection("transactions");
