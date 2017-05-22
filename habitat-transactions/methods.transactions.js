@@ -791,6 +791,42 @@ Meteor.methods({
         }
       }
     },
+    getRouteInfo(origin,destination,wayPoints,apiKey){
+      if(Meteor.isServer){
+        url = `https://maps.googleapis.com/maps/api/directions/json?${origin}&${destination}${wayPoints}&key=${apiKey}`;
+        console.log(url);
+        try {
+          res = HTTP.get(url);
+          console.log(res.data)
+          if(!res.data.routes.length){
+              console.warn(`no routes found for ${txId}`);
+          } else {
+            dirs = res.data.routes[0];
+            if(!dirs.legs.length){
+              console.warn(`no legs found for ${txId}`);
+            } else {
+              journey = dirs.legs[0];
+              query = {routeInfo: {
+                car: {
+                  distance: {
+                    text: journey.distance.text,
+                    meters: journey.distance.value,
+                  },
+                  duration: {
+                    text: journey.duration.text,
+                    seconds: journey.duration.value,
+                  }
+                }
+              }};
+              return query;
+            }
+          }
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+    },
+
     remoteVendorContact(txId, apiKey) {
       console.log('TEST');
       console.log(this.userId);
