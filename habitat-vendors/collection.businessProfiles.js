@@ -32,15 +32,12 @@ class businessProfilesCollection extends Mongo.Collection {
               businesses: bizArr
             };
             Accounts.createUser(obj);
-            console.log(newid);
             Meteor.users.update(newid, {$set: {'profile.businesses': bizArr}}, (err, res) => {
               if (err) {
-                console.warn(err);
+                throwError(err);
               }
             });
-            businessProfiles.update(newBizId, {$set: {
-              uid: newid
-            }}, (err, res) => {
+            businessProfiles.update(newBizId, {$set: { uid: newid }}, (err, res) => {
               if(err) { throwError(err.message); }
               Roles.addUsersToRoles(newid, 'vendor');
               mailman.onboard.biz(bp, pw);
@@ -208,7 +205,7 @@ businessProfiles.initEasySearch( ['company_name', 'company_type'], {
 
 businessProfiles.escape = company_name => company_name.replace(/,/g , " ").replace('&', ' and ');
 if (Meteor.isServer) {
-  businessProfiles._ensureIndex({ 'geometry.coordinates': '2d'});  
+  businessProfiles._ensureIndex({ 'geometry.coordinates': '2d'});
 }
 generateBizPass = function (company_name) {
   return  company_name
