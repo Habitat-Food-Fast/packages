@@ -75,6 +75,7 @@ businessProfiles.methods = {
     }).validator(),
     run({uid}) {
       if (Meteor.user() && Roles.userIsInRole(Meteor.userId(), ['admin', 'vendor'])) {
+        arguments[0].company_name = businessProfiles.findOne(uid).company_name;
         return saleItems.insert(arguments[0]);
       } else {
         throwError('Unauthorized');
