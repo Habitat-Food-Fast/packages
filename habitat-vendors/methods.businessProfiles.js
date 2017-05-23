@@ -212,5 +212,23 @@ Meteor.methods({
         throw new Meteor.Error(err.reason);
       }
     });
-  }
+  },
+
+  updateRates(bizId, method, day, percentNum, flatRate) {
+    console.log(percentNum);
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
+        [`weeklyHours.$.vendorRates.${method}.flat`]: parseFloat(flatRate),
+        [`weeklyHours.$.vendorRates.${method}.percent`]: parseFloat(0.01 * percentNum)
+      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
+    });
+  },
+
+  toggleVendorFreeDelivery(bizId, day, makeFree){
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
+      'weeklyHours.$.vendorPremium': makeFree,
+      'weeklyHours.$.deliveryFee': makeFree ? 0 : 2.99
+    }}, (err) => { if(err) { throw new Meteor.Error(err.message); } });
+  },
 });
