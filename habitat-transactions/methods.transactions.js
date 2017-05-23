@@ -160,7 +160,7 @@ transactions.methods = {
         } else {
           if(this.isSimulation){
             return sweetAlert(sweetAlert.copy.removeExisting(currentOpenTx._id, args.sellerId), (isConfirm) => {
-              return isConfirm ? transactions.methods.removeTransaction.call({ txIds: [currentOpenTx._id] }, (err) => {
+              return isConfirm ? transactions.methods.removeTransaction.call({ txId: currentOpenTx._id }, (err) => {
                 if (err) { throw new Meteor.Error(err.message); } else {
                   if(this.isSimulation){
                     modOverlay.animate.close();
