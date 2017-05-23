@@ -426,10 +426,13 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
+        console.log(params);
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
-            return JSON.parse(result.content);
+            res = JSON.parse(result.content);
+            console.log(res)
+            return res;
           }
         } catch (e) {
           JSON.stringify(e, null, 2);
