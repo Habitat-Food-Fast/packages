@@ -26,6 +26,10 @@ Meteor.users.schema = new SimpleSchema({
     type: Date,
     optional: true,
   },
+  'location.address': {
+    type: String,
+    optional: true,
+  },
   'profile.gender': {
     type: String,
     optional: true,
@@ -44,11 +48,13 @@ Meteor.users.schema = new SimpleSchema({
     type: String,
     min: 10,
     max: 10,
-    trim: true
+    trim: true,
+    optional: true,
   },
   'profile.fn': {
     type: String,
-    trim: true
+    trim: true,
+    optional: true,
   },
   'profile.ln': {
     type: String,

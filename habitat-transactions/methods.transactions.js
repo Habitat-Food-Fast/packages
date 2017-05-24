@@ -160,7 +160,7 @@ transactions.methods = {
         } else {
           if(this.isSimulation){
             return sweetAlert(sweetAlert.copy.removeExisting(currentOpenTx._id, args.sellerId), (isConfirm) => {
-              return isConfirm ? transactions.methods.removeTransaction.call({ txIds: [currentOpenTx._id] }, (err) => {
+              return isConfirm ? transactions.methods.removeTransaction.call({ txId: currentOpenTx._id }, (err) => {
                 if (err) { throw new Meteor.Error(err.message); } else {
                   if(this.isSimulation){
                     modOverlay.animate.close();
@@ -259,10 +259,16 @@ confirmDropoff: new ValidatedMethod({
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
       settledByAdmin: isAdmin,
-      payRef: {}
+      cashTip: tx.DaaS && tx.DaaSType === 'cash'
+
     };
-    if(tip) { update.payRef.tip = tip; }
+
     transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
+      if(!tx.payRef.tip){
+        transactions.update(txId, { $set: {
+          'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
+        }})
+      }
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
       });
@@ -284,8 +290,6 @@ sendReceiptImage: new ValidatedMethod({
       const tx = transactions.findOne(txId);
       runner.sendReceipt(req=false, tx, tx.orderNumber, image, tx.runnerId, tip, textResponse=false);
     }
-
-
   }
 }),
 
@@ -313,11 +317,7 @@ sendReceiptImage: new ValidatedMethod({
 
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
       const rnr = Meteor.users.findOne(runnerId);
-      const runnerObj = {
-        phone: rnr.profile.phone,
-        pic: rnr.profile.profile_pic,
-        name: rnr.profile.fn
-      };
+      const runnerObj = transactions.grabRunnerObj(runnerId);
       transactions.update(tx._id, { $set: {
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
@@ -343,6 +343,7 @@ sendReceiptImage: new ValidatedMethod({
         transactions.update(txId, {$set: {
           runnerId: runId,
           reassignCount: tx.reassignCount && tx.reassignCount.length ? tx.reassignCount.length : 1,
+          runnerObj: transactions.grabRunnerObj(runId)
         }}, (err) => {
           if(err) { throwError(err.message); } else {
             if(!this.isSimulation) {
@@ -425,10 +426,13 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
+        console.log(params);
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
-            return JSON.parse(result.content);
+            res = JSON.parse(result.content);
+            console.log(res)
+            return res;
           }
         } catch (e) {
           JSON.stringify(e, null, 2);
@@ -682,10 +686,13 @@ New on-demand order #${tx.orderNumber} in ${hab.name} for ${tx.company_name}. Re
 Meteor.methods({
   fetchMasterTransactions() {
     return masterTransactions.find({deliveryX: {$exists: true}}).fetch();
+<<<<<<< HEAD
   },
   updateMasterTransactions(id, update) {
     console.log("in meteor");
     masterTransactions.update(id, update, (err) => {if (err) throwError(err)});
+=======
+>>>>>>> 05c4c302c3c2cba017a43595fb991e5e2435b348
   },
   acceptOrder(id, method, role) {
       if(Meteor.isServer){
@@ -793,6 +800,42 @@ Meteor.methods({
         }
       }
     },
+    getRouteInfo(origin,destination,wayPoints,apiKey){
+      if(Meteor.isServer){
+        url = `https://maps.googleapis.com/maps/api/directions/json?${origin}&${destination}${wayPoints}&key=${apiKey}`;
+        console.log(url);
+        try {
+          res = HTTP.get(url);
+          console.log(res.data)
+          if(!res.data.routes.length){
+              console.warn(`no routes found for ${txId}`);
+          } else {
+            dirs = res.data.routes[0];
+            if(!dirs.legs.length){
+              console.warn(`no legs found for ${txId}`);
+            } else {
+              journey = dirs.legs[0];
+              query = {routeInfo: {
+                car: {
+                  distance: {
+                    text: journey.distance.text,
+                    meters: journey.distance.value,
+                  },
+                  duration: {
+                    text: journey.duration.text,
+                    seconds: journey.duration.value,
+                  }
+                }
+              }};
+              return query;
+            }
+          }
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+    },
+
     remoteVendorContact(txId, apiKey) {
       console.log('TEST');
       console.log(this.userId);
@@ -846,9 +889,7 @@ Meteor.methods({
           from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
           body: msg // body of the SMS message
         }, (err, responseData) => {
-            if (!err) {
-              // console.log(responseData.body);
-            }
+            if (!err) { }
           }
         );
       }
@@ -910,6 +951,37 @@ Meteor.methods({
         }
       });
     },
+
+    orderDeclinedVendorText(txId, from, missed) {
+      const tx = transactions.findOne(txId);
+      var res;
+      transactions.update(txId, {$set: {
+        cancelledByVendor:
+          (from === 'vendor' && !missed) ||
+          (from === 'email') ||
+          (from === 'call'),
+        missedByVendor: missed,
+        cancelledByAdmin: (from === 'god'),
+        status: 'created',
+        cancelledTime: Date(),
+      }}, (err, res) => {
+        if(err) { JSON.stringify(err, null, 2); } else {
+          const tx = transactions.findOne(txId);
+          if(missed) {
+            Meteor.call('sendStatusUpdateText', null, 'to admin', `Order # ${tx.orderNumber} cancelled. ${tx.company_name} missed texts and calls`, true);
+          }
+          const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
+          var result = sendMessageSync({
+            to: businessProfiles.findOne(tx.sellerId).orderPhone, // Any number Twilio can deliver to
+            from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+            body: `Order # ${tx.orderNumber} cancelled.`
+          });
+
+          res = result;
+        }
+      });
+      return res;
+    },
     sendUserReceiptEmail(transId) {
       var transToSend = transactions.findOne(transId);
       var buyer = Meteor.users.findOne(transToSend.buyerId);
@@ -937,7 +1009,7 @@ Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
     if(Meteor.isServer && Meteor.user() && Meteor.user().roles.includes('admin')){
       try {
-        const url = `${Meteor.absoluteUrl()}mastertransactions/${weekId}/${weekNum}/${token}`
+        const url = `${Meteor.absoluteUrl()}mastertransactions/${weekId}/${weekNum}/${token}`;
         console.log(url);
         return HTTP.get(url);
       } catch (err) {
@@ -963,6 +1035,53 @@ Meteor.methods({
       );
     });
     return res;
+  },
+
+  declineTransaction(tx, from, missed){
+    if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
+    if (!tx.DaaS) {
+      Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
+        console.log(JSON.stringify(err, null, 2));
+        console.log(JSON.stringify(res, null, 2));
+          });
+      Meteor.call('orderDeclinedBuyerText', tx.buyerId, tx.sellerId, (err, res) => {
+        console.log('inside of the send buyer text');
+        console.log(JSON.stringify(err, null, 2));
+        console.log(JSON.stringify(res, null, 2));
+        });
+      return Meteor.call('voidTransaction', tx.braintreeId, (err) => {
+        if(err && tx.braintreeId) { throw new Meteor.Error(err.message); } else {
+          console.log('transaction voided');
+          Meteor.call('nullifyTransaction', tx._id, (err, res) => {
+            if(err) { throw new Meteor.Error(err.message); }
+          });
+        }
+      });
+    } else {
+      Meteor.call('nullifyTransaction', tx._id, (err, res) => {
+        if(err) { throw new Meteor.Error(err.message); }
+      });
+    }
+  },
+  nullifyTransaction(id){
+    //  RANK 2 TODO - check the args
+    var myTx = transactions.findOne(id);
+    const mInfo = myTx.payRef.mealInfo;
+    if (mInfo && mInfo.used > 0) {
+      Meteor.users.update(myTx.buyerId, {$inc: {'profile.mealCount': mInfo.used}});
+    }
+    return transactions.update(id,
+      {
+        $unset: {
+          latestVendorCall: '',
+        },
+        $set: {
+          status: 'created',
+          braintreeId: null,
+          vendorCallCount: 0
+        }
+      }
+    );
   },
 });
 

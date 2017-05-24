@@ -10,7 +10,6 @@ if (Meteor.isServer) {
        { owner: this.userId },
      ],
     };
-    debugger;
     // modifiers = {
     //   limit: 100,
     //   // sort: {

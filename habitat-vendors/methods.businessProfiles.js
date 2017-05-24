@@ -39,7 +39,6 @@ businessProfiles.methods = {
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
-        console.log('just before it');
         return businessProfiles.insert(arguments[0]);
       }
   }
@@ -76,6 +75,7 @@ businessProfiles.methods = {
     }).validator(),
     run({uid}) {
       if (Meteor.user() && Roles.userIsInRole(Meteor.userId(), ['admin', 'vendor'])) {
+        arguments[0].company_name = businessProfiles.findOne(uid).company_name;
         return saleItems.insert(arguments[0]);
       } else {
         throwError('Unauthorized');
@@ -89,14 +89,12 @@ businessProfiles.methods = {
      uid: { type: String },
      pass: { type: String, min: 6 },
    }).validator(),
-   run({uid, password}) {
+   run({uid, pass}) {
      if (Meteor.isServer) {
        if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
-         console.log(password);
-         Accounts.setPassword(uid, password);
-         const usr = Meteor.users.findOne(id);
-         const biz = businessProfiles.findOne({uid: id});
-
+         Accounts.setPassword(uid, pass);
+         const usr = Meteor.users.findOne(uid);
+         const biz = businessProfiles.findOne({uid: uid});
          if(biz){
            Email.send({
              from: "app@market.tryhabitat.com",
@@ -104,7 +102,7 @@ businessProfiles.methods = {
              subject: `${biz.company_name} password reset`,
              text: `${biz.company_name} new login info:
              Username: ${usr.profile.email}
-             Password: ${newPassword}`,
+             Password: ${pass}`,
              html: "",
              headers: "",
            });
@@ -122,16 +120,20 @@ Meteor.methods({
     }
   },
   updateProfile(id, newState){
-    console.log(id);
-    console.log(newState);
-    if(newState.habitat){
-      newState.habitat = newState.habitat.map((habitatIdentifier) => {
-        habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
-        return habitat._id;
+    if(Meteor.isServer){
+      console.log(id);
+      console.log(newState);
+      if(newState.habitat){
+        newState.habitat = newState.habitat.map((habitatIdentifier) => {
+          habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
+          return habitat._id;
+        });
+      }
+
+      return businessProfiles.update(id, {$set: newState}, (err) => {
+        if(err) { console.warn(err); }
       });
     }
-
-    return businessProfiles.update({_id: id}, {$set: newState});
   },
 
   vendorsNear() {
@@ -162,28 +164,71 @@ Meteor.methods({
     }
   },
   updateWeeklyHours (biz, myDay, field, val) {
-  if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-  var weekArray = businessProfiles.findOne(biz).weeklyHours;
-  var hourObj = _.findWhere(weekArray, {day: myDay});
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    var weekArray = businessProfiles.findOne(biz).weeklyHours;
+    var hourObj = _.findWhere(weekArray, {day: myDay});
 
-  if (field === 'open') {
-    businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {
-      'weeklyHours.$.open': val}
+    if (field === 'open') {
+      businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {
+        'weeklyHours.$.open': val}
+      });
+    } else {
+      var hour = Number(moment(val, 'h hh, a A').format('H'));
+      var min = Number(moment(val, 'HH:mm').format('m'));
+      var dayBase = myDay * 86400000;
+      var hourBase = hour * 3600000;
+      var minBase = min * 60000;
+      if (field === 'openHr') {
+        var openTime = dayBase + hourBase + minBase;
+        businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {'weeklyHours.$.openTime': openTime, 'weeklyHours.$.openHr': val}});
+      }
+      if (field === 'closeHr') {
+        var closeTime = dayBase + hourBase + minBase;
+        businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {'weeklyHours.$.closeTime': closeTime, 'weeklyHours.$.closeHr': val}});
+      }
+    }
+  },
+  changeBizState(id, type) {
+    if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
+      businessProfiles.update(id, {$set: {open: type}});
+    }
+  },
+  closeBusinessForToday (bizId) {
+    check(bizId, String);
+    if (Meteor.isServer) {
+      var now = Settings.findOne({name: 'weeklyMilliCount'}).count;
+      businessProfiles.update({_id: bizId, 'weeklyHours.day': moment().day()}, { $set: {'weeklyHours.$.quickClose': now}}, (err, res) => {
+        if (err) {
+          throw new Meteor.Error(err.reason);
+        }
+      });
+    }
+  },
+
+  resetTodaysBizHours (bizId) {
+    check(bizId, String);
+    businessProfiles.update({_id: bizId, 'weeklyHours.day': moment().day()}, { $unset: {'weeklyHours.$.quickClose': ''}}, (err, res) => {
+      if (err) {
+        throw new Meteor.Error(err.reason);
+      }
     });
-  } else {
-    var hour = Number(moment(val, 'h hh, a A').format('H'));
-    var min = Number(moment(val, 'HH:mm').format('m'));
-    var dayBase = myDay * 86400000;
-    var hourBase = hour * 3600000;
-    var minBase = min * 60000;
-    if (field === 'openHr') {
-      var openTime = dayBase + hourBase + minBase;
-      businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {'weeklyHours.$.openTime': openTime, 'weeklyHours.$.openHr': val}});
-    }
-    if (field === 'closeHr') {
-      var closeTime = dayBase + hourBase + minBase;
-      businessProfiles.update({_id: biz, 'weeklyHours.day': myDay}, {$set: {'weeklyHours.$.closeTime': closeTime, 'weeklyHours.$.closeHr': val}});
-    }
-  }
-},
+  },
+
+  updateRates(bizId, method, day, percentNum, flatRate) {
+    console.log(percentNum);
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
+        [`weeklyHours.$.vendorRates.${method}.flat`]: parseFloat(flatRate),
+        [`weeklyHours.$.vendorRates.${method}.percent`]: parseFloat(0.01 * percentNum)
+      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
+    });
+  },
+
+  toggleVendorFreeDelivery(bizId, day, makeFree){
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
+      'weeklyHours.$.vendorPremium': makeFree,
+      'weeklyHours.$.deliveryFee': makeFree ? 0 : 2.99
+    }}, (err) => { if(err) { throw new Meteor.Error(err.message); } });
+  },
 });

@@ -517,7 +517,7 @@ runner.payouts = {
       this._progress(token, progress);
       const runnerUser = Meteor.users.findOne({username: worker.email});
 
-      if(!runnerUser) { console.warn(`no user for ${worker.email}`); } else {
+      if(runnerUser){
         const runnerTxs = runner.payouts.runnerTransactions(week, runnerUser._id);
         const allShifts = runner.payouts.getShiftHours(week, worker.id);
         return runner.payouts.payRef(worker, allShifts, runnerTxs, runnerUser._id, week.week);
