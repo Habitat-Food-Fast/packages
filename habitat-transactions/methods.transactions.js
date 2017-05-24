@@ -685,14 +685,15 @@ New on-demand order #${tx.orderNumber} in ${hab.name} for ${tx.company_name}. Re
 
 Meteor.methods({
   fetchMasterTransactions() {
-    return masterTransactions.find({deliveryX: {$exists: true}}).fetch();
-<<<<<<< HEAD
+    return masterTransactions.find({
+      deliveryX: {$exists: true},
+      fog: {$exists: false},
+    },
+      {limit: 10}).fetch();
   },
   updateMasterTransactions(id, update) {
     console.log("in meteor");
     masterTransactions.update(id, update, (err) => {if (err) throwError(err)});
-=======
->>>>>>> 05c4c302c3c2cba017a43595fb991e5e2435b348
   },
   acceptOrder(id, method, role) {
       if(Meteor.isServer){
