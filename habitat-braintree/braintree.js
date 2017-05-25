@@ -30,6 +30,27 @@ Meteor.startup(function () {
 });
 
 Meteor.methods({
+  reauthorizeAmount(tx, amount) {
+    if (Meteor.user().roles.includes('admin')) {
+      Meteor.call('voidTransaction', tx, (err) => {
+        if (err) { throw new Meteor.Error('Unable to void initial transaction'); } else {
+          const id = transactions.findOne(tx).braintreeId;
+          gateway.trasaction.cloneTransaction(id, {
+            amount: amount,
+            options: {
+              submitForSettlement: true
+            }
+          }, (err, res) => {
+            if (err) {
+              throw new Meteor.Error('Unable to clone the transaction');
+            } else {
+              return res;
+            }
+          });
+        }
+      });
+    }
+  },
   createSaleTransaction(paymentMethodNonce, txId) {
     const tx = transactions.findOne(txId);
     const bp = businessProfiles.findOne(tx.sellerId);
@@ -335,34 +356,4 @@ BT = {
     }
   }
 };
-
-Router.route('receiveMerchantUpdate', function () {
-  const request = this.request;
-  const response = this.response;
-  var bt_challenge = request.query.bt_challenge;
-  if(bt_challenge) {
-    return response.end(gateway.webhookNotification.verify(bt_challenge));
-  } else {
-    //Decode the request and perform the needed logic for the type of request
-    gateway.webhookNotification.parse(request.body.bt_signature, request.body.bt_payload, (err, webhookNotification) => {
-      webhookNotifications.insert(webhookNotification, (err, webhookNotificationId) => {
-        if(err) { throw new Meteor.Error(err.reason); }
-
-        switch(webhookNotification.kind) {
-          case Braintree.WebhookNotification.Kind.Check:
-            break;
-          case Braintree.WebhookNotification.Kind.SubMerchantAccountApproved:
-            BT.admin.emails.submerchantApproved(webhookNotification.merchantAccount);
-            break;
-          case Braintree.WebhookNotification.Kind.SubMerchantAccountDeclined:
-            BT.admin.emails.submerchantDeclined(webhookNotification.merchantAccount);
-            break;
-          case Braintree.WebhookNotification.Kind.Disbursement:
-            BT.submerchant.disburse(webhookNotification);
-        }
-      });
-    });
-    return response.end();
-  }
-}, { where: 'server', path: 'vendorapproved/' });
 }

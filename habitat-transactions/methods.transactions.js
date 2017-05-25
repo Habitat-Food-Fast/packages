@@ -160,7 +160,7 @@ transactions.methods = {
         } else {
           if(this.isSimulation){
             return sweetAlert(sweetAlert.copy.removeExisting(currentOpenTx._id, args.sellerId), (isConfirm) => {
-              return isConfirm ? transactions.methods.removeTransaction.call({ txIds: [currentOpenTx._id] }, (err) => {
+              return isConfirm ? transactions.methods.removeTransaction.call({ txId: currentOpenTx._id }, (err) => {
                 if (err) { throw new Meteor.Error(err.message); } else {
                   if(this.isSimulation){
                     modOverlay.animate.close();
@@ -317,11 +317,7 @@ sendReceiptImage: new ValidatedMethod({
 
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
       const rnr = Meteor.users.findOne(runnerId);
-      const runnerObj = {
-        phone: rnr.profile.phone,
-        pic: rnr.profile.profile_pic,
-        name: rnr.profile.fn
-      };
+      const runnerObj = transactions.grabRunnerObj(runnerId);
       transactions.update(tx._id, { $set: {
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
@@ -347,6 +343,7 @@ sendReceiptImage: new ValidatedMethod({
         transactions.update(txId, {$set: {
           runnerId: runId,
           reassignCount: tx.reassignCount && tx.reassignCount.length ? tx.reassignCount.length : 1,
+          runnerObj: transactions.grabRunnerObj(runId)
         }}, (err) => {
           if(err) { throwError(err.message); } else {
             if(!this.isSimulation) {
@@ -429,10 +426,13 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
+        console.log(params);
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
-            return JSON.parse(result.content);
+            res = JSON.parse(result.content);
+            console.log(res)
+            return res;
           }
         } catch (e) {
           JSON.stringify(e, null, 2);
@@ -686,6 +686,21 @@ New on-demand order #${tx.orderNumber} in ${hab.name} for ${tx.company_name}. Re
 Meteor.methods({
   fetchMasterTransactions() {
     return masterTransactions.find({deliveryX: {$exists: true}}).fetch();
+  },
+  updateMasterTransactions(id, update) {
+    console.log("in meteor");
+    masterTransactions.update(id, update, (err) => {if (err) throwError(err); });
+
+    return masterTransactions.find({
+      deliveryX: {$exists: true},
+      fog: {$exists: false},
+    },
+      {limit: 10}).fetch();
+  },
+  updateMasterTransactions(id, update) {
+    console.log("in meteor");
+    console.log(update);
+    masterTransactions.update(id, update, (err) => {if (err) throwError(err)});
   },
   acceptOrder(id, method, role) {
       if(Meteor.isServer){
