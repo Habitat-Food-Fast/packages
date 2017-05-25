@@ -44,14 +44,15 @@ Meteor.methods({
     Categories.remove(id);
   },
 
-  updateCatBiz(cat, biz, type) {
+  updateCatBiz(cat, biz) {
     if (!Roles.userIsInRole(Meteor.userId(), 'admin')) {
       throw new Meteor.Error('Not Authorized');
     }
-    if (type) {
-      Categories.update(cat, {$pull: {businesses: biz}});
+    const c = Categories.findOne(cat);
+    if (c.businesses.includes(biz)) {
+      Categories.update({_id: cat}, {$pull: {'businesses': biz}});
     } else {
-      Categories.update(cat, {$push: {businesses: biz}});
+      Categories.update({_id: cat}, {$push: {'businesses': biz}});
     }
   }
 });
