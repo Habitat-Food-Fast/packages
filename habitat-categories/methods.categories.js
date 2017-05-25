@@ -42,5 +42,17 @@ Meteor.methods({
       throw new Meteor.Error('Not Authorized');
     }
     Categories.remove(id);
+  },
+
+  updateCatBiz(cat, biz) {
+    if (!Roles.userIsInRole(Meteor.userId(), 'admin')) {
+      throw new Meteor.Error('Not Authorized');
+    }
+    const c = Categories.findOne(cat);
+    if (c.businesses.includes(biz)) {
+      Categories.update({_id: cat}, {$pull: {'businesses': biz}});
+    } else {
+      Categories.update({_id: cat}, {$push: {'businesses': biz}});
+    }
   }
 });

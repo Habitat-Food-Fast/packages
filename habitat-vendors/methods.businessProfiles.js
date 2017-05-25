@@ -231,4 +231,28 @@ Meteor.methods({
       'weeklyHours.$.deliveryFee': makeFree ? 0 : 2.99
     }}, (err) => { if(err) { throw new Meteor.Error(err.message); } });
   },
+
+  updateDeliveryFee(id, day, fee) {
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    return businessProfiles.update({_id: id, 'weeklyHours.day': day }, {$set: {
+        'weeklyHours.$.deliveryFee': parseFloat(fee),
+      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
+    });
+  },
+
+  updateMinimum(bizId, day, flatRate) {
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
+        [`weeklyHours.$.vendorRates.freeDel.minimum`]: parseFloat(flatRate),
+      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
+    });
+  },
+
+  updateFallback(bizId, day, flatRate) {
+    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
+    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
+        [`weeklyHours.$.deliveryFeeMinimumFallback`]: parseFloat(flatRate),
+      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
+    });
+  },
 });
