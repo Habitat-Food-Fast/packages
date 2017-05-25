@@ -697,6 +697,11 @@ Meteor.methods({
     },
       {limit: 10}).fetch();
   },
+  updateMasterTransactions(id, update) {
+    console.log("in meteor");
+    console.log(update);
+    masterTransactions.update(id, update, (err) => {if (err) throwError(err)});
+  },
   acceptOrder(id, method, role) {
       if(Meteor.isServer){
         const tx = transactions.findOne(id);
