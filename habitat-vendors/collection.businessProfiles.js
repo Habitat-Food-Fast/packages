@@ -179,7 +179,25 @@ class businessProfilesCollection extends Mongo.Collection {
     return removeCommas.replace('&', ' and ');
   }
   bizInitials(bizName) { return bizName.split(' ').map(w => w.charAt(0)).join().replace(',','');}
+  getMenu(id){
+    bp = businessProfiles.findOne(id ? id : {})
+    saleItems.find({uid: bp._id}).forEach((si) => {
+      console.log(si._id)
+      mods = Modifiers.find({itemId: {$in: [si._id]}}).map((mod) => {
 
+        return modCategories.findOne(mod.subcategory) ? _.extend(
+          _.omit(mod, ['itemId', 'uid', '_id', 'subcategory']),
+          { name, selectOne, required } = modCategories.findOne(mod.subcategory)
+        ) : false
+      });
+      console.log({
+        name: si.name,
+        price: si.price,
+        category: si.category,
+        modifiers: mods,
+      });
+    })
+  }
 }
 
 Meteor.methods({

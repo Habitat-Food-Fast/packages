@@ -25,7 +25,7 @@ transactions.csv = {
         sellerId: tx.sellerId,
         buyerName: up ? up.fn : '',
         buyerLastName: up && up.ln ? up.ln : '',
-        buyerPhone: up ? up.phone : '',
+        buyerPhone: up ? up.phone.toString() : '',
         buyerEmail: up ? up.email : '',
         buyerCompletedOrdersToDate: transactions.find({buyerId: tx.buyerId, status: {$in: transactions.completedAndArchived()}}).count(),
         mealUser: up ? up.mealUser : '',
