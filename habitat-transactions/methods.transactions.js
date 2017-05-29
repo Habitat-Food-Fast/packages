@@ -736,6 +736,7 @@ Meteor.methods({
     generateOrderAgainTransaction(oldTx){
       delete oldTx._id;
       const id = transactions.insert(oldTx);
+      transactions.update(id, {$set: {orderNumber: transactions.pin()}})
       console.log(oldTx.method);
       if (oldTx.method !== 'Pickup') {
         transactions.methods.addTxAddress.call({

@@ -295,6 +295,7 @@ class transactionsCollection extends Mongo.Collection {
   completedAndArchived(){ return [ 'completed', 'archived' ]; }
   active(){ return [ 'pending_vendor', 'pending_runner', 'in_progress' ]; }
   userVisible() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress', 'completed']; }
+  userCart() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress']; }
   closedAndDiscarded() { return ['completed', 'archived', 'discarded', 'cancelled']; }
   pin() { return Math.floor(1000 + Math.random() * 9000); }
   grabRunnerObj(runnerId) {
