@@ -359,10 +359,10 @@ runnerPayout = {
   },
   getTotalOwed(shifts, timespan, runnerId){
     check(runnerId, String);
-    hourly = this.getTotalHourlyOwed(shifts, timespan, runnerId); console.log(`hourly rate is ${hourly}`)
-    perOrder = this.perOrderRate(runnerId, timespan); console.log(`perOrder owed ${perOrder}`);
-    tipTotal = this.getTotalTips(runnerId, timespan); console.log(`tiptotal is ${tipTotal}`);
-    owed = hourly + perOrder+ tipTotal; console.warn(`owed is ${owed}`);
+    hourly = this.getTotalHourlyOwed(shifts, timespan, runnerId); // console.log(`hourly rate is ${hourly}`)
+    perOrder = this.perOrderRate(runnerId, timespan); // console.log(`perOrder owed ${perOrder}`);
+    tipTotal = this.getTotalTips(runnerId, timespan); // console.log(`tiptotal is ${tipTotal}`);
+    owed = hourly + perOrder+ tipTotal; // console.warn(`owed is ${owed}`);
       return owed;
     },
   filterInactive(worker){ return worker.transactionCount === 0 || worker.daasCount === 0; },
@@ -472,19 +472,19 @@ runner.payouts = {
       .reduce((sum, num) => { return sum + num; }, 0);
   },
   _totalOwed(runnerTxs, allShifts, staffJoyId){
-    hourlyRate = (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4); console.log(`hourlyRate ${hourlyRate}`)
-    perTxKeep = this._perTxKeep(runnerTxs); console.log(`pertx keep ${perTxKeep}`)
-    onDemandOwed = this._onDemandOwed(runnerTxs); console.log(`ondemand owed ${onDemandOwed}`)
-    tips = this._tips(runnerTxs); console.log(`tips: ${tips}`);
+    hourlyRate = (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4);// console.log(`hourlyRate ${hourlyRate}`)
+    perTxKeep = this._perTxKeep(runnerTxs);// console.log(`pertx keep ${perTxKeep}`)
+    onDemandOwed = this._onDemandOwed(runnerTxs); //console.log(`ondemand owed ${onDemandOwed}`)
+    tips = this._tips(runnerTxs); //console.log(`tips: ${tips}`);
     total = hourlyRate +
             perTxKeep +
             onDemandOwed +
-            tips; console.warn(total)
+            tips; // console.warn(total)
 
     return total;
   },
   _progress(token, progress) {
-    console.log(`hit stream prog for ${token}`);
+    //console.log(`hit stream prog for ${token}`);
     streamer.emit(token, progress);
   },
   payRef(worker, allShifts, runnerTxs, runnerId, week){
@@ -505,7 +505,7 @@ runner.payouts = {
       owedDeliveryFee: accounting.formatMoney(this._perTxKeep(runnerTxs)),
       owedTips: accounting.formatMoney(this._tips(runnerTxs)),
       runnerOwed: this._totalOwed(runnerTxs, allShifts, worker.id),
-    }); console.log(worker.name)
+    }); //console.log(worker.name)
     return query;
   },
   getAll(week, token){
@@ -513,7 +513,7 @@ runner.payouts = {
     workers = runner.payouts.getWorkers();
     return workers.map((worker, index) => {
       progress = index / workers.length;
-      console.log(`completed ${progress * 100}%`);
+      //console.log(`completed ${progress * 100}%`);
       this._progress(token, progress);
       const runnerUser = Meteor.users.findOne({username: worker.email});
 
@@ -546,7 +546,7 @@ Router.route('/allweeks', {
 
     try {
       return convert.json2csv(allPayouts, (err, spreadsheet) => {
-        console.log('Finished converting');
+        //console.log('Finished converting');
         if(err) { console.warn(err.message); } else {
           console.log('Success, serving spreadsheet');
           this.response.writeHead(200, csv.writeHead(`runner_summary_week-`, 'csv'));
