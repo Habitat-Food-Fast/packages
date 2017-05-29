@@ -7,7 +7,8 @@ API = {
     const getRequestContents = API.utility.getRequestContents( request ),
           apiKey = getRequestContents.api_key,
           validUser = API.authentication( apiKey );
-
+          console.log('apiKey', apiKey);
+          console.log('validUser', validUser);
     if ( validUser ) {
       return { owner: validUser, data: getRequestContents, key: apiKey };
     } else {
@@ -16,6 +17,8 @@ API = {
   },
   handleRequest( context, resource, method ) {
     var connection = API.connection( context.request );
+    console.log('resource and method',resource, method);
+    console.log(connection);
     return !connection.error ?
       API.methods[ resource ][ method ]( context, connection ) :
       API.utility.response( context, 401, connection );
@@ -24,7 +27,7 @@ API = {
     getRequestContents( request ) {
       switch(request.method) {
         case "GET":
-          return request.query;
+          return request.body;
         case "POST":
         case "PUT":
         case "DELETE":
