@@ -119,7 +119,6 @@ class transactionsCollection extends Mongo.Collection {
       tx = transactions.findOne(txId);
       HTTP.call('GET', gmapsUrl(tx), (err, result) => {
         if(err){ console.warn(err.message); } else {
-          console.log(result.data);
           if(!result.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
@@ -143,8 +142,8 @@ class transactionsCollection extends Mongo.Collection {
                 }
               } }, (err) => {
                 if(err) { console.warn(err.message); } else {
-                  console.log(calc._roundToTwo((i / count) * 100) + '%');
-                  console.log(`set ${tx.orderNumber} to`, transactions.findOne(txId).routeInfo.car.distance.text);
+                  // console.log(calc._roundToTwo((i / count) * 100) + '%');
+                  // console.log(`set ${tx.orderNumber} to`, transactions.findOne(txId).routeInfo.car.distance.text);
                 }
               });
             }
@@ -157,7 +156,7 @@ class transactionsCollection extends Mongo.Collection {
     tx = transactions.findOne(txId);
   }
   requestItems(txId, prepTime) {
-    const isDaaS = transactions.findOne(txId) ? transactions.findOne(txId).DaaS : true;
+    const isDaaS = transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
     return {
       week: weeks.find().count(),
@@ -323,7 +322,7 @@ gmapsUrl = (tx) => {
   const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
   const originCoords = biz.geometry.coordinates;
 
-  console.log(`${biz.company_address} to ${tx.deliveryAddress}`);
+  // console.log(`${biz.company_address} to ${tx.deliveryAddress}`);
   const origin = `origin=${originCoords[1]},${originCoords[0]}`;
   const coords = deliveryAddressCoords(tx._id);
 
