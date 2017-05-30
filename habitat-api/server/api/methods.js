@@ -1,9 +1,24 @@
 API.methods = {
+  vendors: {
+    GET( context, connection ) {
+      let getVendors;
+      const hasQuery = API.utility.hasData( connection.data );
+      if (connection.data.vendorId) {
+        connection.data.owner = connection.owner;
+        getVendors = businessProfiles.find(connection.data.vendorId).fetch();
+        return getVendors.length > 0 ?
+          API.utility.response( context, 200, getVendors ) :
+          API.utility.response( context, 404, { error: 404, message: "No vendors found, dude." } );
+      } else {
+        getVendors = businessProfiles.find().fetch();
+        API.utility.response( context, 200, getVendors);
+      }
+    },
+  },
   orders: {
     GET( context, connection ) {
       let getOrders;
       const hasQuery = API.utility.hasData( connection.data );
-
       if ( hasQuery ) {
         connection.data.owner = connection.owner;
         getOrders = transactions.find( connection.data ).fetch();

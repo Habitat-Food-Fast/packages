@@ -52,7 +52,7 @@ transactions.methods = {
         args.sellerId ||
         Meteor.user().profile.businesses[0]
       );
-      return transactions.insert(_.extend(args, {
+      update = _.extend(args, {
         createdAt: Date.now(),
         partnerName: args.thirdParty ? args.partnerName : false,
         createdAtHuman: new Date(),
@@ -72,16 +72,20 @@ transactions.methods = {
           phone: args.customerPhone,
           name: args.customerName,
         }
-      }), (err, txId) => {
+      }); console.warn(`updateObj for insertDaaS`); console.log(update)
+      return transactions.insert(update, (err, txId) => {
         if(err) { throwError(err.message); } else {
           const tx = transactions.findOne(txId);
           if (!tx.customerPhone) {
+            console.warn(`DaaS #${tx.orderNumber} missing PHONE`);
             slm(`DaaS #${tx.orderNumber} missing PHONE`);
           }
           if (!tx.deliveryAddress) {
+            console.warn(`DaaS #${tx.orderNumber} missing ADDRESS`);
             slm(`DaaS #${tx.orderNumber} missing ADDRESS`);
           }
           if (tx.DaaSType === 'online' && !tx.payRef.tip) {
+            console.warn(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
             slm(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
           }
         }
@@ -105,8 +109,10 @@ transactions.methods = {
       // if(!Roles.userIsInRole(Meteor.userId(), ['admin', 'vendor', 'runner'])) { throwError(503, "Sorry, no vendor access"); }
       if (!prepTime) {prepTime = transactions.findOne(deliveryId) ? transactions.findOne(deliveryId).prepTime : businessProfiles.findOne(transactions.findOne(deliveryId).sellerId).prep_time;}
       arguments[0].readyAt = new Date(Date.now() + (prepTime * 60000));
+      update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime));
+      console.log(update);
         return transactions.update(deliveryId, {
-          $set: _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime))
+          $set: update
         }, (err) => {
           if(err) { throwError(err.message); } else {
             DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
@@ -712,6 +718,7 @@ Meteor.methods({
     generateOrderAgainTransaction(oldTx){
       delete oldTx._id;
       const id = transactions.insert(oldTx);
+      transactions.update(id, {$set: {orderNumber: transactions.pin()}});
       console.log(oldTx.method);
       if (oldTx.method !== 'Pickup') {
         transactions.methods.addTxAddress.call({
@@ -796,7 +803,7 @@ Meteor.methods({
         console.log(url);
         try {
           res = HTTP.get(url);
-          console.log(res.data)
+          console.log(res.data);
           if(!res.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {

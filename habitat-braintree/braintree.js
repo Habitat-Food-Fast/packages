@@ -31,49 +31,52 @@ Meteor.startup(function () {
 
 Meteor.methods({
   createSaleTransaction(paymentMethodNonce, txId) {
-    const tx = transactions.findOne(txId);
-    const bp = businessProfiles.findOne(tx.sellerId);
-    const isFirstTransaction = transactions.find({buyerId: tx.buyerId, status: 'completed'}).count() === 0;
+    if (Meteor.isServer) {
+      const tx = transactions.findOne(txId);
+      const bp = businessProfiles.findOne(tx.sellerId);
+      const isFirstTransaction = transactions.find({buyerId: tx.buyerId, status: 'completed'}).count() === 0;
 
-     if(!bp.open){
-       throwError(`Sorry, ${bp.company_name} is closed`);
-     } else if (!paymentMethodNonce) {
-      if (transactions.creditsCoverFullOrder(txId) || paymentMethodNonce && tx.payRef.platformRevenue === 0) {
+       if(!bp.open){
+         throwError(`Sorry, ${bp.company_name} is closed`);
+       } else if (!paymentMethodNonce) {
+        if (transactions.creditsCoverFullOrder(txId) || paymentMethodNonce && tx.payRef.platformRevenue === 0) {
+          transactions.request(txId, {
+            braintreeId: null,
+            firstOrder: isFirstTransaction,
+          }, (err) => { if (err) { throwError(err.reason); } else {
+            handleInitialVendorContact(txId);
+          }});
+        return { success: true, isFirstTransaction: isFirstTransaction };
+        }
+      } else {
+        check(paymentMethodNonce, String); check(txId, String); check(tx, Object);
+        if(tx.buyerId !== Meteor.userId()) { throw new Meteor.Error(503, 'methods.createSaleTransaction.statusOrUserIdWrong'); }
+        const createSaleTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
+        const result = createSaleTransactionSynchronously( BT.transactions.generateParams(txId, paymentMethodNonce) );
+
+        if(!result.success) {
+          throwError(result);
+        }
+
         transactions.request(txId, {
-          braintreeId: null,
-          firstOrder: isFirstTransaction,
-        }, (err) => { if (err) { throwError(err.reason); } else {
+            braintreeId: result.transaction.id,
+            firstOrder: isFirstTransaction,
+          }, (err) => {
+            if (err) {
+              throw new Meteor.Error(err.reason);
+            }
           handleInitialVendorContact(txId);
-        }});
-      return { success: true, isFirstTransaction: isFirstTransaction };
+        });
+        return _.extend(result, {
+          success: true,
+          isFirstTransaction: isFirstTransaction,
+        });
       }
-    } else {
-      check(paymentMethodNonce, String); check(txId, String); check(tx, Object);
-      if(tx.buyerId !== Meteor.userId()) { throw new Meteor.Error(503, 'methods.createSaleTransaction.statusOrUserIdWrong'); }
-      const createSaleTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
-      const result = createSaleTransactionSynchronously( BT.transactions.generateParams(txId, paymentMethodNonce) );
-
-      if(!result.success) {
-        throwError(result);
-      }
-
-      transactions.request(txId, {
-          braintreeId: result.transaction.id,
-          firstOrder: isFirstTransaction,
-        }, (err) => {
-          if (err) {
-            throw new Meteor.Error(err.reason);
-          }
-        handleInitialVendorContact(txId);
-      });
-      return _.extend(result, {
-        success: true,
-        isFirstTransaction: isFirstTransaction,
-      });
     }
   },
   // Submit a transaction for processing
   submitForSettlement (braintreeId) {
+    if (Meteor.isServer) {
       let tx = transactions.findOne({braintreeId: braintreeId});
       let submitForSettlementSynchronously = Meteor.wrapAsync(gateway.transaction.submitForSettlement, gateway.transaction);
       try {
@@ -85,19 +88,22 @@ Meteor.methods({
           throw new Meteor.Error(e.name, e.message);
       }
       return result; // transaction details are in result.transaction
+    }
   },
 
   // Cancel a transaction
   voidTransaction (transactionId) {
-      var voidTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.void, gateway.transaction),
-          result;
+    if(Meteor.isServer) {
+        var voidTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.void, gateway.transaction),
+            result;
 
-      try {
-          result = voidTransactionSynchronously(transactionId);
-      } catch (e) {
-          throw new Meteor.Error(e.name, e.message);
-      }
-      return result; // transaction details are in result.transaction
+        try {
+            result = voidTransactionSynchronously(transactionId);
+        } catch (e) {
+            throw new Meteor.Error(e.name, e.message);
+        }
+        return result;
+    }
   },
 
   // Add a new customer to the braintree vault
@@ -190,36 +196,6 @@ createCustomer (customerDetails) {
         }
         return;
     },
-
-    // Find an individual sub merchant account
-    findSubMerchant (subMerchantId) {
-        var findSubMerchantSynchronously = Meteor.wrapAsync(gateway.merchantAccount.find, gateway.merchantAccount),
-            subMerchantAccount;
-
-        try {
-            subMerchantAccount = findSubMerchantSynchronously(subMerchantId);
-        } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-        return subMerchantAccount;
-    },
-
-    // Create an individual sub merchant account
-    createSubmerchant (subMerchantDetails) {
-        var createSubMerchantSynchronously = Meteor.wrapAsync(gateway.merchantAccount.create, gateway.merchantAccount),
-            subMerchantAccount;
-
-        if (!subMerchantDetails.masterMerchantAccountId) {
-            subMerchantDetails.masterMerchantAccountId = Meteor.settings.braintree.BT_MASTER_MERCHANT_ACCOUNT_ID;
-        }
-        try {
-            subMerchantAccount = createSubMerchantSynchronously(subMerchantDetails);
-        } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-        return subMerchantAccount;
-    },
-
 
     submitMealForSettlement(mealPlan, nonce){
       var createMealTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
@@ -335,34 +311,4 @@ BT = {
     }
   }
 };
-
-Router.route('receiveMerchantUpdate', function () {
-  const request = this.request;
-  const response = this.response;
-  var bt_challenge = request.query.bt_challenge;
-  if(bt_challenge) {
-    return response.end(gateway.webhookNotification.verify(bt_challenge));
-  } else {
-    //Decode the request and perform the needed logic for the type of request
-    gateway.webhookNotification.parse(request.body.bt_signature, request.body.bt_payload, (err, webhookNotification) => {
-      webhookNotifications.insert(webhookNotification, (err, webhookNotificationId) => {
-        if(err) { throw new Meteor.Error(err.reason); }
-
-        switch(webhookNotification.kind) {
-          case Braintree.WebhookNotification.Kind.Check:
-            break;
-          case Braintree.WebhookNotification.Kind.SubMerchantAccountApproved:
-            BT.admin.emails.submerchantApproved(webhookNotification.merchantAccount);
-            break;
-          case Braintree.WebhookNotification.Kind.SubMerchantAccountDeclined:
-            BT.admin.emails.submerchantDeclined(webhookNotification.merchantAccount);
-            break;
-          case Braintree.WebhookNotification.Kind.Disbursement:
-            BT.submerchant.disburse(webhookNotification);
-        }
-      });
-    });
-    return response.end();
-  }
-}, { where: 'server', path: 'vendorapproved/' });
 }
