@@ -102,6 +102,8 @@ Meteor.methods({
       var closeTime = dayBase + hourBase + minBase;
       Habitats.update({_id: id, 'weeklyHours.day': day}, {$set: {'weeklyHours.$.closeTime': closeTime, 'weeklyHours.$.closeHr': time}});
     }
+  } else {
+    throw new Meteor.Error('Not Authorized');
   }
   }
 });
