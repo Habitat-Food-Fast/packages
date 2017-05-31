@@ -432,12 +432,10 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
-        console.log(params);
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
             res = JSON.parse(result.content);
-            console.log(res)
             return res;
           }
         } catch (e) {
@@ -690,24 +688,6 @@ New on-demand order #${tx.orderNumber} in ${hab.name} for ${tx.company_name}. Re
 };
 
 Meteor.methods({
-  fetchMasterTransactions() {
-    return masterTransactions.find({deliveryX: {$exists: true}}).fetch();
-  },
-  updateMasterTransactions(id, update) {
-    console.log("in meteor");
-    masterTransactions.update(id, update, (err) => {if (err) throwError(err); });
-
-    return masterTransactions.find({
-      deliveryX: {$exists: true},
-      fog: {$exists: false},
-    },
-      {limit: 10}).fetch();
-  },
-  updateMasterTransactions(id, update) {
-    console.log("in meteor");
-    console.log(update);
-    masterTransactions.update(id, update, (err) => {if (err) throwError(err)});
-  },
   acceptOrder(id, method, role) {
       if(Meteor.isServer){
         const tx = transactions.findOne(id);
@@ -736,7 +716,7 @@ Meteor.methods({
     generateOrderAgainTransaction(oldTx){
       delete oldTx._id;
       const id = transactions.insert(oldTx);
-      transactions.update(id, {$set: {orderNumber: transactions.pin()}})
+      transactions.update(id, {$set: {orderNumber: transactions.pin()}});
       console.log(oldTx.method);
       if (oldTx.method !== 'Pickup') {
         transactions.methods.addTxAddress.call({
@@ -821,7 +801,7 @@ Meteor.methods({
         console.log(url);
         try {
           res = HTTP.get(url);
-          console.log(res.data)
+          console.log(res.data);
           if(!res.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
