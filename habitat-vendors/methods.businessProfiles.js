@@ -86,15 +86,16 @@ businessProfiles.methods = {
  validatePassword: new ValidatedMethod({
    name: 'businessProfiles.methods.validatePassword',
    validate: new SimpleSchema({
-     uid: { type: String },
+     bizId: { type: String },
      pass: { type: String, min: 6 },
    }).validator(),
-   run({uid, pass}) {
+   run({bizId, pass}) {
      if (Meteor.isServer) {
        if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
+         const biz = businessProfiles.findOne(bizId);
+         const uid = biz.uid;
          Accounts.setPassword(uid, pass);
          const usr = Meteor.users.findOne(uid);
-         const biz = businessProfiles.findOne({uid: uid});
          if(biz){
            Email.send({
              from: "app@market.tryhabitat.com",
