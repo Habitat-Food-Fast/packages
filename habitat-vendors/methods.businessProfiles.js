@@ -287,9 +287,17 @@ Meteor.methods({
   },
   updateRadius(bizId, radius){
     // update = {$set: {radius: radius[0][0]}}; console.log(update); adds the first to the array
-    update = {$set: {radius: radius[0]}}; console.log(radius[0]);
-    return businessProfiles.update(bizId, update, {validate: false}, (err) => {
-      if(err) { throwError(err); }
+    debugger
+    update = {$set: {radius: radius[0]}}; console.log(update); console.log(bizId);
+    radius[0].forEach((r) => {
+      console.log(r)
+      return businessProfiles.update(bizId, { $push: { radius: r }}, {validate: false}, (err) => {
+        if(err) { throwError(err); } else {
+          console.warn(`updated`);
+          console.log(businessProfiles.findOne(bizId).radius)
+        }
+      })
     })
+
   }
 });

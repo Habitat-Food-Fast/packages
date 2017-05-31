@@ -161,7 +161,7 @@ class transactionsCollection extends Mongo.Collection {
     return {
       week: weeks.find().count(),
       status: !isDaaS ? 'pending_vendor' :
-        transactions.findOne(txId).thirdParty ? 'pending_vendor' : 'pending_runner',
+        transactions.findOne(txId).isYelp || transactions.findOne(txId).isGrubhub ? 'pending_vendor' : 'pending_runner',
       timeRequested: Date.now(),
       humanTimeRequested: Date(),
       vendorPayRef: businessProfiles.rates(txId),
