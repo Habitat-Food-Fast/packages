@@ -110,7 +110,36 @@ businessProfiles.methods = {
        }
      }
    }
- })
+ }),
+
+ // updateRadius: new ValidatedMethod({
+ //   name: 'businessProfiles.methods.updateRadius',
+ //   mixins: [PermissionsMixin],
+ //   allow: [{
+ //     group: true,
+ //     roles: ['admin', 'vendor'],
+ //   }],
+ //   validate: new SimpleSchema({
+ //     bizId: { type: String },
+ //     radius: { type: Array },
+ //     'radius.$' : {
+ //       type: Array,
+ //     },
+ //     'radius.$.$' : {
+ //       type: [Number], decimal: true,
+ //     },
+ //     'radius.$.$.$' : {
+ //       type: Number, decimal: true,
+ //     },
+ //   }).validator(),
+ //   run({bizId, radius}){
+ //     console.log(`updateing ${bizId} with radius ${radius}`);
+ //     console.log(typeof radius)
+ //     return businessProfiles.update(bizId, {$set: {radius: radius}}, {validate: false}, (err) => {
+ //       if(err) { throwError(err); }
+ //     })
+ //   }
+ // })
 };
 
 Meteor.methods({
@@ -255,4 +284,11 @@ Meteor.methods({
       }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
     });
   },
+  updateRadius(bizId, radius){
+    // update = {$set: {radius: radius[0][0]}}; console.log(update); adds the first to the array
+    update = {$set: {radius: radius[0]}}; console.log(radius[0]);
+    return businessProfiles.update(bizId, update, {validate: false}, (err) => {
+      if(err) { throwError(err); }
+    })
+  }
 });
