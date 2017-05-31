@@ -165,7 +165,7 @@ class transactionsCollection extends Mongo.Collection {
       timeRequested: Date.now(),
       humanTimeRequested: Date(),
       vendorPayRef: businessProfiles.rates(txId),
-      vendorOrderNumber: goodcomOrders.find().count() + 1,
+      vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
       deliveredAtEst: this.deliveryEstimate(txId, inMinutes=false, prepTime),
       cancelledByAdmin: false,

@@ -105,8 +105,7 @@ transactions.methods = {
       runnerId: { type: String, optional: true },
     }).validator(),
     run({ deliveryId, prepTime }) {
-      //TODO: ask nate about how to best protect if handled by route...perhaps an API key generated when request is made
-      // if(!Roles.userIsInRole(Meteor.userId(), ['admin', 'vendor', 'runner'])) { throwError(503, "Sorry, no vendor access"); }
+      console.log(transactions.findOne(deliveryId));
       if (!prepTime) {prepTime = transactions.findOne(deliveryId) ? transactions.findOne(deliveryId).prepTime : businessProfiles.findOne(transactions.findOne(deliveryId).sellerId).prep_time;}
       arguments[0].readyAt = new Date(Date.now() + (prepTime * 60000));
       update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime));
@@ -116,7 +115,7 @@ transactions.methods = {
         }, (err) => {
           if(err) { throwError(err.message); } else {
             DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
-              if(err) { console.log(err); throwError(err.message); }
+              if(err) { console.log(err); throw new Meteor.Error(err); }
             });
           }
         });
@@ -432,12 +431,10 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
-        console.log(params);
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
             res = JSON.parse(result.content);
-            console.log(res)
             return res;
           }
         } catch (e) {
@@ -690,24 +687,6 @@ New on-demand order #${tx.orderNumber} in ${hab.name} for ${tx.company_name}. Re
 };
 
 Meteor.methods({
-  fetchMasterTransactions() {
-    return masterTransactions.find({deliveryX: {$exists: true}}).fetch();
-  },
-  updateMasterTransactions(id, update) {
-    console.log("in meteor");
-    masterTransactions.update(id, update, (err) => {if (err) throwError(err); });
-
-    return masterTransactions.find({
-      deliveryX: {$exists: true},
-      fog: {$exists: false},
-    },
-      {limit: 10}).fetch();
-  },
-  updateMasterTransactions(id, update) {
-    console.log("in meteor");
-    console.log(update);
-    masterTransactions.update(id, update, (err) => {if (err) throwError(err)});
-  },
   acceptOrder(id, method, role) {
       if(Meteor.isServer){
         const tx = transactions.findOne(id);
@@ -736,7 +715,7 @@ Meteor.methods({
     generateOrderAgainTransaction(oldTx){
       delete oldTx._id;
       const id = transactions.insert(oldTx);
-      transactions.update(id, {$set: {orderNumber: transactions.pin()}})
+      transactions.update(id, {$set: {orderNumber: transactions.pin()}});
       console.log(oldTx.method);
       if (oldTx.method !== 'Pickup') {
         transactions.methods.addTxAddress.call({
@@ -763,19 +742,18 @@ Meteor.methods({
       }
     },
     requestRemoteDaas(obj) {
-      transactions.methods.searchForAddress.call({address: obj.address}, (err, res) => {
-        if (res && res.features.length) {
-          transactions.methods.insertDaaS.call({
-            deliveryAddress: res.features[0].place_name,
-            loc: res.features[0].geometry,
-            sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
-            DaaSType: obj.type,
-            orderSize: obj.orderSize || 1,
-            isDelivery: true,
-          }, (err, id) => {
-            if (err) {
-              throw new Meteor.Error(err);
-            }
+      if (Meteor.isServer) {
+        transactions.methods.insertDaaS.call({
+          deliveryAddress: res.features[0].place_name,
+          loc: res.features[0].geometry,
+          sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
+          DaaSType: obj.type,
+          orderSize: obj.orderSize || 1,
+          isDelivery: true,
+        }, (err, id) => {
+          if (err) {
+            throw new Meteor.Error(err);
+          } else {
             const txId = id;
             transactions.methods.requestDaaS.call({
               deliveryId: id,
@@ -790,11 +768,9 @@ Meteor.methods({
                 transactions.update(txId, {$set: {'payRef.DaaSCharge': charge}});
               }
             });
-          });
-        } else {
-          throw new Meteor.Error('Invalid Address');
-        }
-      });
+          }
+        });
+      }
     },
     editDaaSInfo(id, state) {
       const obj = {
@@ -821,7 +797,7 @@ Meteor.methods({
         console.log(url);
         try {
           res = HTTP.get(url);
-          console.log(res.data)
+          console.log(res.data);
           if(!res.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
