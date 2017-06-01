@@ -739,12 +739,13 @@ Meteor.methods({
         transactions.update(tx, {$set: {pickedUpAt: Date.now()}});
       }
     },
-    requestRemoteDaas(obj) {
+    requestRemoteDaas(obj, bizId) {
       if (Meteor.isServer) {
+        const biz = (Meteor.user() && Meteor.user().roles.includes('admin')) ? bizId : undefined;
         transactions.methods.insertDaaS.call({
           deliveryAddress: obj.selectedAddr,
           loc: res.features[0].geometry,
-          sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
+          sellerId: biz || Meteor.users.findOne(this.userId).profile.businesses[0],
           DaaSType: obj.type,
           orderSize: obj.orderSize || 1,
           isDelivery: true,
