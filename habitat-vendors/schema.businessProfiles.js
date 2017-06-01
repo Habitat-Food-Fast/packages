@@ -40,12 +40,17 @@ businessProfiles.schema = new SimpleSchema({
     'employees.$.name': { type: String },
     'employees.$.phone': { type: Number },
     'employees.$.text': { type: Boolean },
+
   zones: { type: [Object], optional: true },
     'zones.$.name': { type: String },
     'zones.$.multiplier': { type: Number, decimal: true },
     'zones.$.min': { type: Number, decimal: false },
     'zones.$.max': { type: Number, decimal: false },
-    
+
+  radius: { type: Array, optional: true },
+  'radius.$': {type: Array, optional: true},
+  'radius.$.$': {type: Number, decimal: true, optional: true},
+
   weeklyHours: { type: [Object], },
     'weeklyHours.$.day': { type: Number, allowedValues: [0,1,2,3,4,5,6] },
     'weeklyHours.$.open': { type: Boolean },
