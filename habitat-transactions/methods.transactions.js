@@ -72,7 +72,7 @@ transactions.methods = {
           phone: args.customerPhone,
           name: args.customerName,
         }
-      }); console.warn(`updateObj for insertDaaS`); console.log(update)
+      });
       return transactions.insert(update, (err, txId) => {
         if(err) { throwError(err.message); } else {
           const tx = transactions.findOne(txId);
@@ -105,11 +105,9 @@ transactions.methods = {
       runnerId: { type: String, optional: true },
     }).validator(),
     run({ deliveryId, prepTime }) {
-      console.log(transactions.findOne(deliveryId));
       if (!prepTime) {prepTime = transactions.findOne(deliveryId) ? transactions.findOne(deliveryId).prepTime : businessProfiles.findOne(transactions.findOne(deliveryId).sellerId).prep_time;}
       arguments[0].readyAt = new Date(Date.now() + (prepTime * 60000));
       update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime));
-      console.log(update);
         return transactions.update(deliveryId, {
           $set: update
         }, (err) => {
@@ -744,7 +742,7 @@ Meteor.methods({
     requestRemoteDaas(obj) {
       if (Meteor.isServer) {
         transactions.methods.insertDaaS.call({
-          deliveryAddress: res.features[0].place_name,
+          deliveryAddress: obj.selectedAddr,
           loc: res.features[0].geometry,
           sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
           DaaSType: obj.type,
