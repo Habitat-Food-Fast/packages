@@ -150,16 +150,13 @@ Meteor.methods({
     }
   },
   updateProfile(id, newState){
-    if(Meteor.isServer){
-      console.log(id);
-      console.log(newState);
+    if(Meteor.isServer && Meteor.user().roles.includes('admin')){
       if(newState.habitat){
         newState.habitat = newState.habitat.map((habitatIdentifier) => {
           habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
           return habitat._id;
         });
       }
-
       return businessProfiles.update(id, {$set: newState}, (err) => {
         if(err) { console.warn(err); }
       });
