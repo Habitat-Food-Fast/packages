@@ -107,7 +107,8 @@ transactions.methods = {
     run({ deliveryId, prepTime }) {
       if (!prepTime) {prepTime = transactions.findOne(deliveryId) ? transactions.findOne(deliveryId).prepTime : businessProfiles.findOne(transactions.findOne(deliveryId).sellerId).prep_time;}
       arguments[0].readyAt = new Date(Date.now() + (prepTime * 60000));
-      update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime));
+      console.warn(`the deliveryId right before requestItems is ${deliveryId}`);
+      update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime, true));
         return transactions.update(deliveryId, {
           $set: update
         }, (err) => {
