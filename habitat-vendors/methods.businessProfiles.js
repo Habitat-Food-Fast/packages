@@ -285,20 +285,9 @@ Meteor.methods({
       }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
     });
   },
-  updateRadius(bizId, radius){
-    // update = {$set: {radius: radius[0][0]}}; console.log(update); adds the first to the array
-    if(Meteor.isServer){
-        console.log(radius, typeof radius);
-        console.log(radius[0], typeof radius[0]);
-        console.log(radius[0][0], typeof radius[0][0]);
-        console.log(radius[0][0][0], typeof radius[0][0][0]);
-
-        return businessProfiles.update(bizId, { $set: { radius: radius[0] }}, (err) => {
-          if(err) { throwError(err); } else {
-            console.warn(`updated`);
-            console.log(businessProfiles.findOne(bizId).radius)
-          }
-        })
+  updateRadius(bizId, rad){
+    if(Meteor.isServer && Roles.userIsInRole(Meteor.userId(), ['admin'])){
+      businessProfiles.update(bizId, { $set: { 'radius': rad }});
     }
   }
 });

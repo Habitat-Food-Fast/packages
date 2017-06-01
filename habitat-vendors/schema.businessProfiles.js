@@ -47,8 +47,9 @@ businessProfiles.schema = new SimpleSchema({
     'zones.$.min': { type: Number, decimal: false },
     'zones.$.max': { type: Number, decimal: false },
 
-  radius: { type: [Object], optional: true },
-    'radius.$': {type: [Number], optional: true, decimal: true},
+  radius: { type: Array, optional: true },
+  'radius.$': {type: Array, optional: true},
+  'radius.$.$': {type: Number, decimal: true, optional: true},
 
   weeklyHours: { type: [Object], },
     'weeklyHours.$.day': { type: Number, allowedValues: [0,1,2,3,4,5,6] },
