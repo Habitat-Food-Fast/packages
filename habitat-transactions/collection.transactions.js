@@ -155,8 +155,8 @@ class transactionsCollection extends Mongo.Collection {
   getStatus(txId) {
     tx = transactions.findOne(txId);
   }
-  requestItems(txId, prepTime) {
-    const isDaaS = transactions.findOne(txId).DaaS;
+  requestItems(txId, prepTime, daas) {
+    const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
     return {
       week: weeks.find().count(),
