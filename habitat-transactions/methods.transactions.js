@@ -1,3 +1,9 @@
+let phaxio;
+import('phaxio').then((Phaxio) => {
+  phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+})
+
+
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
@@ -72,7 +78,7 @@ transactions.methods = {
           phone: args.customerPhone,
           name: args.customerName,
         }
-      }); console.warn(`updateObj for insertDaaS`); console.log(update)
+      });
       return transactions.insert(update, (err, txId) => {
         if(err) { throwError(err.message); } else {
           const tx = transactions.findOne(txId);
@@ -105,18 +111,16 @@ transactions.methods = {
       runnerId: { type: String, optional: true },
     }).validator(),
     run({ deliveryId, prepTime }) {
-      //TODO: ask nate about how to best protect if handled by route...perhaps an API key generated when request is made
-      // if(!Roles.userIsInRole(Meteor.userId(), ['admin', 'vendor', 'runner'])) { throwError(503, "Sorry, no vendor access"); }
       if (!prepTime) {prepTime = transactions.findOne(deliveryId) ? transactions.findOne(deliveryId).prepTime : businessProfiles.findOne(transactions.findOne(deliveryId).sellerId).prep_time;}
       arguments[0].readyAt = new Date(Date.now() + (prepTime * 60000));
-      update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime));
-      console.log(update);
+      console.warn(`the deliveryId right before requestItems is ${deliveryId}`);
+      update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime, true));
         return transactions.update(deliveryId, {
           $set: update
         }, (err) => {
           if(err) { throwError(err.message); } else {
             DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
-              if(err) { console.log(err); throwError(err.message); }
+              if(err) { console.log(err); throw new Meteor.Error(err); }
             });
           }
         });
@@ -273,7 +277,7 @@ confirmDropoff: new ValidatedMethod({
       if(!tx.payRef.tip){
         transactions.update(txId, { $set: {
           'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
-        }})
+        }});
       }
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
@@ -432,12 +436,10 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
-        console.log(params);
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
             res = JSON.parse(result.content);
-            console.log(res)
             return res;
           }
         } catch (e) {
@@ -744,20 +746,20 @@ Meteor.methods({
         transactions.update(tx, {$set: {pickedUpAt: Date.now()}});
       }
     },
-    requestRemoteDaas(obj) {
-      transactions.methods.searchForAddress.call({address: obj.address}, (err, res) => {
-        if (res && res.features.length) {
-          transactions.methods.insertDaaS.call({
-            deliveryAddress: res.features[0].place_name,
-            loc: res.features[0].geometry,
-            sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
-            DaaSType: obj.type,
-            orderSize: obj.orderSize || 1,
-            isDelivery: true,
-          }, (err, id) => {
-            if (err) {
-              throw new Meteor.Error(err);
-            }
+    requestRemoteDaas(obj, bizId) {
+      if (Meteor.isServer) {
+        const biz = (Meteor.user() && Meteor.user().roles.includes('admin')) ? bizId : undefined;
+        transactions.methods.insertDaaS.call({
+          deliveryAddress: obj.selectedAddr,
+          loc: res.features[0].geometry,
+          sellerId: biz || Meteor.users.findOne(this.userId).profile.businesses[0],
+          DaaSType: obj.type,
+          orderSize: obj.orderSize || 1,
+          isDelivery: true,
+        }, (err, id) => {
+          if (err) {
+            throw new Meteor.Error(err);
+          } else {
             const txId = id;
             transactions.methods.requestDaaS.call({
               deliveryId: id,
@@ -772,11 +774,9 @@ Meteor.methods({
                 transactions.update(txId, {$set: {'payRef.DaaSCharge': charge}});
               }
             });
-          });
-        } else {
-          throw new Meteor.Error('Invalid Address');
-        }
-      });
+          }
+        });
+      }
     },
     editDaaSInfo(id, state) {
       const obj = {

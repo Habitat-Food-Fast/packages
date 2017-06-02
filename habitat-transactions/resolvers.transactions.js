@@ -1,5 +1,5 @@
 let convertSync;
-import('json-2-csv').then(({json2csv}) => {
+import('json-2-csv').then((convert) => {
   convertSync = Meteor.wrapAsync(convert.json2csv);
 });
 

@@ -63,7 +63,7 @@ class transactionsCollection extends Mongo.Collection {
          _.extend(order, {
           orderId: this.pin(),
           itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
-          itemName: saleItems.findOne(order.saleItemId).name,
+          itemName: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).name : '',
           itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
           modifiers: order.modifiers,
           modifiersText: order.modifiers === [] ? [] : this.formatMods(order.modifiers)
@@ -153,17 +153,17 @@ class transactionsCollection extends Mongo.Collection {
   getStatus(txId) {
     tx = transactions.findOne(txId);
   }
-  requestItems(txId, prepTime) {
-    const isDaaS = transactions.findOne(txId).DaaS;
+  requestItems(txId, prepTime, daas) {
+    const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
     return {
       week: weeks.find().count(),
       status: !isDaaS ? 'pending_vendor' :
-        transactions.findOne(txId).thirdParty ? 'pending_vendor' : 'pending_runner',
+        transactions.findOne(txId).isYelp || transactions.findOne(txId).isGrubhub ? 'pending_vendor' : 'pending_runner',
       timeRequested: Date.now(),
       humanTimeRequested: Date(),
       vendorPayRef: businessProfiles.rates(txId),
-      vendorOrderNumber: goodcomOrders.find().count() + 1,
+      vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
       deliveredAtEst: this.deliveryEstimate(txId, inMinutes=false, prepTime),
       cancelledByAdmin: false,

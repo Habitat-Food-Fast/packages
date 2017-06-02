@@ -233,7 +233,7 @@ Meteor.methods({
 sendRunnerPing(txId, runnerId, initialPing){
   if (Meteor.isServer) {
     const tx = transactions.findOne(txId);
-    return initialPing ? runner.alertShifted(tx._id, tx.habitat) :
+    return initialPing ? runner.alertShifted(txId, tx.habitat) :
       twilio.messages.create({
         to: Meteor.users.findOne(runnerId).profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
