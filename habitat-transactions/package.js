@@ -6,7 +6,7 @@ Package.describe({
 Npm.depends({
   "phaxio": "0.0.6",
   "geolib": "2.0.22",
-  "random-color": "1.0.1",
+  "json-2-csv": "2.1.1"
 });
 
 Package.onUse(function (api) {

@@ -1,4 +1,3 @@
-import convert from 'json-2-csv';
 const convertSync = Meteor.wrapAsync(convert.json2csv);
 import moment from 'moment';
 
