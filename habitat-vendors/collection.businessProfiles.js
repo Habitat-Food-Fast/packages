@@ -67,7 +67,7 @@ class businessProfilesCollection extends Mongo.Collection {
             faxPhone: fakePhone.toString(),
             company_name: `FAKE ${doc.company_name}`,
             company_phone: fakePhone.toString(),
-            company_email: faker.internet.email(),
+            company_email: Random.id() + '@hotmail.com',
           }}, (err) => { if(err) { throwError(err.message); }});
         }
       });

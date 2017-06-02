@@ -1,4 +1,3 @@
-import randomColor from 'random-color';
 tx = txId => transactions.findOne(txId);
 Deliveries = new Meteor.Collection("deliveries");
 longCall = Meteor.settings.devMode ? 40000 : 120000;
@@ -9,6 +8,7 @@ class transactionsCollection extends Mongo.Collection {
   insert(doc) {
     const bizProf = businessProfiles.findOne(doc.sellerId);
     const usr = Meteor.users.findOne(doc.buyerId) || false;
+    const randomColor = await import('random-color');
     const transaction = _.extend(this.resetItems(), {
       status: 'created',
       DaaS: doc.DaaS ? true : false,
