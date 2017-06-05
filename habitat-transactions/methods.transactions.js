@@ -74,11 +74,13 @@ transactions.methods = {
         acceptUrl: args.acceptUrl,
         customerPhone: args.customerPhone,
         customerName: args.customerName,
+        deliveryInstructions: args.deliveryInstructions,
         customer: {
           phone: args.customerPhone,
           name: args.customerName,
         }
       });
+      console.log(update);
       return transactions.insert(update, (err, txId) => {
         if(err) { throwError(err.message); } else {
           const tx = transactions.findOne(txId);
@@ -119,8 +121,6 @@ transactions.methods = {
           $set: update
         }, (err) => {
           if(err) { throwError(err.message); } else {
-            console.log('trying to call this way');
-            console.log(DDPenv());
             DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
               if(err) { console.log(err); throw new Meteor.Error(err); }
             });
@@ -751,6 +751,7 @@ Meteor.methods({
     requestRemoteDaas(obj, bizId) {
       if (Meteor.isServer) {
         const biz = (Meteor.user() && Meteor.user().roles.includes('admin')) ? bizId : undefined;
+        console.log(obj.deliveryInstructions);
         transactions.methods.insertDaaS.call({
           deliveryAddress: obj.selectedAddr,
           deliveryInstructions: obj.deliveryInstructions,
