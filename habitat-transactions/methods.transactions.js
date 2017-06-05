@@ -119,6 +119,8 @@ transactions.methods = {
           $set: update
         }, (err) => {
           if(err) { throwError(err.message); } else {
+            console.log('trying to call this way');
+            console.log(DDPenv());
             DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
               if(err) { console.log(err); throw new Meteor.Error(err); }
             });
@@ -751,6 +753,7 @@ Meteor.methods({
         const biz = (Meteor.user() && Meteor.user().roles.includes('admin')) ? bizId : undefined;
         transactions.methods.insertDaaS.call({
           deliveryAddress: obj.selectedAddr,
+          deliveryInstructions: obj.deliveryInstructions,
           loc: res.features[0].geometry,
           sellerId: biz || Meteor.users.findOne(this.userId).profile.businesses[0],
           DaaSType: obj.type,
