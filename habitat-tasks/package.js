@@ -5,6 +5,8 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.versionsFrom('METEOR@1.4.4.2');
+
   api.use('underscore');
   api.use('ecmascript');
   api.use('mongo');

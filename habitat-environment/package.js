@@ -11,13 +11,9 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.3.2.4');
+  api.versionsFrom('METEOR@1.4.4.2');
+
   api.use('ecmascript');
   api.addFiles('env.js');
   api.export('DDPenv');
-});
-
-Package.onTest(function(api) {
-  api.use('ecmascript');
-  api.use('tinytest');
 });
