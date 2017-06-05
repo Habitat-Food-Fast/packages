@@ -1,21 +1,4 @@
 businessProfiles.methods = {
-  onboard: new ValidatedMethod({
-    name: 'businessProfiles.methods.onboardSubmerchant',
-    validate: new SimpleSchema({
-      merchAcct: { type: Object, blackbox: true },
-      sid: {type: String}
-    }).validator(),
-    run({ merchAcct, sid }) {
-      if (!this.isSimulation && Roles.userIsInRole(this.userId, ['vendor']) ||
-          !this.isSimulation && Roles.userIsInRole(this.userId, ['admin']) ) {
-        BT.submerchant.create(merchAcct, sid, (err, success) => {
-          if(err){ throw new Meteor.Error(err.message); }
-          return success;
-        });
-      }
-    }
-  }),
-
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',
     validate: new SimpleSchema({
