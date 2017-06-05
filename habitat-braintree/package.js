@@ -5,6 +5,9 @@ Package.describe({
   documentation: null
 });
 
+Npm.depends({
+  "braintree": "1.32.0",
+});
 Package.onUse(function(api) {
   api.versionsFrom('1.3.2.4');
   api.use('ecmascript');

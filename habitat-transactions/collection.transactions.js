@@ -1,4 +1,3 @@
-import randomColor from 'random-color';
 tx = txId => transactions.findOne(txId);
 Deliveries = new Meteor.Collection("deliveries");
 longCall = Meteor.settings.devMode ? 40000 : 120000;
@@ -9,7 +8,8 @@ class transactionsCollection extends Mongo.Collection {
   insert(doc) {
     const bizProf = businessProfiles.findOne(doc.sellerId);
     const usr = Meteor.users.findOne(doc.buyerId) || false;
-    const transaction = _.extend(this.resetItems(), {
+
+    return super.insert(_.extend(this.resetItems(), {
       status: 'created',
       DaaS: doc.DaaS ? true : false,
       thirdParty: doc.thirdParty || false,
@@ -46,9 +46,7 @@ class transactionsCollection extends Mongo.Collection {
       message: null,
       rating_vendor: null,
       week: weeks.find().count(),
-      color: randomColor(0.3, 0.99).hexString(),
-    });
-    return super.insert(transaction, (err, txId) => {
+    }), (err, txId) => {
       if(err) { throwError(err.message); } else {
         if(Meteor.user()){ Meteor.users.update(Meteor.userId(), { $push:{ "profile.transactions": txId } }); }
         calc.recalculateOpenTxs(txId, transactions.findOne(txId));
@@ -65,7 +63,7 @@ class transactionsCollection extends Mongo.Collection {
          _.extend(order, {
           orderId: this.pin(),
           itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
-          itemName: saleItems.findOne(order.saleItemId).name,
+          itemName: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).name : '',
           itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
           modifiers: order.modifiers,
           modifiersText: order.modifiers === [] ? [] : this.formatMods(order.modifiers)
@@ -93,7 +91,7 @@ class transactionsCollection extends Mongo.Collection {
           price: mod.price
         });
       }
-    };
+    }
     return modArray;
   }
   remove(id, callback){ return super.remove(id, callback); }

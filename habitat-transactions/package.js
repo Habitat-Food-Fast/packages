@@ -3,6 +3,11 @@ Package.describe({
   summary: "Transactions collection stuff",
   version: "1.0.6"
 });
+Npm.depends({
+  "phaxio": "0.0.6",
+  "geolib": "2.0.22",
+  "json-2-csv": "2.1.1"
+});
 
 Package.onUse(function (api) {
   api.use('underscore');

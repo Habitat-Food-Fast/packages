@@ -11,22 +11,20 @@ var gateway,
     roundedAmount;
 
 Meteor.startup(function () {
-    //old app used NPM package with global lowercase braintree variable
-    //new app using patrickml:braintree (uppercase braintree variable)
-    //following line patches the difference in case
-    braintree = Braintree;
-
+  import('braintree').then((braintree) => {
     if(!braintree){
       throw new Meteor.Error(bt.err.noPackage.name, bt.err.noPackage.msg);
     } else if(Meteor.settings.braintree.BT_MERCHANT_ID != Meteor.settings.public.braintree.BT_MERCHANT_ID){
       throw new Meteor.Error(bt.err.mismatch.name, bt.err.mismatch.msg);
     }
-    gateway = BrainTreeConnect({
+    gateway = braintree.connect({
         environment: Meteor.settings.devMode ? braintree.Environment.Sandbox : braintree.Environment.Production,
         merchantId: Meteor.settings.braintree.BT_MERCHANT_ID,
         publicKey: Meteor.settings.braintree.BT_PUBLIC_KEY,
         privateKey: Meteor.settings.braintree.BT_PRIVATE_KEY
     });
+    console.log(gateway);
+  });
 });
 
 Meteor.methods({

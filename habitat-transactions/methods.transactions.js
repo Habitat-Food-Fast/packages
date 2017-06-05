@@ -1,3 +1,9 @@
+let phaxio;
+import('phaxio').then((Phaxio) => {
+  phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+})
+
+
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
@@ -273,7 +279,7 @@ confirmDropoff: new ValidatedMethod({
       if(!tx.payRef.tip){
         transactions.update(txId, { $set: {
           'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
-        }})
+        }});
       }
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
@@ -742,13 +748,14 @@ Meteor.methods({
         transactions.update(tx, {$set: {pickedUpAt: Date.now()}});
       }
     },
-    requestRemoteDaas(obj) {
+    requestRemoteDaas(obj, bizId) {
       if (Meteor.isServer) {
+        const biz = (Meteor.user() && Meteor.user().roles.includes('admin')) ? bizId : undefined;
         transactions.methods.insertDaaS.call({
           deliveryAddress: obj.selectedAddr,
           deliveryInstructions: obj.deliveryInstructions,
           loc: res.features[0].geometry,
-          sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
+          sellerId: biz || Meteor.users.findOne(this.userId).profile.businesses[0],
           DaaSType: obj.type,
           orderSize: obj.orderSize || 1,
           isDelivery: true,

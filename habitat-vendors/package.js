@@ -8,6 +8,7 @@ Package.onUse(function (api) {
   api.use('underscore');
   api.use('ecmascript');
   api.use('mongo');
+  api.use('random');
   api.use('aldeed:collection2');
   api.use('aldeed:simple-schema');
   api.use('momentjs:moment');
