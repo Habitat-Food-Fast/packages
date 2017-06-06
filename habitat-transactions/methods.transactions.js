@@ -38,6 +38,7 @@ transactions.methods = {
       customerEmail: { type: String, optional: true },
       acceptUrl: { type: String, optional: true },
       orderSize: { type: Number, optional: true },
+      prepTime: {type: Number, optional: true },
       payRef: { type: Object, optional: true, blackbox: true },
       thirdParty: { type: Boolean, optional: true },
       partnerName: { type: String, optional: true },
@@ -45,6 +46,8 @@ transactions.methods = {
       key: { type: String, optional: true },
       order: { type: [Object], optional: true, blackbox: true },
       isDelivery: { type: Boolean, optional: true },
+      status: {type: String, optional: true },
+      readyAt: {type: Date, optional: true }
     }).validator(),
     run( args ) {
       const biz = businessProfiles.findOne(
@@ -60,7 +63,7 @@ transactions.methods = {
         sellerId: biz._id,
         habitat: biz.habitat[0],
         company_name: biz.company_name,
-        status: 'created',
+        status: args.status || 'created',
         method: args.isDelivery ? 'Delivery' : 'Pickup',
         orderNumber: transactions.pin(),
         orderSize: args.orderSize,
@@ -109,7 +112,6 @@ transactions.methods = {
     run({ deliveryId, prepTime }) {
       if (!prepTime) {prepTime = transactions.findOne(deliveryId) ? transactions.findOne(deliveryId).prepTime : businessProfiles.findOne(transactions.findOne(deliveryId).sellerId).prep_time;}
       arguments[0].readyAt = new Date(Date.now() + (prepTime * 60000));
-      console.warn(`the deliveryId right before requestItems is ${deliveryId}`);
       update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime, true));
         return transactions.update(deliveryId, {
           $set: update
@@ -745,32 +747,29 @@ Meteor.methods({
     requestRemoteDaas(obj, bizId) {
       if (Meteor.isServer) {
         const biz = (Meteor.user() && Meteor.user().roles.includes('admin')) ? bizId : undefined;
-        console.log(obj.deliveryInstructions);
-        transactions.methods.insertDaaS.call({
+        const bizObj = businessProfiles.findOne(biz || Meteor.users.findOne(this.userId).profile.businesses[0]);
+        const charge = businessProfiles.getToday(biz || Meteor.users.findOne(this.userId).profile.businesses[0]).vendorRates.DaaS.flat;
+        const prep = obj.time || bizObj.prep_time
+        const txId = transactions.methods.insertDaaS.call({
           deliveryAddress: obj.selectedAddr,
           deliveryInstructions: obj.deliveryInstructions,
-          loc: res.features[0].geometry,
+          loc: obj.loc || res.features[0].geometry,
           sellerId: biz || Meteor.users.findOne(this.userId).profile.businesses[0],
           DaaSType: obj.type,
+          customerName: obj.name,
+          customerPhone: obj.phone,
+          prepTime: prep,
+          status: 'pending_runner',
+          readyAt: new Date(Date.now() + (prep * 60000)),
+          payRef: {
+            DaaSCharge: charge
+          },
           orderSize: obj.orderSize || 1,
-          isDelivery: true,
-        }, (err, id) => {
-          if (err) {
-            throw new Meteor.Error(err);
-          } else {
-            const txId = id;
-            transactions.methods.requestDaaS.call({
-              deliveryId: id,
-              prepTime: obj.time,
-              customerName: obj.name,
-              customerPhone: obj.phone
-            }, (err, id) => {
-              if (err) {
-                throw new Meteor.Error(err);
-              } else {
-                const charge = businessProfiles.getToday(Meteor.users.findOne(this.userId).profile.businesses[0]).vendorRates.DaaS.flat;
-                transactions.update(txId, {$set: {'payRef.DaaSCharge': charge}});
-              }
+          isDelivery: true
+        }, (err) => {
+          if (!err) {
+            DDPenv().call('sendRunnerPing', txId, false, initialPing=true, (err, res) => {
+              if(err) { console.log(err); throw new Meteor.Error(err); }
             });
           }
         });

@@ -199,12 +199,6 @@ class businessProfilesCollection extends Mongo.Collection {
   }
 }
 
-Meteor.methods({
-   fetchReceipt(bizId, weekNum, token, DaaS) {
-     const type = DaaS ? 'DaaS' : 'habitat';
-     return transactions.csv.vendor.payout[type](bizId, weekNum || weeks.find().count(), token, send=false);
-   }
-});
 businessProfiles = new businessProfilesCollection("businessprofiles");
 
 businessProfiles.allow({

@@ -23,7 +23,6 @@ Meteor.startup(function () {
         publicKey: Meteor.settings.braintree.BT_PUBLIC_KEY,
         privateKey: Meteor.settings.braintree.BT_PRIVATE_KEY
     });
-    console.log(gateway);
   });
 });
 
