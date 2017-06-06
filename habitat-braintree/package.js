@@ -9,7 +9,8 @@ Npm.depends({
   "braintree": "1.32.0",
 });
 Package.onUse(function(api) {
-  api.versionsFrom('1.3.2.4');
+  api.versionsFrom('METEOR@1.4.4.2');
+
   api.use('ecmascript');
   api.use('check');
   api.mainModule('braintree.js');
