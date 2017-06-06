@@ -210,4 +210,15 @@ Meteor.methods({
       }
     });
   },
+
+  updateSaleitemVisibility(saleItemId, trueOrFalse, bizId) {
+    if (Meteor.isServer) {
+      var uid = businessProfiles.findOne(bizId).uid;
+      if (this.userId === uid || Roles.userIsInRole(this.userId, ['admin'])) {
+        saleItems.update(saleItemId, {$set: {isHiddenFromMenu: trueOrFalse}});
+        return saleItemId;
+      }  
+    }
+  },
+
 });
