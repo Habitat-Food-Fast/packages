@@ -1,6 +1,7 @@
 API = {
   authentication( apiKey ) {
     var getUser = APIKeys.findOne( { "key": apiKey }, { fields: { "owner": 1 } } );
+    console.log('auth', apiKey, getUser)
     return getUser ? getUser.owner : false;
   },
   connection( request ) {

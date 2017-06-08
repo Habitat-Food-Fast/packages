@@ -5,16 +5,15 @@ _baseSchema = new SimpleSchema({
     custom(){
       console.log(this.obj)
       const bp = businessProfiles.findOne(this.obj.sellerId);
+      if(!bp){ throwError({reason: 'No vendor found'}); }
       const hab = Habitats.findOne({name: bp.backend_habitat});
-      if(!bp){
-        throwError({reason: 'No vendor found'});
-      } else if (!hab) {
+      if (!hab) {
         throwError({reason: 'No habitat found'});
-      } else if (bp && bp.closed) {
+      } else if (bp.closed) {
         throwError({reason: 'Vendor is currently closed'});
-      } else if (bp && this.obj.DaaS && !bp.DaaS){
+      } else if (this.obj.DaaS && !bp.DaaS){
         throwError({reason: 'Vendor is not enabled for Delivery-as-a-Service'});
-      } else if (bp && hab && hab.orderType === 'pickup' && this.obj.isDelivery){
+      } else if (hab.orderType === 'pickup' && this.obj.isDelivery){
         throwError({reason: 'Habitat is closed for delivery'})
       }
     }
@@ -93,16 +92,6 @@ function handleDelivery(context, tx){
   }
 }
 
-handleErrors = (context, order) => {
-  console.warn(`inside handleErrors`, order.sellerId)
-  switch (order) {
-    case !order.sellerId:
-      console.warn(`inside handle errors no sellerId`)
-      return API.utility.response(context, 400, { error: 400, message: `Must pass a valid Habitat sellerId`, });
-    case order.thirdParty && !order.partnerName:
-      return API.utility.response(context, 400, { error: 400, message: `Can't find partner for ${connection.data.partnerName}`, });
-  }
-}
 
 validateOrder = (context, order) => {
   let schema = _baseSchema
