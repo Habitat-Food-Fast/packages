@@ -32,4 +32,5 @@ Package.onUse(function (api) {
   api.export('handleInitialVendorContact');
   api.export('gmapsUrl');
   api.export('transactions');
+  api.export('validateOrder');
 });
