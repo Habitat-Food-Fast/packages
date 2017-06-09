@@ -729,42 +729,13 @@ Meteor.methods({
         transactions.update(tx, {$set: {pickedUpAt: Date.now()}});
       }
     },
-    requestRemoteDaas(obj, bizId) {
-      if (Meteor.isServer) {
-        const biz = (Meteor.user() && Meteor.user().roles.includes('admin')) ? bizId : undefined;
-        const bizObj = businessProfiles.findOne(biz || Meteor.users.findOne(this.userId).profile.businesses[0]);
-        const charge = businessProfiles.getToday(biz || Meteor.users.findOne(this.userId).profile.businesses[0]).vendorRates.DaaS.flat;
-        const prep = obj.time || bizObj.prep_time
-        const txId = transactions.methods.insertDaaS.call({
-          deliveryAddress: obj.selectedAddr,
-          deliveryInstructions: obj.deliveryInstructions,
-          loc: obj.loc || res.features[0].geometry,
-          sellerId: biz || Meteor.users.findOne(this.userId).profile.businesses[0],
-          DaaSType: obj.type,
-          customerName: obj.name,
-          customerPhone: obj.phone,
-          prepTime: prep,
-          status: 'pending_runner',
-          readyAt: new Date(Date.now() + (prep * 60000)),
-          payRef: {
-            DaaSCharge: charge
-          },
-          orderSize: obj.orderSize || 1,
-          isDelivery: true
-        }, (err) => {
-          if (!err) {
-            DDPenv().call('sendRunnerPing', txId, false, initialPing=true, (err, res) => {
-              if(err) { console.log(err); throw new Meteor.Error(err); }
-            });
-          }
-        });
-      }
-    },
     editDaaSInfo(id, state) {
+      console.log(state);
       const obj = {
-        customerName: state.name,
-        customerPhone: state.phone,
-        deliveryAddress: state.address
+        'customer.name': state.name,
+        'customer.phone': state.phone,
+        deliveryAddress: state.address,
+        deliveryInstructions: state.deliveryInstructions
       };
       if (transactions.findOne(id).sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
         return transactions.update(id, {$set: obj});
