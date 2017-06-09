@@ -22,7 +22,6 @@ _baseSchema = new SimpleSchema({
     }
   },
   status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner'] },
-  orderType: { type: String, allowedValues: ['credit_card', 'online', 'cash'] },
   orderSize: { type: Number, optional: true },
   isDelivery: { type: Boolean },
   prepTime: { type: Number }, //only used if vendor mode
@@ -36,8 +35,6 @@ _baseSchema = new SimpleSchema({
   company_name: {type: String, optional: true},
   orderNumber: {type: String, optional: true},
   cashTip: { type: Boolean, optional: true, },
-  orderSize: { type: Number, optional: true },
-  prepTime: { type: Number, optional: true }, //only used if vendor mode
 });
 
 _timingSchema = new SimpleSchema({
