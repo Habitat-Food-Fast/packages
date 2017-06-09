@@ -19,7 +19,7 @@ _baseSchema = new SimpleSchema({
     }
   },
   status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner'] },
-  orderType: { type: String, allowedValues: ['credit_card', 'prepaid', 'cash'] },
+  orderType: { type: String, allowedValues: ['credit_card', 'online', 'cash'] },
   orderSize: { type: Number, optional: true },
   isDelivery: { type: Boolean },
   prepTime: { type: Number }, //only used if vendor mode
@@ -46,9 +46,9 @@ _orderSchema = new SimpleSchema ({
 });
 _customerSchema = new SimpleSchema({
   customer: { type: Object },
-    'customer.name': { type: String },
+    'customer.name': { type: String, optional: true },
     'customer.phone': { type: String },
-    'customer.email': { type: String },
+    'customer.email': { type: String, optional: true },
 });
 _payRefSchema = new SimpleSchema({
   payRef: { type: Object },
@@ -94,11 +94,14 @@ function handleDelivery(context, tx){
 
 
 validateOrder = (context, order) => {
+  console.log(`order is`);
+  console.log(order);
   let schema = _baseSchema
-    .extend(_orderSchema)
-    .extend(_customerSchema)
-    .extend(_payRefSchema)
-    .extend(_timingSchema)
+  .extend(_customerSchema)
+  .extend(_timingSchema)
+  if (!order.sellerId === order.partnerName) {
+    schema.extend(_orderSchema).extend(_payRefSchema)
+  }
 
   if(order.isDelivery){
     order = _.extend(order, handleDelivery(context, order));

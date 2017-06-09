@@ -39,8 +39,8 @@ API.methods = {
       } else {
         try {
           delete connection.data.api_key; //no longer need this now that partner has been validated
-          const usr = Meteor.users.findOne(connection.owner);
           const bp = businessProfiles.findOne(connection.data.sellerId);
+          const usr = Meteor.users.findOne(businessProfiles.findOne(connection.owner) ? bp.uid : connection.owner);
           connection.data.sellerId =  bp ? bp._id : '';
           connection.data.thirdParty = !usr //if owner is not habitat user
           connection.data.partnerName = usr ? '' : connection.owner;

@@ -20,8 +20,9 @@ class transactionsCollection extends Mongo.Collection {
       DaaSType: doc.orderType || doc.DaaSType,
       vendorPayRef: {},
       runnerPayRef: {},
-      order: !doc.order.length ? [] : this.formatOrder(doc.order, doc.thirdParty),
-      plainOrder: !doc.order.length ? [] : this.formatOrder(doc.order, doc.thirdParty),
+      prepTime: doc.prepTime || bizProf.prep_time,
+      order: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
+      plainOrder: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       orderNumber: doc.orderNumber || this.pin(),
       orderSize: doc.orderSize || 1,
       habitat: doc.habitat || bizProf.habitat[0],
@@ -52,11 +53,11 @@ class transactionsCollection extends Mongo.Collection {
       console.log('after super.insert', tx)
       if(err) { throwError(err.message); } else {
         if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
-        if(doc.status === 'pending_vendor' || doc.status === 'pending_runner'){
-          transactions.request(txId)
+        if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
+          transactions.request(txId, {});
         }
         if(doc.buyerId){ Meteor.users.update(doc.buyerId, { $push:{ "profile.transactions": txId } }); }
-        if(!doc.thirdParty){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
+        if(!doc.thirdParty && !tx.DaaS){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
 
         return txId;
       }
@@ -202,7 +203,7 @@ class transactionsCollection extends Mongo.Collection {
   customerItems(usr, doc) {
     if(usr) {
       return { id: usr ? usr._id : '', phone: usr ? usr.profile.phone : '', name: usr ? usr.profile.fn : '', };
-    } else if (doc.thirdParty) {
+    } else if (doc.thirdParty || doc.DaaS) {
       return {
         id: '',
         phone: doc.customer.phone,
@@ -214,16 +215,20 @@ class transactionsCollection extends Mongo.Collection {
   request(id, fields, callback){
     const trans = transactions.findOne(id);
 
-    if (trans && trans.payRef &&trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }
-
+    if (trans && trans.payRef && trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }
+    const prep = trans.prepTime;
     //CAN'T USE SUPER HERE, WANT TO USE OVERRIDDEN METHOD TO TRACK LAST UPDATE
-    return this.update(id, {$set: _.extend(fields, this.requestItems(id), {
+    return transactions.update(id, {$set: _.extend(fields, this.requestItems(id), {
       txType: trans.promoId ?
         Instances.findOne(trans.promoId) ?
           Instances.findOne(trans.promoId).acquisition ? 'acquisition' : 'retention'
           : ''
         : '',
-    })}, callback);
+    })}, (err, res) => {
+      if (err) {
+        throwError(err);
+      }
+    });
   }
   timeSinceRequest(txId){
     const tx = transactions.findOne(txId);
