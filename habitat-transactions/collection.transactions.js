@@ -6,7 +6,10 @@ finalDelay = Meteor.settings.devMode ? 40000 : 90000;
 
 class transactionsCollection extends Mongo.Collection {
   insert(doc) {
-    const bizProf = businessProfiles.findOne(doc.sellerId);
+    const bizProf = businessProfiles.findOne(doc.company_name ?
+      { company_name: doc.company_name} :
+      doc.sellerId
+    );
     const usr = Meteor.users.findOne(doc.buyerId) || false;
     console.warn(doc.orderType);
     return super.insert(_.extend(this.resetItems(), {
@@ -34,7 +37,7 @@ class transactionsCollection extends Mongo.Collection {
       company_geometry: bizProf.geometry,
       buyerId: !doc.DaaS ? doc.buyerId : doc.sellerId,
       customer: this.customerItems(usr, doc),
-      sellerId: doc.DaaS ? doc.sellerId : bizProf._id,
+      sellerId: bizProf._id,
       company_name: bizProf.company_name,
       createdAt: Date.now(),
       createdAtHuman: Date(),
@@ -68,7 +71,7 @@ class transactionsCollection extends Mongo.Collection {
   forceRemove() { return super.remove({}); }
   formatOrder(order, thirdParty){
     if(!thirdParty){
-      return order.length === 0 ? order : order.map(order =>
+      o= order.length === 0 ? order : order.map(order =>
          _.extend(order, {
           orderId: this.pin(),
           itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
@@ -79,7 +82,7 @@ class transactionsCollection extends Mongo.Collection {
         })
       );
     } else {
-      return order.length === 0 ? order : order.map(order =>
+      o= order.length === 0 ? order : order.map(order =>
          _.extend(order, {
           orderId: this.pin(),
           itemPrice: order.itemPrice,
@@ -88,6 +91,8 @@ class transactionsCollection extends Mongo.Collection {
         })
       );
     }
+
+    console.log(o); return o;
   }
   formatMods(mods) {
     let modArray = [];
@@ -197,7 +202,7 @@ class transactionsCollection extends Mongo.Collection {
       adminAssign: false,
       promoUsed: null,
       promoId: null,
-      deliveredAtEst: false, //reset here - want to store time from vendor accept.
+      // deliveredAtEst: false,
     };
   }
   customerItems(usr, doc) {

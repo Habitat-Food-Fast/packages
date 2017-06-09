@@ -4,7 +4,10 @@ _baseSchema = new SimpleSchema({
     type: String,
     custom(){
       console.log(this.obj)
-      const bp = businessProfiles.findOne(this.obj.sellerId);
+      const bp = businessProfiles.findOne(this.obj.company_name ?
+        { company_name: this.obj.company_name} :
+        this.obj.sellerId
+      );
       if(!bp){ throwError({reason: 'No vendor found'}); }
       const hab = Habitats.findOne({name: bp.backend_habitat});
       if (!hab) {
@@ -26,6 +29,15 @@ _baseSchema = new SimpleSchema({
   partnerName: { type: String }, //PRIVATE: (not passed up)
   thirdParty: { type: Boolean }, //PRIVATE: (not passed up)
   DaaS: { type: Boolean }, //PRIVATE: (not passed up)
+  method: { type: String },
+  status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner'] },
+  DaaSType: { type: String, allowedValues: ['credit_card', 'online', 'cash'] },
+  grubhubId: {type: String, optional: true},
+  company_name: {type: String, optional: true},
+  orderNumber: {type: String, optional: true},
+  cashTip: { type: Boolean, optional: true, },
+  orderSize: { type: Number, optional: true },
+  prepTime: { type: Number, optional: true }, //only used if vendor mode
 });
 
 _timingSchema = new SimpleSchema({
@@ -33,16 +45,19 @@ _timingSchema = new SimpleSchema({
   expectedAt: { type: String, optional: true }
 })
 _orderSchema = new SimpleSchema ({
-  order: { type: Array },
-    'order.$': { type: Object },
-      'order.$.itemName': { type: String },
-      'order.$.itemCategory': { type: String, optional: true },
-      'order.$.itemPrice': { type: Number },
-      'order.$.modifiers': { type: Array, optional: true },
-        'order.$.modifiers.$': { type: Object, optional: true },
-          'order.$.modifiers.$.name': { type: String },
-          'order.$.modifiers.$.category': { type: String },
-          'order.$.modifiers.$.price': { type: Number, optional: true },
+  plainOrder: { type: Array },
+    'plainOrder.$': { type: Object },
+      'plainOrder.$.orderId': { type: Number }, //the index
+      'plainOrder.$.quantity': { type: Number, optional: true, },
+      'plainOrder.$.itemInstructions': { type: String },
+      'plainOrder.$.itemName': { type: String },
+      'plainOrder.$.itemCategory': { type: String, optional: true },
+      'plainOrder.$.itemPrice': { type: Number, optional: true },
+      'plainOrder.$.modifiersText': { type: Array, optional: true },
+        'plainOrder.$.modifiersText.$': { type: Object, optional: true },
+          'plainOrder.$.modifiersText.$.name': { type: String },
+          'plainOrder.$.modifiersText.$.category': { type: String },
+          'plainOrder.$.modifiersText.$.price': { type: Number, optional: true },
 });
 _customerSchema = new SimpleSchema({
   customer: { type: Object },
@@ -52,7 +67,7 @@ _customerSchema = new SimpleSchema({
 });
 _payRefSchema = new SimpleSchema({
   payRef: { type: Object },
-    'payRef.total': { type: Number },
+    'payRef.tp': { type: Number },
     'payRef.tax': { type: Number },
     'payRef.tip': { type: Number },
 });
@@ -61,6 +76,13 @@ _deliverySchema = new SimpleSchema({
   deliveryInstructions: { type: String, optional: true },
   suite: { type: String, optional: true },
   loc: { type: Object, blackbox: true, optional: true },
+  //grubhub stuff, should move toward this more descriptive way.
+  address1: { type: String, optional: true},
+  address2: { type: String, optional: true},
+  city: { type: String, optional: true},
+  state: { type: String, optional: true},
+  zip: { type: String, optional: true},
+  'cross-street': { type: String, optional: true},
 })
 
 function handleDelivery(context, tx){
@@ -103,7 +125,7 @@ validateOrder = (context, order) => {
     schema.extend(_orderSchema).extend(_payRefSchema)
   }
 
-  if(order.isDelivery){
+  if(order.method === 'Delivery' || order.isDelivery){
     order = _.extend(order, handleDelivery(context, order));
     schema.extend(_deliverySchema);
   }
