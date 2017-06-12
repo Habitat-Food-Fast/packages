@@ -114,7 +114,7 @@ validateOrder = (context, order) => {
   .extend(_timingSchema)
   .extend(_deliverySchema);
 
-  if (order.plainOrder.length) {
+  if (order.plainOrder) {
     schema.extend(_orderSchema).extend(_payRefSchema)
   }
   console.log('validate', order)
