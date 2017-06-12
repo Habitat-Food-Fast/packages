@@ -113,8 +113,6 @@ function handleDelivery(context, tx){
 
 
 validateOrder = (context, order) => {
-  console.log(`order is`);
-  console.log(order);
   let schema = _baseSchema
   .extend(_customerSchema)
   .extend(_timingSchema)

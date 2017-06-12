@@ -183,7 +183,7 @@ class transactionsCollection extends Mongo.Collection {
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
-    }; console.log(req);
+    };
     return req;
   }
   //reset vendor, runner, admin lifecycle. no user related stuff or payRef determining fields

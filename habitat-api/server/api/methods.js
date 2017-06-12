@@ -42,6 +42,7 @@ API.methods = {
           const bp = businessProfiles.findOne(connection.data.sellerId);
           const usr = Meteor.users.findOne(businessProfiles.findOne(connection.owner) ? bp.uid : connection.owner);
           connection.data.sellerId =  bp ? bp._id : '';
+          connection.data.company_name = bp ? bp.company_name : '';
           connection.data.thirdParty = !usr //if owner is not habitat user
           connection.data.partnerName = usr ? '' : connection.owner;
           connection.data.DaaS = !usr || usr.roles.includes('admin') || usr.roles.includes('vendor');
