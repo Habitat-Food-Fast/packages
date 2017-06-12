@@ -1,5 +1,9 @@
 import SimpleSchema from 'simpl-schema';
 _baseSchema = new SimpleSchema({
+  prepTime: { type: Number, optional: true }, //only used if vendor mode
+  partnerName: { type: String }, //PRIVATE: (not passed up)
+  thirdParty: { type: Boolean }, //PRIVATE: (not passed up)
+  DaaS: { type: Boolean }, //PRIVATE: (not passed up)
   sellerId: {
     type: String,
     custom(){
@@ -22,15 +26,9 @@ _baseSchema = new SimpleSchema({
     }
   },
   status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner'] },
-  orderSize: { type: Number, optional: true },
-  isDelivery: { type: Boolean },
-  prepTime: { type: Number }, //only used if vendor mode
-  partnerName: { type: String }, //PRIVATE: (not passed up)
-  thirdParty: { type: Boolean }, //PRIVATE: (not passed up)
-  DaaS: { type: Boolean }, //PRIVATE: (not passed up)
-  method: { type: String },
-  status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner'] },
   DaaSType: { type: String, allowedValues: ['credit_card', 'online', 'cash'] },
+  method: { type: String, allowedValues: ['Pickup', 'Delivery']},
+  orderSize: { type: Number, optional: true },
   grubhubId: {type: String, optional: true},
   company_name: {type: String, optional: true},
   orderNumber: {type: String, optional: true},
@@ -116,7 +114,7 @@ validateOrder = (context, order) => {
   let schema = _baseSchema
   .extend(_customerSchema)
   .extend(_timingSchema)
-  if (!order.sellerId === order.partnerName) {
+  if (order.plainOrder.length) {
     schema.extend(_orderSchema).extend(_payRefSchema)
   }
 
