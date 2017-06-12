@@ -204,8 +204,8 @@ generateOrderInfo(tx, runner) {
   const pck = tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format('LT') : 'ASAP';
 
   if(tx.DaaS){
-    customerName = tx.customerName || 'unknown';
-    customerPhone = tx.customerPhone || 'unknown';
+    customerName = tx.customerName || tx.customer.name|| 'unknown';
+    customerPhone = tx.customerPhone || tx.customer.phone || 'unknown';
     msg = `Order #${tx.orderNumber} assigned.
 READY AT: ${pck}
 PAYMENT: ${(tx.DaaSType === 'online' || tx.DaaSType === 'credit_card') ? 'Conf drop w/ tip + pic' : tx.DaaSType}

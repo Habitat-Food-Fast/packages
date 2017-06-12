@@ -1,7 +1,10 @@
 let convertSync;
-import('json-2-csv').then((convert) => {
-  convertSync = Meteor.wrapAsync(convert.json2csv);
-});
+if(module.dynamicImport){
+  import('json-2-csv').then((convert) => {
+    convertSync = Meteor.wrapAsync(convert.json2csv);
+  });  
+}
+
 
 transactions.csv = {
   orders(txId, req) {
