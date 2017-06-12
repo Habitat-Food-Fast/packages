@@ -20,7 +20,7 @@ runner = {
   watchPendingOrders () {
     Habitats.find().forEach((h) => {
       transactions.find({
-        status: {$in: ['pending_runner', 'in_progress']},
+        status: {$in: ['pending_vendor', 'pending_runner', 'in_progress']},
         habitat: h._id}, {sort: {deliveredAtEst: -1}
       }).forEach((t) => {
         if(typeof t.deliveredAtEst !== 'number') { console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); }

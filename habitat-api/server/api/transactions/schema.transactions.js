@@ -1,9 +1,12 @@
 import SimpleSchema from 'simpl-schema';
 _baseSchema = new SimpleSchema({
+  prepTime: { type: Number, optional: true }, //only used if vendor mode
+  partnerName: { type: String }, //PRIVATE: (not passed up)
+  thirdParty: { type: Boolean }, //PRIVATE: (not passed up)
+  DaaS: { type: Boolean }, //PRIVATE: (not passed up)
   sellerId: {
     type: String,
     custom(){
-      console.log(this.obj)
       const bp = businessProfiles.findOne(this.obj.company_name ?
         { company_name: this.obj.company_name} :
         this.obj.sellerId
@@ -22,18 +25,12 @@ _baseSchema = new SimpleSchema({
     }
   },
   status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner'] },
-  orderSize: { type: Number, optional: true },
-  isDelivery: { type: Boolean },
-  prepTime: { type: Number }, //only used if vendor mode
-  partnerName: { type: String }, //PRIVATE: (not passed up)
-  thirdParty: { type: Boolean }, //PRIVATE: (not passed up)
-  DaaS: { type: Boolean }, //PRIVATE: (not passed up)
-  method: { type: String },
-  status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner'] },
   DaaSType: { type: String, allowedValues: ['credit_card', 'online', 'cash'] },
+  method: { type: String, allowedValues: ['Pickup', 'Delivery']},
+  orderSize: { type: Number, optional: true },
   grubhubId: {type: String, optional: true},
   company_name: {type: String, optional: true},
-  orderNumber: {type: String, optional: true},
+  orderNumber: {type: Number, optional: true},
   cashTip: { type: Boolean, optional: true, },
 });
 
@@ -69,7 +66,7 @@ _payRefSchema = new SimpleSchema({
     'payRef.tip': { type: Number },
 });
 _deliverySchema = new SimpleSchema({
-  deliveryAddress: { type: String },
+  deliveryAddress: { type: String, optional: true },
   deliveryInstructions: { type: String, optional: true },
   suite: { type: String, optional: true },
   loc: { type: Object, blackbox: true, optional: true },
@@ -83,7 +80,6 @@ _deliverySchema = new SimpleSchema({
 })
 
 function handleDelivery(context, tx){
-  console.log(tx.deliveryAddress);
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${tx.deliveryAddress}.json`;
   const params = {
     params: {
@@ -116,13 +112,14 @@ validateOrder = (context, order) => {
   let schema = _baseSchema
   .extend(_customerSchema)
   .extend(_timingSchema)
-  if (!order.sellerId === order.partnerName) {
+  .extend(_deliverySchema);
+
+  if (order.plainOrder.length) {
     schema.extend(_orderSchema).extend(_payRefSchema)
   }
-
+  console.log('validate', order)
   if(order.method === 'Delivery' || order.isDelivery){
     order = _.extend(order, handleDelivery(context, order));
-    schema.extend(_deliverySchema);
   }
 
   return schema.validate(order);
