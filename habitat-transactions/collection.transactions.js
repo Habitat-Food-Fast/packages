@@ -11,6 +11,7 @@ class transactionsCollection extends Mongo.Collection {
       doc.sellerId
     );
     const usr = Meteor.users.findOne(doc.buyerId) || false;
+    console.warn(`insert`, doc.method);
     return super.insert(_.extend(this.resetItems(), {
       status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
@@ -29,7 +30,7 @@ class transactionsCollection extends Mongo.Collection {
       orderNumber: doc.orderNumber || this.pin(),
       orderSize: doc.orderSize || 1,
       habitat: doc.habitat || bizProf.habitat[0],
-      method: doc.methodType || doc.method || doc.isDelivery ? 'Delivery' : 'Pickup',
+      method: doc.method ? doc.method : doc.isDelivery ? 'Delivery' : 'Pickup',
       deliveryAddress: doc.deliveryAddress || '',
       deliveryInstructions: doc.deliveryInstructions,
       geometry: doc.loc, //where the order is getting delivered to
@@ -53,6 +54,8 @@ class transactionsCollection extends Mongo.Collection {
       week: weeks.find().count(),
     }), (err, txId) => {
       tx = transactions.findOne(txId);
+      console.warn(`after insert`, tx.method);
+
       if(err) { throwError(err.message); } else {
         if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){

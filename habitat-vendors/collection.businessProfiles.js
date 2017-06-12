@@ -16,6 +16,7 @@ class businessProfilesCollection extends Mongo.Collection {
           weeklyHours: this.setHours(),
           geometry: res.features[0].geometry,
           backend_habitat: Habitats.findOne(doc.habitat[0]).name,
+          grubhubId: doc.grubhubId
         }), (err, newBizId) => {
           if(err) { throwError(err.message); }
             const bp = businessProfiles.findOne(newBizId);

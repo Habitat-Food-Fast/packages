@@ -48,8 +48,8 @@ API.methods = {
           connection.data.DaaS = !usr ||
             usr.roles.includes('admin') ||
             usr.roles.includes('vendor') ||
-            connection.data.method === 'Pickup';
-            
+            connection.data.thirdParty && connection.data.method === 'Delivery';
+
           validateOrder(context, connection.data);
           const txId = transactions.insert(connection.data);
           API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });
