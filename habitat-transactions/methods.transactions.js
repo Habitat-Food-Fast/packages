@@ -21,7 +21,6 @@ transactions.methods = {
       }
     }
   }),
-
   handleOrder: new ValidatedMethod({
     name: 'transactions.methods.handleOrder',
     validate: new SimpleSchema({
