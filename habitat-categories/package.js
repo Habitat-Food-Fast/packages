@@ -16,7 +16,6 @@ Package.onUse(function(api) {
   api.use('mongo', ['client', 'server']);
   api.use('tracker', 'server');
   api.addFiles('collection.categories.js');
-  api.addFiles('methods.categories.js');
   api.addFiles('schema.categories.js');
   api.export('Categories');
 });

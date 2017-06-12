@@ -132,19 +132,6 @@ Meteor.methods({
       businessProfiles.update(biz, {$set: {tax: type}});
     }
   },
-  updateProfile(id, newState){
-    if(Meteor.isServer && Meteor.user().roles.includes('admin')){
-      if(newState.habitat){
-        newState.habitat = newState.habitat.map((habitatIdentifier) => {
-          habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
-          return habitat._id;
-        });
-      }
-      return businessProfiles.update(id, {$set: newState}, (err) => {
-        if(err) { console.warn(err); }
-      });
-    }
-  },
 
   vendorsNear() {
     if (Meteor.isServer) {
@@ -224,50 +211,14 @@ Meteor.methods({
     });
   },
 
-  updateRates(bizId, method, day, percentNum, flatRate) {
-    console.log(percentNum);
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
-        [`weeklyHours.$.vendorRates.${method}.flat`]: parseFloat(flatRate),
-        [`weeklyHours.$.vendorRates.${method}.percent`]: parseFloat(0.01 * percentNum)
-      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
-    });
-  },
-
-  toggleVendorFreeDelivery(bizId, day, makeFree){
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
-      'weeklyHours.$.vendorPremium': makeFree,
-      'weeklyHours.$.deliveryFee': makeFree ? 0 : 2.99
-    }}, (err) => { if(err) { throw new Meteor.Error(err.message); } });
-  },
-
-  updateDeliveryFee(id, day, fee) {
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    return businessProfiles.update({_id: id, 'weeklyHours.day': day }, {$set: {
-        'weeklyHours.$.deliveryFee': parseFloat(fee),
-      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
-    });
-  },
-
-  updateMinimum(bizId, day, flatRate) {
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
-        [`weeklyHours.$.vendorRates.freeDel.minimum`]: parseFloat(flatRate),
-      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
-    });
-  },
-
-  updateFallback(bizId, day, flatRate) {
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
-        [`weeklyHours.$.deliveryFeeMinimumFallback`]: parseFloat(flatRate),
-      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
-    });
-  },
-  updateRadius(bizId, rad){
-    if(Meteor.isServer && Roles.userIsInRole(Meteor.userId(), ['admin'])){
-      businessProfiles.update(bizId, { $set: { 'radius': rad }});
+  updateSaleitemVisibility(saleItemId, trueOrFalse, bizId) {
+    if (Meteor.isServer) {
+      var uid = businessProfiles.findOne(bizId).uid;
+      if (this.userId === uid || Roles.userIsInRole(this.userId, ['admin'])) {
+        saleItems.update(saleItemId, {$set: {isHiddenFromMenu: trueOrFalse}});
+        return saleItemId;
+      }  
     }
-  }
+  },
+
 });
