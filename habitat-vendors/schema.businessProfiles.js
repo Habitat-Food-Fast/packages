@@ -35,7 +35,7 @@ businessProfiles.schema = new SimpleSchema({
   habitatOwnsTablet: { type: Boolean, optional: true},
   serialNumber: { type: Number, optional: true},
   ownerPhone: {type: String, optional: true },
-
+  grubhubId: {type: Number, optional: true},
   employees: { type: [Object], optional: true },
     'employees.$.name': { type: String },
     'employees.$.phone': { type: Number },
