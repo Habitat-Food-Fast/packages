@@ -626,10 +626,12 @@ Meteor.methods({
       }
     },
     editDaaSInfo(id, state) {
+      console.log(state);
       const obj = {
-        customerName: state.name,
-        customerPhone: state.phone,
-        deliveryAddress: state.address
+        'customer.name': state.name,
+        'customer.phone': state.phone,
+        deliveryAddress: state.address,
+        deliveryInstructions: state.deliveryInstructions
       };
       if (transactions.findOne(id).sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
         return transactions.update(id, {$set: obj});
