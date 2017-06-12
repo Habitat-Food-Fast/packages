@@ -1,5 +1,34 @@
 import SimpleSchema from 'simpl-schema';
+fetchMenu = (sellerId) => {
+  bp = businessProfiles.findOne(sellerId, { fields: {company_name:1, categories: 1} });
+  console.warn(`found ${bp.categories.length} categories for ${bp.company_name}`);
+  saleItems.find({ uid: bp._id }, {sort: {category: 1}, fields: {
+    isHiddenFromMenu: 1,
+    name: 1,
+    description: 1,
+    category: 1,
+    price: 1,
+    modifiers: 1,
+  }}).map((si) => {
+    saleItemObj = !si.modifiers.length ? si :
+    _.extend(si, {
+      modifiers: si.modifiers.map((modId) => {
+        const mod = Modifiers.findOne(modId, {fields: {
+          name: 1, price: 1, subcategory:1
+        }});
 
+        const subcategory = modCategories.findOne(mod.subcategory, {fields: {
+          order: 1, name: 1, price: 1, selectOne: 1, required: 1
+        }});
+        const fullSi = _.extend(mod, subcategory);
+        return fullSi;
+      }
+    )
+    })
+      console.log(saleItemObj);
+      return saleItemObj;
+  })
+};
 API.methods = {
   vendors: {
     GET( context, connection ) {
@@ -16,6 +45,22 @@ API.methods = {
         API.utility.response( context, 200, getVendors);
       }
     },
+  },
+  menus: {
+    GET(context, connection){
+      console.warn('hit menu get')
+      if (!API.utility.hasData(connection.data)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on GET`, });
+      } else if(!connection.data.sellerId){
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No sellerId passed on GET`, });
+      } else if(!businessProfiles.findOne(connection.data.sellerId)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: sellerId doesn't match any vendors`, });
+      } else {
+        console.log(`about to fetch menu`)
+        menu = fetchMenu(connection.data.sellerId);
+        API.utility.response( context, 200, { message: 'Here is the menu', data: menu });
+      }
+    }
   },
   orders: {
     GET( context, connection ) {

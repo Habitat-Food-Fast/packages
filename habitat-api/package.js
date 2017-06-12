@@ -35,6 +35,7 @@ Package.onUse(function (api) {
     'server/api/orders/methods.js',
     'server/api/support/endpoint.js',
     'server/api/vendors/json.endpoint.vendors.js',
+    'server/api/vendors/json.endpoint.menus.js',
     'server/api/instances/csv.endpoint.instances.js',
     'server/api/invoices/csv.invoices.js',
     'server/api/mealRecords/csv.mealrecords.js',

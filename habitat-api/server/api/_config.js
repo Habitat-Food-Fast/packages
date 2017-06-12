@@ -1,7 +1,6 @@
 API = {
   authentication( apiKey ) {
     var getUser = APIKeys.findOne( { "key": apiKey });
-    console.log('auth', apiKey, getUser)
     return getUser ? getUser.owner : false;
   },
   connection( request ) {
@@ -32,8 +31,10 @@ API = {
           return request.body;
       }
     },
-    hasData( data ) { return Object.keys( data ).length > 0 ? true : false; },
-    validate( data, pattern ) { return Match.test( data, pattern ); },
+    hasData( data ) {
+      return Object.keys( data ).length > 0 ? true : false;
+    },
+    validate( data, pattern ) {return Match.test( data, pattern ); },
     response( context, statusCode, data ) {
       context.response.setHeader( 'Content-Type', 'application/json' );
       context.response.statusCode = statusCode;

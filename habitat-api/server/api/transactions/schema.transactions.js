@@ -39,19 +39,19 @@ _timingSchema = new SimpleSchema({
   expectedAt: { type: String, optional: true }
 })
 _orderSchema = new SimpleSchema ({
-  plainOrder: { type: Array },
-    'plainOrder.$': { type: Object },
-      'plainOrder.$.orderId': { type: Number }, //the index
+  plainOrder: { type: Array, optional: true, },
+    'plainOrder.$': { type: Object, optional: true, },
+      'plainOrder.$.orderId': { type: Number, optional: true, }, //the index
       'plainOrder.$.quantity': { type: Number, optional: true, },
-      'plainOrder.$.itemInstructions': { type: String },
-      'plainOrder.$.itemName': { type: String },
-      'plainOrder.$.itemCategory': { type: String, optional: true },
-      'plainOrder.$.itemPrice': { type: Number, optional: true },
-      'plainOrder.$.modifiersText': { type: Array, optional: true },
-        'plainOrder.$.modifiersText.$': { type: Object, optional: true },
-          'plainOrder.$.modifiersText.$.name': { type: String },
-          'plainOrder.$.modifiersText.$.category': { type: String },
-          'plainOrder.$.modifiersText.$.price': { type: Number, optional: true },
+      'plainOrder.$.itemInstructions': { type: String, },
+      'plainOrder.$.itemName': { type: String, },
+      'plainOrder.$.itemCategory': { type: String, optional: true, },
+      'plainOrder.$.itemPrice': { type: Number, optional: true, },
+      'plainOrder.$.modifiersText': { type: Array, optional: true, },
+        'plainOrder.$.modifiersText.$': { type: Object, optional: true, },
+          'plainOrder.$.modifiersText.$.name': { type: String, },
+          'plainOrder.$.modifiersText.$.category': { type: String, },
+          'plainOrder.$.modifiersText.$.price': { type: Number, optional: true, },
 });
 _customerSchema = new SimpleSchema({
   customer: { type: Object },
