@@ -21,110 +21,6 @@ transactions.methods = {
       }
     }
   }),
-  //TODO: this method now handles all third party requests,
-  //      should refactor across apps w/ more accurate method name
-  insertDaaS: new ValidatedMethod({
-    name: 'transactions.methods.insertDaaS',
-    validate: new SimpleSchema({
-      deliveryAddress: { type: String },
-      loc: { type: Object, blackbox: true },
-      sellerId: { type: String, optional: true },
-      company_name: { type: String, optional: true },
-      DaaSType: { type: String, optional: true, allowedValues: ['credit_card', 'cash', 'online'] },
-      deliveryInstructions: { type: String, optional: true },
-      suite: { type: String, optional: true },
-      customerName: { type: String, optional: true },
-      customerPhone: { type: String, optional: true },
-      customerEmail: { type: String, optional: true },
-      acceptUrl: { type: String, optional: true },
-      orderSize: { type: Number, optional: true },
-      prepTime: {type: Number, optional: true },
-      payRef: { type: Object, optional: true, blackbox: true },
-      thirdParty: { type: Boolean, optional: true },
-      partnerName: { type: String, optional: true },
-      fromAPI: { type: Boolean, optional: true },
-      key: { type: String, optional: true },
-      order: { type: [Object], optional: true, blackbox: true },
-      isDelivery: { type: Boolean, optional: true },
-      status: {type: String, optional: true },
-      readyAt: {type: Date, optional: true }
-    }).validator(),
-    run( args ) {
-      const biz = businessProfiles.findOne(
-        args.company_name ? { company_name: args.company_name} :
-        args.sellerId ||
-        Meteor.user().profile.businesses[0]
-      );
-      update = _.extend(args, {
-        createdAt: Date.now(),
-        partnerName: args.thirdParty ? args.partnerName : false,
-        createdAtHuman: new Date(),
-        DaaS: true,
-        sellerId: biz._id,
-        habitat: biz.habitat[0],
-        company_name: biz.company_name,
-        status: args.status || 'created',
-        method: args.isDelivery ? 'Delivery' : 'Pickup',
-        orderNumber: transactions.pin(),
-        orderSize: args.orderSize,
-        order: args.order || [],
-        acceptUrl: args.acceptUrl,
-        customerPhone: args.customerPhone,
-        customerName: args.customerName,
-        deliveryInstructions: args.deliveryInstructions,
-        customer: {
-          phone: args.customerPhone,
-          name: args.customerName,
-        }
-      });
-      console.log(update);
-      return transactions.insert(update, (err, txId) => {
-        if(err) { throwError(err.message); } else {
-          const tx = transactions.findOne(txId);
-          if (!tx.customerPhone) {
-            console.warn(`DaaS #${tx.orderNumber} missing PHONE`);
-            slm(`DaaS #${tx.orderNumber} missing PHONE`);
-          }
-          if (!tx.deliveryAddress) {
-            console.warn(`DaaS #${tx.orderNumber} missing ADDRESS`);
-            slm(`DaaS #${tx.orderNumber} missing ADDRESS`);
-          }
-          if (tx.DaaSType === 'online' && !tx.payRef.tip) {
-            console.warn(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
-            slm(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
-          }
-        }
-      });
-      }
-  }),
-
-  requestDaaS: new ValidatedMethod({
-    name: 'transactions.methods.requestDaaS',
-    validate: new SimpleSchema({
-      deliveryId: { type: String },
-      prepTime: { type: Number, optional: true },
-      deliveryInstructions: { type: String, optional: true },
-      suite: { type: String, optional: true },
-      customerName: { type: String, optional: true },
-      customerPhone: { type: String, optional: true },
-      runnerId: { type: String, optional: true },
-    }).validator(),
-    run({ deliveryId, prepTime }) {
-      if (!prepTime) {prepTime = transactions.findOne(deliveryId) ? transactions.findOne(deliveryId).prepTime : businessProfiles.findOne(transactions.findOne(deliveryId).sellerId).prep_time;}
-      arguments[0].readyAt = new Date(Date.now() + (prepTime * 60000));
-      update = _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime, true));
-        return transactions.update(deliveryId, {
-          $set: update
-        }, (err) => {
-          if(err) { throwError(err.message); } else {
-            DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
-              if(err) { console.log(err); throw new Meteor.Error(err); }
-            });
-          }
-        });
-    }
-  }),
-
   handleOrder: new ValidatedMethod({
     name: 'transactions.methods.handleOrder',
     validate: new SimpleSchema({
@@ -786,13 +682,6 @@ Meteor.methods({
       }
     },
 
-    remoteVendorContact(txId, apiKey) {
-      console.log('TEST');
-      console.log(this.userId);
-      if (APIKeys.findOne({key: apiKey}) || this.userId && Meteor.users.findOne(this.userId).roles.includes('admin')) {
-        handleInitialVendorContact(txId, apiKey);
-      }
-    },
     alertRunnerReady(txId) {
       const tx = transactions.findOne(txId);
       if (tx.sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {

@@ -32,6 +32,9 @@ Meteor.methods({
 });
 
 Alerts.methods = {
+  resolve(id) {
+    Alerts.update(id, {$set: {resolved: true, resolvedAt: new Date}});
+  },
   dropoffNow(txId) {
     if (!Alerts.findOne({message: `Order ${tx.orderNumber} should be dropped`})) {
       const obj = {

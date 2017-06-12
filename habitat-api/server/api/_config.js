@@ -1,6 +1,7 @@
 API = {
   authentication( apiKey ) {
-    var getUser = APIKeys.findOne( { "key": apiKey }, { fields: { "owner": 1 } } );
+    var getUser = APIKeys.findOne( { "key": apiKey });
+    console.log('auth', apiKey, getUser)
     return getUser ? getUser.owner : false;
   },
   connection( request ) {
@@ -16,7 +17,6 @@ API = {
   handleRequest( context, resource, method ) {
     var connection = API.connection( context.request );
     console.log(`${method} to ${Meteor.absoluteUrl()}api/v1/${resource} from ${connection.owner}`);
-    console.log(connection.data);
     return !connection.error ?
       API.methods[ resource ][ method ]( context, connection ) :
       API.utility.response( context, 401, connection );

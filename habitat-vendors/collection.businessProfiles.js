@@ -15,6 +15,7 @@ class businessProfilesCollection extends Mongo.Collection {
           employees: [],
           weeklyHours: this.setHours(),
           geometry: res.features[0].geometry,
+          backend_habitat: Habitats.findOne(doc.habitat[0]).name,
         }), (err, newBizId) => {
           if(err) { throwError(err.message); }
             const bp = businessProfiles.findOne(newBizId);

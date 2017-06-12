@@ -4,6 +4,10 @@ Package.describe({
   version: "1.0.6"
 });
 
+Npm.depends({
+  "simpl-schema": "0.3.0",
+})
+
 Package.onUse(function (api) {
   api.versionsFrom('METEOR@1.4.4.2');
 
@@ -28,8 +32,8 @@ Package.onUse(function (api) {
   api.addFiles([
     'server/api/_config.js',
     'server/api/orders/endpoint.js',
+    'server/api/orders/methods.js',
     'server/api/support/endpoint.js',
-    'server/api/vendors/csv.endpoint.businessprofiles.js',
     'server/api/vendors/json.endpoint.vendors.js',
     'server/api/instances/csv.endpoint.instances.js',
     'server/api/invoices/csv.invoices.js',
@@ -43,6 +47,7 @@ Package.onUse(function (api) {
     'server/api/transactions/csv.endpoints.transactions.js',
     'server/api/transactions/csv.query.transactions.js',
     'server/api/transactions/json.endpoints.transactions.js',
+    'server/api/transactions/schema.transactions.js',
     'server/api/users/new-promo-stats.js',
     'server/api/users/runner-stats.js',
     'server/api/methods.js',
