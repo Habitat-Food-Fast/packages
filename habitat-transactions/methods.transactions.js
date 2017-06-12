@@ -612,21 +612,6 @@ Meteor.methods({
       return method === "Pickup" ? transactions.methods.acceptPickup.call({txId: id}) :
         transactions.methods.acceptDelivery.call({txId: id});
     },
-    generateOrderAgainTransaction(oldTx){
-      delete oldTx._id;
-      const id = transactions.insert(oldTx);
-      transactions.update(id, {$set: {orderNumber: transactions.pin()}});
-      console.log(oldTx.method);
-      if (oldTx.method !== 'Pickup') {
-        transactions.methods.addTxAddress.call({
-          _id: id,
-          habId: Meteor.user().profile.habitat,
-          deliveryAddress: Meteor.user().profile.address ? Meteor.user().profile.address : transactions.findOne({buyerId: Meteor.userId()}).deliveryAddress,
-          geometry: Meteor.user().profile.geometry
-        }, (err) => { if(err) { throwError(err.message); }});
-      }
-      return id;
-    },
     updatePrepTime(tx, time) {
       const tran = transactions.findOne(tx);
       const biz = businessProfiles.findOne(tran.sellerId);
@@ -721,12 +706,6 @@ Meteor.methods({
             }
           }
         );
-      }
-    },
-    updateOrderQuantity(order, id) {
-      if (transactions.findOne(id).buyerId === this.userId) {
-        order.orderId = order.orderId + 1;
-        transactions.update(id, {$push: {order: order}});
       }
     },
     sendStatusUpdateText(phone, firstName, msg, isAdmin){
