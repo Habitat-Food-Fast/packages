@@ -11,7 +11,6 @@ class transactionsCollection extends Mongo.Collection {
       doc.sellerId
     );
     const usr = Meteor.users.findOne(doc.buyerId) || false;
-    console.warn(doc.orderType);
     return super.insert(_.extend(this.resetItems(), {
       status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
@@ -25,7 +24,8 @@ class transactionsCollection extends Mongo.Collection {
       runnerPayRef: {},
       prepTime: doc.prepTime || bizProf.prep_time,
       order: doc.order || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
-      plainOrder: doc.plainOrder || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
+      plainOrder: doc.plainOrder,
+      // || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       orderNumber: doc.orderNumber || this.pin(),
       orderSize: doc.orderSize || 1,
       habitat: doc.habitat || bizProf.habitat[0],
@@ -53,7 +53,6 @@ class transactionsCollection extends Mongo.Collection {
       week: weeks.find().count(),
     }), (err, txId) => {
       tx = transactions.findOne(txId);
-      console.log('after super.insert', tx)
       if(err) { throwError(err.message); } else {
         if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
@@ -120,7 +119,6 @@ class transactionsCollection extends Mongo.Collection {
     const estimate = inMinutes ?
       prepTime + delTime :
       tx.timeRequested ? tx.timeRequested : Date.now() + (60000 * prepTime) + (60000 * delTime);
-      console.warn(estimate, 'deliveredatest')
     return estimate;
   }
   addRouteInfo(txId, count, i) {
@@ -138,7 +136,6 @@ class transactionsCollection extends Mongo.Collection {
               console.warn(`no legs found for ${txId}`);
             } else {
               journey = dirs.legs[0];
-              console.log(journey, 'journey')
               transactions.update(txId, { $set: {
                 routeInfo: {
                   car: {
@@ -170,7 +167,6 @@ class transactionsCollection extends Mongo.Collection {
   requestItems(txId, prepTime, daas) {
     const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
-    console.warn(`requesting!`)
     req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),

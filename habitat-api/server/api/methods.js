@@ -45,7 +45,11 @@ API.methods = {
           connection.data.company_name = bp ? bp.company_name : '';
           connection.data.thirdParty = !usr //if owner is not habitat user
           connection.data.partnerName = usr ? '' : connection.owner;
-          connection.data.DaaS = !usr || usr.roles.includes('admin') || usr.roles.includes('vendor');
+          connection.data.DaaS = !usr ||
+            usr.roles.includes('admin') ||
+            usr.roles.includes('vendor') ||
+            connection.data.method === 'Pickup';
+            
           validateOrder(context, connection.data);
           const txId = transactions.insert(connection.data);
           API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });
