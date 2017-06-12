@@ -14,7 +14,7 @@ Package.onUse(function (api) {
   api.use('check');
   api.use('random');
   api.use('http@1.2.10');
-  api.use('aldeed:collection2');
+  api.use('aldeed:collection2-core');
   api.use('aldeed:simple-schema');
   api.use('momentjs:moment');
   api.use('mdg:validated-method');

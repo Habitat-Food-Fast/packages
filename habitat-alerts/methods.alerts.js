@@ -16,6 +16,18 @@ Meteor.methods({
     if (Meteor.user() && Meteor.user().roles.includes('admin')) {
       Alerts.update(id, {$set: {resolved: true, resolvedAt: new Date, resolvedBy: `${Meteor.user().profile.fn} ${Meteor.userId()}`}});
     }
+  },
+  vendorRequestCall(msg) {
+    const obj = {
+      type: 'danger',
+      opened: new Date(),
+      message: `${businessProfiles.findOne(Meteor.user().profile.businesses[0]).company_name} has requested a call`,
+      details: {
+        text: msg ? msg : null,
+        contact: Meteor.user().profile.phone
+      }
+    }
+    return Alerts.insert(obj);
   }
 });
 
