@@ -95,5 +95,8 @@ Alerts.methods = {
       opened: new Date()
     }
     return Alerts.insert(obj);
+  },
+  apiError(obj) {
+    obj.type = 'danger';
   }
 }
