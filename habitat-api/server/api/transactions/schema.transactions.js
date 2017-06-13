@@ -60,10 +60,10 @@ _customerSchema = new SimpleSchema({
     'customer.email': { type: String, optional: true },
 });
 _payRefSchema = new SimpleSchema({
-  payRef: { type: Object },
-    'payRef.tp': { type: Number },
-    'payRef.tax': { type: Number },
-    'payRef.tip': { type: Number },
+  payRef: { type: Object, optional: true },
+    'payRef.tp': { type: Number, optional: true },
+    'payRef.tax': { type: Number, optional: true },
+    'payRef.tip': { type: Number, optional: true },
 });
 _deliverySchema = new SimpleSchema({
   deliveryAddress: { type: String, optional: true },
