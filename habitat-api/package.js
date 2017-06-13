@@ -61,5 +61,6 @@ Package.onUse(function (api) {
   api.addFiles(['examples.api.js', 'collection.api.js'], ['client', 'server']);
   api.export('API');
   api.export('APIKeys');
+  api.export('APIRequests');
   api.export('Router');
 });
