@@ -12,7 +12,7 @@ _baseSchema = new SimpleSchema({
         this.obj.sellerId
       );
       if(!bp){ throwError({reason: 'No vendor found'}); }
-      const hab = Habitats.findOne({name: bp.habitat[0]});
+      const hab = Habitats.findOne(bp.habitat[0]);
       if (!hab) {
         throwError({reason: 'No habitat found'});
       } else if (bp.closed) {
@@ -114,7 +114,7 @@ validateOrder = (context, order) => {
   .extend(_timingSchema)
   .extend(_deliverySchema);
 
-  if (order.plainOrder) {
+  if (order.plainOrder && order.plainOrder.length) {
     schema.extend(_orderSchema).extend(_payRefSchema)
   }
   console.log('validate', order)
