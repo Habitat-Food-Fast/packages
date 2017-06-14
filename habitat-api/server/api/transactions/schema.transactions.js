@@ -30,6 +30,7 @@ _baseSchema = new SimpleSchema({
   orderSize: { type: Number, optional: true },
   grubhubId: {type: String, optional: true},
   company_name: {type: String, optional: true},
+  _orderNumber: {type: String, optional: true},
   orderNumber: {type: Number, optional: true},
   cashTip: { type: Boolean, optional: true, },
   scheduled: { type: Boolean, optional: true },
@@ -125,4 +126,28 @@ validateOrder = (context, order) => {
   }
 
   return schema.validate(order);
+}
+
+menu = {
+   categories: [{
+     rank: 1, //sort rank on menu
+     name: 'Appetizers',
+     items: [{
+       name: 'eggs',
+       price: 2.00,
+       visibleOnFeed: true,
+       add_ons: [{
+          category_name: 'Prep style',
+          category_select_one_required: true,
+          category_items: [{
+            name: 'Over easy',
+            price: 0,
+          },
+          {
+            name: 'Over medium',
+            price: 0,
+          }]
+        }]
+     }]
+   }],
 }

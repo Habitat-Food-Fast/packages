@@ -2,7 +2,7 @@ let convertSync;
 if(module.dynamicImport){
   import('json-2-csv').then((convert) => {
     convertSync = Meteor.wrapAsync(convert.json2csv);
-  });  
+  });
 }
 
 
@@ -44,6 +44,8 @@ transactions.csv = {
         mealName: tx.mealId && FeaturedMeals.findOne(tx.mealId) ? FeaturedMeals.findOne(tx.mealId).title : '',
         promoName: tx.promoId && Instances.findOne(tx.promoId) ? Instances.findOne(tx.promoId).name : '',
         promoId: tx.promoId && Instances.findOne(tx.promoId) ? Instances.findOne(tx.promoId)._id : '',
+        thirdParty: tx.thirdParty || '',
+        partnerName: tx.partnerName || '',
         DaaS: tx.DaaS,
         DaaSType: tx.DaaSType,
         isAcquisition: !tx.promoId ? '' : (Instances.findOne(tx.promoId) && Instances.findOne(tx.promoId).acquisition),

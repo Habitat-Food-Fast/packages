@@ -15,10 +15,19 @@ API = {
   },
   handleRequest( context, resource, method ) {
     var connection = API.connection( context.request );
-    console.log(`${method} to ${Meteor.absoluteUrl()}api/v1/${resource} from ${connection.owner}`);
-    return !connection.error ?
-      API.methods[ resource ][ method ]( context, connection ) :
-      API.utility.response( context, 401, connection );
+    if(connection.error){
+      APIRequests.insert({method: method, request: context.request, response: connection}, (err) => {
+        return API.utility.response( context, 401, connection );
+      });
+    } else {
+      console.log(`${method} to ${Meteor.absoluteUrl()}api/v1/${resource} from ${connection.owner}`);
+      response = API.methods[ resource ][ method ]( context, connection )
+      APIRequests.insert({request: connection, response: response}, (err) => {
+        if(err) { throwError({reason: `Database connection error inserting API request`})} else {
+          return response;
+        }
+      });
+    }
   },
   utility: {
     getRequestContents( request ) {
