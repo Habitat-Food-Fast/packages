@@ -32,6 +32,8 @@ _baseSchema = new SimpleSchema({
   company_name: {type: String, optional: true},
   orderNumber: {type: Number, optional: true},
   cashTip: { type: Boolean, optional: true, },
+  scheduled: { type: Boolean, optional: true },
+  arriveBy: { type: Date, optional: true }
 });
 
 _timingSchema = new SimpleSchema({
