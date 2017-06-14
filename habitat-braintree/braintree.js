@@ -37,37 +37,24 @@ Meteor.methods({
          throwError(`Sorry, ${bp.company_name} is closed`);
        } else if (!paymentMethodNonce) {
         if (transactions.creditsCoverFullOrder(txId) || paymentMethodNonce && tx.payRef.platformRevenue === 0) {
-          transactions.request(txId, {
-            braintreeId: null,
-            firstOrder: isFirstTransaction,
-          }, (err) => { if (err) { throwError(err.reason); } else {
-            handleInitialVendorContact(txId);
-          }});
+        __request(txId, isFirstTransaction);
         return { success: true, isFirstTransaction: isFirstTransaction };
         }
       } else {
         check(paymentMethodNonce, String); check(txId, String); check(tx, Object);
         if(tx.buyerId !== Meteor.userId()) { throw new Meteor.Error(503, 'methods.createSaleTransaction.statusOrUserIdWrong'); }
-        const createSaleTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
-        const result = createSaleTransactionSynchronously( BT.transactions.generateParams(txId, paymentMethodNonce) );
+        const syncTransaction = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
+        const result = syncTransaction(BT.transactions.generateParams(txId, paymentMethodNonce));
 
         if(!result.success) {
           throwError(result);
+        } else {
+          __request(txId, isFirstTransaction);
+          return _.extend(result, {
+            success: true,
+            isFirstTransaction: isFirstTransaction,
+          });
         }
-
-        transactions.request(txId, {
-            braintreeId: result.transaction.id,
-            firstOrder: isFirstTransaction,
-          }, (err) => {
-            if (err) {
-              throw new Meteor.Error(err.reason);
-            }
-          handleInitialVendorContact(txId);
-        });
-        return _.extend(result, {
-          success: true,
-          isFirstTransaction: isFirstTransaction,
-        });
       }
     }
   },
@@ -308,4 +295,15 @@ BT = {
     }
   }
 };
+}
+
+
+function __request(txId, isFirstTransaction){
+  transactions.request(txId, {
+    braintreeId: null,
+    firstOrder: isFirstTransaction,
+    status: 'pending_vendor',
+  }, (err) => { if (err) { throwError(err.reason); } else {
+    handleInitialVendorContact(txId);
+  }});
 }
