@@ -21,102 +21,6 @@ transactions.methods = {
       }
     }
   }),
-  //TODO: this method now handles all third party requests,
-  //      should refactor across apps w/ more accurate method name
-  insertDaaS: new ValidatedMethod({
-    name: 'transactions.methods.insertDaaS',
-    validate: new SimpleSchema({
-      deliveryAddress: { type: String },
-      loc: { type: Object, blackbox: true },
-      sellerId: { type: String, optional: true },
-      company_name: { type: String, optional: true },
-      DaaSType: { type: String, optional: true, allowedValues: ['credit_card', 'cash', 'online'] },
-      deliveryInstructions: { type: String, optional: true },
-      suite: { type: String, optional: true },
-      customerName: { type: String, optional: true },
-      customerPhone: { type: String, optional: true },
-      customerEmail: { type: String, optional: true },
-      acceptUrl: { type: String, optional: true },
-      orderSize: { type: Number, optional: true },
-      payRef: { type: Object, optional: true, blackbox: true },
-      thirdParty: { type: Boolean, optional: true },
-      partnerName: { type: String, optional: true },
-      fromAPI: { type: Boolean, optional: true },
-      key: { type: String, optional: true },
-      order: { type: [Object], optional: true, blackbox: true },
-      isDelivery: { type: Boolean, optional: true },
-    }).validator(),
-    run( args ) {
-      const biz = businessProfiles.findOne(
-        args.company_name ? { company_name: args.company_name} :
-        args.sellerId ||
-        Meteor.user().profile.businesses[0]
-      );
-      return transactions.insert(_.extend(args, {
-        createdAt: Date.now(),
-        partnerName: args.thirdParty ? args.partnerName : false,
-        createdAtHuman: new Date(),
-        DaaS: true,
-        sellerId: biz._id,
-        habitat: biz.habitat[0],
-        company_name: biz.company_name,
-        status: 'created',
-        method: args.isDelivery ? 'Delivery' : 'Pickup',
-        orderNumber: transactions.pin(),
-        orderSize: args.orderSize,
-        order: args.order || [],
-        acceptUrl: args.acceptUrl,
-        customerPhone: args.customerPhone,
-        customerName: args.customerName,
-        customer: {
-          phone: args.customerPhone,
-          name: args.customerName,
-        }
-      }), (err, txId) => {
-        if(err) { throwError(err.message); } else {
-          const tx = transactions.findOne(txId);
-          if (!tx.customerPhone) {
-            slm(`DaaS #${tx.orderNumber} missing PHONE`);
-          }
-          if (!tx.deliveryAddress) {
-            slm(`DaaS #${tx.orderNumber} missing ADDRESS`);
-          }
-          if (tx.DaaSType === 'online' && !tx.payRef.tip) {
-            slm(`DaaS #${tx.orderNumber} missing TIP ONLINE PREPAID`);
-          }
-        }
-      });
-      }
-  }),
-
-  requestDaaS: new ValidatedMethod({
-    name: 'transactions.methods.requestDaaS',
-    validate: new SimpleSchema({
-      deliveryId: { type: String },
-      prepTime: { type: Number, optional: true },
-      deliveryInstructions: { type: String, optional: true },
-      suite: { type: String, optional: true },
-      customerName: { type: String, optional: true },
-      customerPhone: { type: String, optional: true },
-      runnerId: { type: String, optional: true },
-    }).validator(),
-    run({ deliveryId, prepTime }) {
-      //TODO: ask nate about how to best protect if handled by route...perhaps an API key generated when request is made
-      // if(!Roles.userIsInRole(Meteor.userId(), ['admin', 'vendor', 'runner'])) { throwError(503, "Sorry, no vendor access"); }
-      if (!prepTime) {prepTime = transactions.findOne(deliveryId) ? transactions.findOne(deliveryId).prepTime : businessProfiles.findOne(transactions.findOne(deliveryId).sellerId).prep_time;}
-      arguments[0].readyAt = new Date(Date.now() + (prepTime * 60000));
-        return transactions.update(deliveryId, {
-          $set: _.extend(arguments[0], transactions.requestItems(deliveryId, prepTime))
-        }, (err) => {
-          if(err) { throwError(err.message); } else {
-            DDPenv().call('sendRunnerPing', deliveryId, false, initialPing=true, (err, res) => {
-              if(err) { console.log(err); throwError(err.message); }
-            });
-          }
-        });
-    }
-  }),
-
   handleOrder: new ValidatedMethod({
     name: 'transactions.methods.handleOrder',
     validate: new SimpleSchema({
@@ -267,7 +171,7 @@ confirmDropoff: new ValidatedMethod({
       if(!tx.payRef.tip){
         transactions.update(txId, { $set: {
           'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
-        }})
+        }});
       }
       businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
         if(err) { console.warn(err.message); }
@@ -426,12 +330,10 @@ sendReceiptImage: new ValidatedMethod({
             access_token: Meteor.settings.public.mapboxKey
           }
         };
-        console.log(params);
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
             res = JSON.parse(result.content);
-            console.log(res)
             return res;
           }
         } catch (e) {
@@ -709,20 +611,6 @@ Meteor.methods({
       return method === "Pickup" ? transactions.methods.acceptPickup.call({txId: id}) :
         transactions.methods.acceptDelivery.call({txId: id});
     },
-    generateOrderAgainTransaction(oldTx){
-      delete oldTx._id;
-      const id = transactions.insert(oldTx);
-      console.log(oldTx.method);
-      if (oldTx.method !== 'Pickup') {
-        transactions.methods.addTxAddress.call({
-          _id: id,
-          habId: Meteor.user().profile.habitat,
-          deliveryAddress: Meteor.user().profile.address ? Meteor.user().profile.address : transactions.findOne({buyerId: Meteor.userId()}).deliveryAddress,
-          geometry: Meteor.user().profile.geometry
-        }, (err) => { if(err) { throwError(err.message); }});
-      }
-      return id;
-    },
     updatePrepTime(tx, time) {
       const tran = transactions.findOne(tx);
       const biz = businessProfiles.findOne(tran.sellerId);
@@ -737,45 +625,13 @@ Meteor.methods({
         transactions.update(tx, {$set: {pickedUpAt: Date.now()}});
       }
     },
-    requestRemoteDaas(obj) {
-      transactions.methods.searchForAddress.call({address: obj.address}, (err, res) => {
-        if (res && res.features.length) {
-          transactions.methods.insertDaaS.call({
-            deliveryAddress: res.features[0].place_name,
-            loc: res.features[0].geometry,
-            sellerId: Meteor.users.findOne(this.userId).profile.businesses[0],
-            DaaSType: obj.type,
-            orderSize: obj.orderSize || 1,
-            isDelivery: true,
-          }, (err, id) => {
-            if (err) {
-              throw new Meteor.Error(err);
-            }
-            const txId = id;
-            transactions.methods.requestDaaS.call({
-              deliveryId: id,
-              prepTime: obj.time,
-              customerName: obj.name,
-              customerPhone: obj.phone
-            }, (err, id) => {
-              if (err) {
-                throw new Meteor.Error(err);
-              } else {
-                const charge = businessProfiles.getToday(Meteor.users.findOne(this.userId).profile.businesses[0]).vendorRates.DaaS.flat;
-                transactions.update(txId, {$set: {'payRef.DaaSCharge': charge}});
-              }
-            });
-          });
-        } else {
-          throw new Meteor.Error('Invalid Address');
-        }
-      });
-    },
     editDaaSInfo(id, state) {
+      console.log(state);
       const obj = {
-        customerName: state.name,
-        customerPhone: state.phone,
-        deliveryAddress: state.address
+        'customer.name': state.name,
+        'customer.phone': state.phone,
+        deliveryAddress: state.address,
+        deliveryInstructions: state.deliveryInstructions
       };
       if (transactions.findOne(id).sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
         return transactions.update(id, {$set: obj});
@@ -796,7 +652,7 @@ Meteor.methods({
         console.log(url);
         try {
           res = HTTP.get(url);
-          console.log(res.data)
+          console.log(res.data);
           if(!res.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
@@ -826,13 +682,6 @@ Meteor.methods({
       }
     },
 
-    remoteVendorContact(txId, apiKey) {
-      console.log('TEST');
-      console.log(this.userId);
-      if (APIKeys.findOne({key: apiKey}) || this.userId && Meteor.users.findOne(this.userId).roles.includes('admin')) {
-        handleInitialVendorContact(txId, apiKey);
-      }
-    },
     alertRunnerReady(txId) {
       const tx = transactions.findOne(txId);
       if (tx.sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
@@ -858,12 +707,6 @@ Meteor.methods({
             }
           }
         );
-      }
-    },
-    updateOrderQuantity(order, id) {
-      if (transactions.findOne(id).buyerId === this.userId) {
-        order.orderId = order.orderId + 1;
-        transactions.update(id, {$push: {order: order}});
       }
     },
     sendStatusUpdateText(phone, firstName, msg, isAdmin){
@@ -1109,22 +952,27 @@ handleInitialVendorContact = (txId) => {
             headers: "",
           });
         } else {
-          phaxio.sendFax({
-            to: Meteor.settings.devMode ?
-            '+18884732963' :
-            `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
-            string_data: res.content,
-            string_data_type: 'html'
-          }, (error, data) => {
-            if(error) {
-              Email.send({
-                from: "fax@tryhabitat.com",
-                to: Meteor.settings.devMode ? 'mike@tryhabitat.com' : 'info@tryhabitat.com',
-                subject: "Fax Failure",
-                text: JSON.stringify(error, null, 2),
+          if(module.dynamicImport){
+            import('phaxio').then((Phaxio) => {
+              phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+              phaxio.sendFax({
+                to: Meteor.settings.devMode ?
+                '+18884732963' :
+                `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
+                string_data: res.content,
+                string_data_type: 'html'
+              }, (error, data) => {
+                if(error) {
+                  Email.send({
+                    from: "fax@tryhabitat.com",
+                    to: Meteor.settings.devMode ? 'mike@tryhabitat.com' : 'info@tryhabitat.com',
+                    subject: "Fax Failure",
+                    text: JSON.stringify(error, null, 2),
+                  });
+                }
               });
-            }
-          });
+            })
+          }
         }
       });
 			break;

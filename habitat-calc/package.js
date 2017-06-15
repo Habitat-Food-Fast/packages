@@ -11,7 +11,8 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.3.2.4');
+  api.versionsFrom('METEOR@1.4.4.2');
+
   api.use('ecmascript');
   api.use('check');
   api.mainModule('habitat-calc.js');

@@ -1,5 +1,10 @@
-import convert from 'json-2-csv';
-const convertSync = Meteor.wrapAsync(convert.json2csv);
+let convertSync;
+if(module.dynamicImport){
+  import('json-2-csv').then((convert) => {
+    convertSync = Meteor.wrapAsync(convert.json2csv);
+  });
+}
+
 
 transactions.csv = {
   orders(txId, req) {
@@ -25,7 +30,7 @@ transactions.csv = {
         sellerId: tx.sellerId,
         buyerName: up ? up.fn : '',
         buyerLastName: up && up.ln ? up.ln : '',
-        buyerPhone: up ? up.phone : '',
+        buyerPhone: up ? up.phone.toString() : '',
         buyerEmail: up ? up.email : '',
         buyerCompletedOrdersToDate: transactions.find({buyerId: tx.buyerId, status: {$in: transactions.completedAndArchived()}}).count(),
         mealUser: up ? up.mealUser : '',
@@ -39,6 +44,8 @@ transactions.csv = {
         mealName: tx.mealId && FeaturedMeals.findOne(tx.mealId) ? FeaturedMeals.findOne(tx.mealId).title : '',
         promoName: tx.promoId && Instances.findOne(tx.promoId) ? Instances.findOne(tx.promoId).name : '',
         promoId: tx.promoId && Instances.findOne(tx.promoId) ? Instances.findOne(tx.promoId)._id : '',
+        thirdParty: tx.thirdParty || '',
+        partnerName: tx.partnerName || '',
         DaaS: tx.DaaS,
         DaaSType: tx.DaaSType,
         isAcquisition: !tx.promoId ? '' : (Instances.findOne(tx.promoId) && Instances.findOne(tx.promoId).acquisition),

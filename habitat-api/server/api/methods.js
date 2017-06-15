@@ -1,9 +1,101 @@
+import SimpleSchema from 'simpl-schema';
+fetchMenu = (sellerId) => {
+  bp = businessProfiles.findOne(sellerId, { fields: {company_name:1, categories: 1} });
+  console.warn(`found ${bp.categories.length} categories for ${bp.company_name}`);
+  saleItems.find({ uid: bp._id }, {sort: {category: 1}, fields: {
+    isHiddenFromMenu: 1,
+    name: 1,
+    description: 1,
+    category: 1,
+    price: 1,
+    modifiers: 1,
+  }}).map((si) => {
+    saleItemObj = !si.modifiers.length ? si :
+    _.extend(si, {
+      modifiers: si.modifiers.map((modId) => {
+        const mod = Modifiers.findOne(modId, {fields: {
+          name: 1, price: 1, subcategory:1
+        }});
+
+        const subcategory = modCategories.findOne(mod.subcategory, {fields: {
+          order: 1, name: 1, price: 1, selectOne: 1, required: 1
+        }});
+        const fullSi = _.extend(mod, subcategory);
+        return fullSi;
+      }
+    )
+    })
+      console.log(saleItemObj);
+      return saleItemObj;
+  })
+};
 API.methods = {
+  ping: {
+    GET(context, connection){
+      if (!API.utility.hasData(connection.data)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on GET`, });
+      } else{
+        return API.utility.response( context, 200, _.omit(APIKeys.findOne({key: connection.data.api_key}), '_id'));
+      }
+    }
+  },
+  vendors: {
+    GET( context, connection ) {
+      let getVendors;
+      const hasQuery = API.utility.hasData( connection.data );
+      if (connection.data.vendorId) {
+        connection.data.owner = connection.owner;
+        getVendors = businessProfiles.find(connection.data.vendorId).fetch();
+        return getVendors.length > 0 ?
+          API.utility.response( context, 200, getVendors ) :
+          API.utility.response( context, 404, { error: 404, message: "No vendors found, dude." } );
+      } else {
+        getVendors = businessProfiles.find().fetch();
+        return API.utility.response( context, 200, getVendors);
+      }
+    },
+  },
+  zones: {
+    GET( context, connection ) {
+      let getZones;
+      const hasQuery = API.utility.hasData( connection.data );
+      fields = {
+        name: 1,
+        open: 1,
+        bounds: 1
+      }
+      if (connection.data.zoneId) {
+        connection.data.owner = connection.owner;
+        getZones = Habitats.find(connection.data.zoneId, {fields: fields}).fetch();
+        return getZones.length > 0 ?
+          API.utility.response( context, 200, getZones ) :
+          API.utility.response( context, 404, { error: 404, message: "No zones found." } );
+      } else {
+        getZones = Habitats.find({}, {fields: fields}).fetch();
+        return API.utility.response( context, 200, getZones);
+      }
+    },
+  },
+  menus: {
+    GET(context, connection){
+      console.warn('hit menu get')
+      if (!API.utility.hasData(connection.data)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on GET`, });
+      } else if(!connection.data.sellerId){
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No sellerId passed on GET`, });
+      } else if(!businessProfiles.findOne(connection.data.sellerId)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: sellerId doesn't match any vendors`, });
+      } else {
+        console.log(`about to fetch menu`)
+        menu = fetchMenu(connection.data.sellerId);
+        return API.utility.response( context, 200, { message: 'Here is the menu', data: menu });
+      }
+    }
+  },
   orders: {
     GET( context, connection ) {
       let getOrders;
       const hasQuery = API.utility.hasData( connection.data );
-
       if ( hasQuery ) {
         connection.data.owner = connection.owner;
         getOrders = transactions.find( connection.data ).fetch();
@@ -13,67 +105,38 @@ API.methods = {
           API.utility.response( context, 404, { error: 404, message: "No transactions found, dude." } );
       } else {
         getOrders = transactions.find({ "owner": connection.owner }).fetch();
-        API.utility.response( context, 200, getOrders);
+        return API.utility.response( context, 200, getOrders);
       }
     },
     POST( context, connection ) {
-      if (API.utility.hasData(connection.data)) {
-        console.log(connection.data);
-        connection.data.owner = connection.owner;
-        let res;
+      if (!API.utility.hasData(connection.data)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on POST`, });
+      } else {
         try {
-          if(connection.data.isDelivery) {
-            console.log('isDelivery');
-            res = transactions.methods.searchForAddress.call({address: connection.data.deliveryAddress});
-            console.log(res);
-          }
-          bp = businessProfiles.findOne(connection.data.sellerId);
-          if(!bp) { return API.utility.response(context, 400, { error: 400, message: `Can't find business ${connection.data.companyName}`, }); } else {
-            transactions.methods.insertDaaS.call({
-              isDelivery: connection.data.isDelivery,
-              deliveryAddress: connection.data.isDelivery ? res.features[0].place_name : '',
-              deliveryInstructions: connection.data.isDelivery ? connection.data.deliveryInstructions : '',
-              loc: connection.data.isDelivery ? res.features[0].geometry : {},
-              sellerId: bp._id,
-              DaaSType: connection.data.orderType, //credit_card, prepaid, or cash
-              fromAPI: true,
-              thirdParty: true,
-              partnerName: connection.data.owner,
-              customerName: `${connection.data.customer.firstName} ${connection.data.customer.lastName}`,
-              customerPhone: connection.data.customer.phone,
-              customerEmail: connection.data.customer.email,
-              order: connection.data.order,
-              payRef: connection.data.payRef,
-            }, (err, id) => {
-              if(err) {
-                API.utility.response(context, 403, { error: 403, message: err.message, });
-              } else {
-                console.log(`id after instert daas ${id}`);
-                Meteor.call('requestTxWrapper', id, connection, (err) => {
-                  if(err) { console.warn(err.message); } else {
-                    console.log('success');
-                  }
-                });
-                API.utility.response( context, 200, {_id: id, "message": "Transaction successfully created!" });
-              }
-            });
-          }
+          delete connection.data.api_key; //no longer need this now that partner has been validated
+          const bp = businessProfiles.findOne(connection.data.sellerId);
+          const usr = Meteor.users.findOne(businessProfiles.findOne(connection.owner) ? bp.uid : connection.owner);
+          connection.data.sellerId =  bp ? bp._id : '';
+          connection.data.company_name = bp ? bp.company_name : '';
+          connection.data.thirdParty = !usr //if owner is not habitat user
+          connection.data.partnerName = usr ? '' : connection.owner;
+          connection.data.DaaS = !usr ||
+            usr.roles.includes('admin') ||
+            usr.roles.includes('vendor') ||
+            connection.data.thirdParty && connection.data.method === 'Delivery';
+
+          validateOrder(context, connection.data);
+          const txId = transactions.insert(connection.data);
+          return API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });
         } catch(exception) {
-          console.log(exception);
-          return exception;
+          return API.utility.response(context, 403, { error: 403, message: exception.message, });
         }
       }
     },
     PUT( context, connection ) {
       var hasQuery  = API.utility.hasData( connection.data ),
           validData = API.utility.validate( connection.data, Match.OneOf(
-            { "_id": String, "name": String },
-            { "_id": String, "crust": String },
-            { "_id": String, "toppings": [ String ] },
-            { "_id": String, "name": String, "crust": String },
-            { "_id": String, "name": String, "toppings": [ String ] },
-            { "_id": String, "crust": String, "toppings": [ String ] },
-            { "_id": String, "name": String, "crust": String, "toppings": [ String ] }
+            { "_id": String, "status": String }
           ));
 
       if ( hasQuery && validData ) {
@@ -88,42 +151,8 @@ API.methods = {
           return API.utility.response( context, 404, { "message": "Can't update a non-existent pizza, homeslice." } );
         }
       } else {
-        API.utility.response( context, 403, { error: 403, message: "PUT calls must have a pizza ID and at least a name, crust, or toppings passed in the request body in the correct formats (String, String, Array)." } );
+        return API.utility.response( context, 403, { error: 403, message: "PUT calls must have a pizza ID and at least a name, crust, or toppings passed in the request body in the correct formats (String, String, Array)." } );
       }
     },
-    DELETE( context, connection ) {
-      var hasQuery  = API.utility.hasData( connection.data ),
-          validData = API.utility.validate( connection.data, { "_id": String } );
-
-      if ( hasQuery && validData ) {
-        var pizzaId  = connection.data._id;
-        var getOrder = transactions.findOne(pizzaId, { fields: { "_id": 1 } } );
-
-        if ( getOrder ) {
-          return transactions.remove(pizzaId, (err) => {
-            if(err) { console.warn( err.message); } else {
-              return API.utility.response( context, 200, { "message": "Order removed!" } );
-            }
-          });
-
-        } else {
-          return API.utility.response( context, 404, { "message": "Can't delete a non-existent order, homeslice." } );
-        }
-      } else {
-        return API.utility.response( context, 403, { error: 403, message: "DELETE calls must have an _id (and only an _id) in the request body in the correct format (String)." } );
-      }
-    }
   }
 };
-
-Meteor.methods({
-    requestTxWrapper(id, connection) {
-      transactions.update(id, {$set: {status: 'pending_vendor'}}, (err) => {
-        if(err) { console.warn(err.message); }
-        Meteor.call('remoteVendorContact', id, connection.data.key, (err) => {
-          if(err) { console.warn(err.message); } else {
-          }
-        });
-      })
-    }
-});

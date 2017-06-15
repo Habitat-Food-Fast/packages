@@ -35,17 +35,22 @@ businessProfiles.schema = new SimpleSchema({
   habitatOwnsTablet: { type: Boolean, optional: true},
   serialNumber: { type: Number, optional: true},
   ownerPhone: {type: String, optional: true },
-
+  grubhubId: {type: Number, optional: true},
   employees: { type: [Object], optional: true },
     'employees.$.name': { type: String },
     'employees.$.phone': { type: Number },
     'employees.$.text': { type: Boolean },
+
   zones: { type: [Object], optional: true },
     'zones.$.name': { type: String },
     'zones.$.multiplier': { type: Number, decimal: true },
     'zones.$.min': { type: Number, decimal: false },
     'zones.$.max': { type: Number, decimal: false },
-    
+
+  radius: { type: Array, optional: true },
+  'radius.$': {type: Array, optional: true},
+  'radius.$.$': {type: Number, decimal: true, optional: true},
+
   weeklyHours: { type: [Object], },
     'weeklyHours.$.day': { type: Number, allowedValues: [0,1,2,3,4,5,6] },
     'weeklyHours.$.open': { type: Boolean },
@@ -72,59 +77,3 @@ businessProfiles.schema = new SimpleSchema({
     'weeklyHours.$.vendorRates.pickup.flat':  { type: Number, decimal: true, min: 0.0, max: 1 },
     'weeklyHours.$.vendorRates.pickup.percent':  { type: Number, decimal: true, min: 0.0, max: 1 },
 }); businessProfiles.attachSchema(businessProfiles.schema);
-
-Meteor.startup(function(){
-  if(Meteor.isServer && businessProfiles.find().count() === 0){
-    businessProfiles.insert(_.extend(bizDevDefaults(), {
-      company_name: "Mikes's Donuts",
-      company_email: "mike@tryhabitat.com",
-      company_phone: "4433869479",
-      company_address: "2198 N Broad Street",
-      orderPhone: 4433869479,
-    }), (err, id) => {
-      if(err) { throwError(err.message); } else {
-        const cats = ['Appetizers', 'Breakfast', 'Dinner', 'Snacks'];
-        _.times(10, () => {
-          si = {
-            uid: id,
-            name: faker.company.bsAdjective() + ' ' + faker.commerce.product(),
-            description: `${faker.hacker.phrase()}. ${faker.hacker.phrase()}`,
-            category: _.sample(cats),
-            price: faker.finance.amount(),
-            modifiers: [],
-          };
-          return saleItems.insert(si, (err) => {
-            if(err) { throw new Meteor.Error(err.message); }
-          });
-        });
-
-      }
-    });
-  }
-});
-
-Meteor.methods({
-  makeDevBiz(name, email, phone, address) {
-    if(Roles.userIsInRole(Meteor.userId(), ['admin'])){
-      return businessProfiles.insert(_.extend(bizDevDefaults(), {
-        company_name: name,
-        company_email: email,
-        company_phone: phone.toString(),
-        company_address: address,
-        orderPhone: phone,
-      }));
-    }
-
-  }
-});
-
-function bizDevDefaults(){
-  return {
-    habitat:  ["g77XEv8LqxJKjTT8k"],
-    company_type: "carryout",
-    company_picture: "http://placekitten.com/200/300",
-    method: "none",
-    notificationPreference: "email",
-    prep_time: 25,
-  };
-}

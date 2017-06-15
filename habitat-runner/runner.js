@@ -1,5 +1,3 @@
-import phoneFormatter from 'phone-formatter';
-// import crypto from 'crypto';
 import convert from 'json-2-csv';
 const convertSync = Meteor.wrapAsync(convert.json2csv);
 import moment from 'moment';
@@ -22,7 +20,7 @@ runner = {
   watchPendingOrders () {
     Habitats.find().forEach((h) => {
       transactions.find({
-        status: {$in: ['pending_runner', 'in_progress']},
+        status: {$in: ['pending_vendor', 'pending_runner', 'in_progress']},
         habitat: h._id}, {sort: {deliveredAtEst: -1}
       }).forEach((t) => {
         if(typeof t.deliveredAtEst !== 'number') { console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); }
@@ -58,7 +56,6 @@ runner = {
             name, email, internal_id,
           }};
           const worker = HTTP.call(`POST`, url, params);
-          console.log(worker);
       } catch (e) {
         console.warn(`error CREATING data ${e}`);
       }
@@ -97,9 +94,6 @@ runner = {
   getShifted(start, end, habitats, roleName) {
     habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
       return this.getShifts(start, end, habitats, roleName).filter((shift) => {
-        // console.log(`now = ${moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
-        // console.log(`shift begin = ${moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
-        // console.log(`shift end = ${moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').toISOString()}`);
         return !shift || !shift.shift ? {} :
           moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').isBetween(
             moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours'),
@@ -210,8 +204,8 @@ generateOrderInfo(tx, runner) {
   const pck = tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format('LT') : 'ASAP';
 
   if(tx.DaaS){
-    customerName = tx.customerName || 'unknown';
-    customerPhone = tx.customerPhone || 'unknown';
+    customerName = tx.customerName || tx.customer.name|| 'unknown';
+    customerPhone = tx.customerPhone || tx.customer.phone || 'unknown';
     msg = `Order #${tx.orderNumber} assigned.
 READY AT: ${pck}
 PAYMENT: ${(tx.DaaSType === 'online' || tx.DaaSType === 'credit_card') ? 'Conf drop w/ tip + pic' : tx.DaaSType}
@@ -240,7 +234,7 @@ Meteor.methods({
 sendRunnerPing(txId, runnerId, initialPing){
   if (Meteor.isServer) {
     const tx = transactions.findOne(txId);
-    return initialPing ? runner.alertShifted(tx._id, tx.habitat) :
+    return initialPing ? runner.alertShifted(txId, tx.habitat) :
       twilio.messages.create({
         to: Meteor.users.findOne(runnerId).profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
@@ -299,12 +293,8 @@ runnerPayout = {
   //maps through all shifts in a timespan, summing hours for each userId
   getAllShifts(shifts){
     return shifts.map((shift) => {
-      console.log(shift);
-
       check(shift.stop, String);
       check(shift.start, String);
-      console.log(shift.user_id); check(shift.user_id, Number);
-
       stop = new Date(moment(shift.stop).format()).getTime();
       start = new Date( moment(shift.start).format()).getTime();
 
@@ -316,12 +306,8 @@ runnerPayout = {
 
     return this.getAllShifts(shifts)
       .filter((shift) => {
-        console.log(shift);
-
         check(shift.user_id, Number);
         check(runnerId, String);
-        console.log(`shift.user_id ${shift.user_id} workerId ${runnerId}`);
-
         return shift.user_id === runnerId;
       })
       .map((shift) => {
@@ -338,14 +324,12 @@ runnerPayout = {
     check(runnerId, String);
     lto = this.getOrders(runnerId, timespan).length > 0 &&
            this.getTotalHours(shifts, timespan, runnerId) === 0;
-    console.log(`worked less than one ${lto} for ${runnerId}`);
     return lto;
   },
   getTotalHours(shifts, timespan, runnerId){
-    // totalHours = this.workedLessThanOne(shifts, timespan, runnerId) ? 1 : this.getBaseHours(shifts, runnerId);
     totalHours = this.getBaseHours(shifts, runnerId);
     check(shifts, Array); check(runnerId, String); check(runnerId, String);
-    console.log(`totalhours for ${totalHours} ${runnerId}`);
+
     return totalHours;
   },
   getTotalHourlyOwed(shifts, timespan, runnerId){
@@ -359,10 +343,10 @@ runnerPayout = {
   },
   getTotalOwed(shifts, timespan, runnerId){
     check(runnerId, String);
-    hourly = this.getTotalHourlyOwed(shifts, timespan, runnerId); console.log(`hourly rate is ${hourly}`)
-    perOrder = this.perOrderRate(runnerId, timespan); console.log(`perOrder owed ${perOrder}`);
-    tipTotal = this.getTotalTips(runnerId, timespan); console.log(`tiptotal is ${tipTotal}`);
-    owed = hourly + perOrder+ tipTotal; console.warn(`owed is ${owed}`);
+    hourly = this.getTotalHourlyOwed(shifts, timespan, runnerId);
+    perOrder = this.perOrderRate(runnerId, timespan);
+    tipTotal = this.getTotalTips(runnerId, timespan);
+    owed = hourly + perOrder+ tipTotal;
       return owed;
     },
   filterInactive(worker){ return worker.transactionCount === 0 || worker.daasCount === 0; },
@@ -472,21 +456,14 @@ runner.payouts = {
       .reduce((sum, num) => { return sum + num; }, 0);
   },
   _totalOwed(runnerTxs, allShifts, staffJoyId){
-    hourlyRate = (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4); console.log(`hourlyRate ${hourlyRate}`)
-    perTxKeep = this._perTxKeep(runnerTxs); console.log(`pertx keep ${perTxKeep}`)
-    onDemandOwed = this._onDemandOwed(runnerTxs); console.log(`ondemand owed ${onDemandOwed}`)
-    tips = this._tips(runnerTxs); console.log(`tips: ${tips}`);
-    total = hourlyRate +
-            perTxKeep +
-            onDemandOwed +
-            tips; console.warn(total)
-
+    hourlyRate = (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4);
+    perTxKeep = this._perTxKeep(runnerTxs);
+    onDemandOwed = this._onDemandOwed(runnerTxs);
+    tips = this._tips(runnerTxs);
+    total = hourlyRate + perTxKeep + onDemandOwed + tips;
     return total;
   },
-  _progress(token, progress) {
-    console.log(`hit stream prog for ${token}`);
-    streamer.emit(token, progress);
-  },
+  _progress(token, progress) { streamer.emit(token, progress); },
   payRef(worker, allShifts, runnerTxs, runnerId, week){
     wk = weeks.findOne({week: week});
     query = _.extend(worker, {
@@ -505,15 +482,13 @@ runner.payouts = {
       owedDeliveryFee: accounting.formatMoney(this._perTxKeep(runnerTxs)),
       owedTips: accounting.formatMoney(this._tips(runnerTxs)),
       runnerOwed: this._totalOwed(runnerTxs, allShifts, worker.id),
-    }); console.log(worker.name)
+    });
     return query;
   },
   getAll(week, token){
-    console.log(`we're on week ${week.week}`);
     workers = runner.payouts.getWorkers();
     return workers.map((worker, index) => {
       progress = index / workers.length;
-      console.log(`completed ${progress * 100}%`);
       this._progress(token, progress);
       const runnerUser = Meteor.users.findOne({username: worker.email});
 
@@ -542,13 +517,9 @@ Router.route('/allweeks', {
   where: 'server',
   action() {
     const allPayouts = _.flatten(weeks.find({week: {$lte: 10}}, { sort: {week: 1}}).map(w => runner.payouts.getAll(w)));
-    console.log(`allPaouts lenght ${allPayouts.length}`);
-
     try {
       return convert.json2csv(allPayouts, (err, spreadsheet) => {
-        console.log('Finished converting');
         if(err) { console.warn(err.message); } else {
-          console.log('Success, serving spreadsheet');
           this.response.writeHead(200, csv.writeHead(`runner_summary_week-`, 'csv'));
           this.response.end(spreadsheet);
         }

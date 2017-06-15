@@ -1,21 +1,4 @@
 businessProfiles.methods = {
-  onboard: new ValidatedMethod({
-    name: 'businessProfiles.methods.onboardSubmerchant',
-    validate: new SimpleSchema({
-      merchAcct: { type: Object, blackbox: true },
-      sid: {type: String}
-    }).validator(),
-    run({ merchAcct, sid }) {
-      if (!this.isSimulation && Roles.userIsInRole(this.userId, ['vendor']) ||
-          !this.isSimulation && Roles.userIsInRole(this.userId, ['admin']) ) {
-        BT.submerchant.create(merchAcct, sid, (err, success) => {
-          if(err){ throw new Meteor.Error(err.message); }
-          return success;
-        });
-      }
-    }
-  }),
-
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',
     validate: new SimpleSchema({
@@ -86,15 +69,16 @@ businessProfiles.methods = {
  validatePassword: new ValidatedMethod({
    name: 'businessProfiles.methods.validatePassword',
    validate: new SimpleSchema({
-     uid: { type: String },
+     bizId: { type: String },
      pass: { type: String, min: 6 },
    }).validator(),
-   run({uid, pass}) {
+   run({bizId, pass}) {
      if (Meteor.isServer) {
        if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
+         const biz = businessProfiles.findOne(bizId);
+         const uid = biz.uid;
          Accounts.setPassword(uid, pass);
          const usr = Meteor.users.findOne(uid);
-         const biz = businessProfiles.findOne({uid: uid});
          if(biz){
            Email.send({
              from: "app@market.tryhabitat.com",
@@ -110,29 +94,42 @@ businessProfiles.methods = {
        }
      }
    }
- })
+ }),
+
+ // updateRadius: new ValidatedMethod({
+ //   name: 'businessProfiles.methods.updateRadius',
+ //   mixins: [PermissionsMixin],
+ //   allow: [{
+ //     group: true,
+ //     roles: ['admin', 'vendor'],
+ //   }],
+ //   validate: new SimpleSchema({
+ //     bizId: { type: String },
+ //     radius: { type: Array },
+ //     'radius.$' : {
+ //       type: Array,
+ //     },
+ //     'radius.$.$' : {
+ //       type: [Number], decimal: true,
+ //     },
+ //     'radius.$.$.$' : {
+ //       type: Number, decimal: true,
+ //     },
+ //   }).validator(),
+ //   run({bizId, radius}){
+ //     console.log(`updateing ${bizId} with radius ${radius}`);
+ //     console.log(typeof radius)
+ //     return businessProfiles.update(bizId, {$set: {radius: radius}}, {validate: false}, (err) => {
+ //       if(err) { throwError(err); }
+ //     })
+ //   }
+ // })
 };
 
 Meteor.methods({
   setVendorTax(biz, type) {
     if (Meteor.users.findOne(this.userId).roles.includes('admin')) {
       businessProfiles.update(biz, {$set: {tax: type}});
-    }
-  },
-  updateProfile(id, newState){
-    if(Meteor.isServer){
-      console.log(id);
-      console.log(newState);
-      if(newState.habitat){
-        newState.habitat = newState.habitat.map((habitatIdentifier) => {
-          habitat = Habitats.findOne({name: habitatIdentifier}) || Habitats.findOne({_id: habitatIdentifier});
-          return habitat._id;
-        });
-      }
-
-      return businessProfiles.update(id, {$set: newState}, (err) => {
-        if(err) { console.warn(err); }
-      });
     }
   },
 
@@ -214,45 +211,14 @@ Meteor.methods({
     });
   },
 
-  updateRates(bizId, method, day, percentNum, flatRate) {
-    console.log(percentNum);
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
-        [`weeklyHours.$.vendorRates.${method}.flat`]: parseFloat(flatRate),
-        [`weeklyHours.$.vendorRates.${method}.percent`]: parseFloat(0.01 * percentNum)
-      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
-    });
+  updateSaleitemVisibility(saleItemId, trueOrFalse, bizId) {
+    if (Meteor.isServer) {
+      var uid = businessProfiles.findOne(bizId).uid;
+      if (this.userId === uid || Roles.userIsInRole(this.userId, ['admin'])) {
+        saleItems.update(saleItemId, {$set: {isHiddenFromMenu: trueOrFalse}});
+        return saleItemId;
+      }  
+    }
   },
 
-  toggleVendorFreeDelivery(bizId, day, makeFree){
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
-      'weeklyHours.$.vendorPremium': makeFree,
-      'weeklyHours.$.deliveryFee': makeFree ? 0 : 2.99
-    }}, (err) => { if(err) { throw new Meteor.Error(err.message); } });
-  },
-
-  updateDeliveryFee(id, day, fee) {
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    return businessProfiles.update({_id: id, 'weeklyHours.day': day }, {$set: {
-        'weeklyHours.$.deliveryFee': parseFloat(fee),
-      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
-    });
-  },
-
-  updateMinimum(bizId, day, flatRate) {
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
-        [`weeklyHours.$.vendorRates.freeDel.minimum`]: parseFloat(flatRate),
-      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
-    });
-  },
-
-  updateFallback(bizId, day, flatRate) {
-    if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    return businessProfiles.update({_id: bizId, 'weeklyHours.day': day }, {$set: {
-        [`weeklyHours.$.deliveryFeeMinimumFallback`]: parseFloat(flatRate),
-      }}, (err, res) => { if(err) { throw new Meteor.Error(err.message, err.reason); }
-    });
-  },
 });

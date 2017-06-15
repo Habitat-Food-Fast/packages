@@ -11,7 +11,8 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.3.3');
+  api.versionsFrom('METEOR@1.4.4.2');
+
   api.use('ecmascript');
   api.use('http');
   api.use('url');

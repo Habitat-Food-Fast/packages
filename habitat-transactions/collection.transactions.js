@@ -1,4 +1,3 @@
-import randomColor from 'random-color';
 tx = txId => transactions.findOne(txId);
 Deliveries = new Meteor.Collection("deliveries");
 longCall = Meteor.settings.devMode ? 40000 : 120000;
@@ -7,33 +6,40 @@ finalDelay = Meteor.settings.devMode ? 40000 : 90000;
 
 class transactionsCollection extends Mongo.Collection {
   insert(doc) {
-    const bizProf = businessProfiles.findOne(doc.sellerId);
+    const bizProf = businessProfiles.findOne(doc.company_name ?
+      { company_name: doc.company_name} :
+      doc.sellerId
+    );
     const usr = Meteor.users.findOne(doc.buyerId) || false;
-    const transaction = _.extend(this.resetItems(), {
-      status: 'created',
+    console.warn(`insert`, doc.method);
+    return super.insert(_.extend(this.resetItems(), {
+      status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
       thirdParty: doc.thirdParty || false,
+      partnerName: doc.partnerName,
       acceptUrl: doc.acceptUrl,
-      payRef: {},
-      closed: doc.DaaS ? false : null,
-      DaaSType: doc.DaaSType ? doc.DaaSType : null,
+      payRef: doc.payRef || {},
+      closed: false,
+      DaaSType: doc.orderType || doc.DaaSType,
       vendorPayRef: {},
       runnerPayRef: {},
-      order: !doc.order.length ? [] : this.formatOrder(doc.order, doc.thirdParty),
-      plainOrder: !doc.order.length ? [] : this.formatOrder(doc.order, doc.thirdParty),
+      prepTime: doc.prepTime || bizProf.prep_time,
+      order: doc.order || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
+      plainOrder: doc.plainOrder,
+      // || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       orderNumber: doc.orderNumber || this.pin(),
       orderSize: doc.orderSize || 1,
-      nonUser: (!Meteor.userId() ? true: false ),
-      habitat: doc.habitat,
-      method: doc.methodType || doc.method,
+      habitat: doc.habitat || bizProf.habitat[0],
+      method: doc.method ? doc.method : doc.isDelivery ? 'Delivery' : 'Pickup',
       deliveryAddress: doc.deliveryAddress || '',
+      deliveryInstructions: doc.deliveryInstructions,
       geometry: doc.loc, //where the order is getting delivered to
       company_address: bizProf.company_address,
       company_geometry: bizProf.geometry,
       buyerId: !doc.DaaS ? doc.buyerId : doc.sellerId,
       customer: this.customerItems(usr, doc),
-      sellerId: doc.DaaS ? doc.sellerId : bizProf._id,
-      company_name: doc.DaaS ? doc.company_name : bizProf.company_name,
+      sellerId: bizProf._id,
+      company_name: bizProf.company_name,
       createdAt: Date.now(),
       createdAtHuman: Date(),
       timeRequested: 0,
@@ -46,12 +52,18 @@ class transactionsCollection extends Mongo.Collection {
       message: null,
       rating_vendor: null,
       week: weeks.find().count(),
-      color: randomColor(0.3, 0.99).hexString(),
-    });
-    return super.insert(transaction, (err, txId) => {
+    }), (err, txId) => {
+      tx = transactions.findOne(txId);
+      console.warn(`after insert`, tx.method);
+
       if(err) { throwError(err.message); } else {
-        if(Meteor.user()){ Meteor.users.update(Meteor.userId(), { $push:{ "profile.transactions": txId } }); }
-        calc.recalculateOpenTxs(txId, transactions.findOne(txId));
+        if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
+        if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
+          transactions.request(txId, {});
+        }
+        if(doc.buyerId){ Meteor.users.update(doc.buyerId, { $push:{ "profile.transactions": txId } }); }
+        if(!doc.thirdParty && !tx.DaaS){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
+
         return txId;
       }
     });
@@ -61,18 +73,18 @@ class transactionsCollection extends Mongo.Collection {
   forceRemove() { return super.remove({}); }
   formatOrder(order, thirdParty){
     if(!thirdParty){
-      return order.length === 0 ? order : order.map(order =>
+      o= order.length === 0 ? order : order.map(order =>
          _.extend(order, {
           orderId: this.pin(),
           itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
-          itemName: saleItems.findOne(order.saleItemId).name,
+          itemName: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).name : '',
           itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
           modifiers: order.modifiers,
           modifiersText: order.modifiers === [] ? [] : this.formatMods(order.modifiers)
         })
       );
     } else {
-      return order.length === 0 ? order : order.map(order =>
+      o= order.length === 0 ? order : order.map(order =>
          _.extend(order, {
           orderId: this.pin(),
           itemPrice: order.itemPrice,
@@ -81,6 +93,8 @@ class transactionsCollection extends Mongo.Collection {
         })
       );
     }
+
+    console.log(o); return o;
   }
   formatMods(mods) {
     let modArray = [];
@@ -93,33 +107,30 @@ class transactionsCollection extends Mongo.Collection {
           price: mod.price
         });
       }
-    };
+    }
     return modArray;
   }
   remove(id, callback){ return super.remove(id, callback); }
   //todo: clean up params
   deliveryEstimate(txId, inMinutes, prep, sellerId, habitat, daas){
     let tx = transactions.findOne(txId);
-    if(!tx) {
-      tx = Deliveries.findOne(txId);
-    }
     const bp = businessProfiles.findOne(tx.sellerId || sellerId);
-    const prepTime = daas ? daas :
-      tx.DaaS ? tx.prepTime || prep : bp.prep_time; //TODO: add prepTime to txs on request so we don't need ternary
-    const delTime = Habitats.findOne(tx.habitat || habitat).deliveryTime;
-
-    return inMinutes ?
+    const prepTime = tx.prepTime || bp.prep_time; //TODO: add prepTime to txs on request so we don't need ternary
+    habId = tx.habitat || habitat;
+    console.log(habId);
+    const delTime = Habitats.findOne(habId).deliveryTime;
+    const estimate = inMinutes ?
       prepTime + delTime :
       tx.timeRequested ? tx.timeRequested : Date.now() + (60000 * prepTime) + (60000 * delTime);
+    return estimate;
   }
   addRouteInfo(txId, count, i) {
     if(Meteor.isClient){
-      console.warn(`can't add route info on client`);
+      console.warn("cant add route info on client");
     } else {
       tx = transactions.findOne(txId);
       HTTP.call('GET', gmapsUrl(tx), (err, result) => {
         if(err){ console.warn(err.message); } else {
-          console.log(result.data);
           if(!result.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
@@ -143,8 +154,8 @@ class transactionsCollection extends Mongo.Collection {
                 }
               } }, (err) => {
                 if(err) { console.warn(err.message); } else {
-                  console.log(calc._roundToTwo((i / count) * 100) + '%');
-                  console.log(`set ${tx.orderNumber} to`, transactions.findOne(txId).routeInfo.car.distance.text);
+                  // console.log(calc._roundToTwo((i / count) * 100) + '%');
+                  // console.log(`set ${tx.orderNumber} to`, transactions.findOne(txId).routeInfo.car.distance.text);
                 }
               });
             }
@@ -156,17 +167,15 @@ class transactionsCollection extends Mongo.Collection {
   getStatus(txId) {
     tx = transactions.findOne(txId);
   }
-  requestItems(txId, prepTime) {
-    const isDaaS = transactions.findOne(txId) ? transactions.findOne(txId).DaaS : true;
+  requestItems(txId, prepTime, daas) {
+    const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
-    return {
+    req = {
       week: weeks.find().count(),
-      status: !isDaaS ? 'pending_vendor' :
-        transactions.findOne(txId).thirdParty ? 'pending_vendor' : 'pending_runner',
       timeRequested: Date.now(),
       humanTimeRequested: Date(),
       vendorPayRef: businessProfiles.rates(txId),
-      vendorOrderNumber: goodcomOrders.find().count() + 1,
+      vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
       deliveredAtEst: this.deliveryEstimate(txId, inMinutes=false, prepTime),
       cancelledByAdmin: false,
@@ -174,6 +183,7 @@ class transactionsCollection extends Mongo.Collection {
       missedByVendor: false,
       cancelledTime: false,
     };
+    return req;
   }
   //reset vendor, runner, admin lifecycle. no user related stuff or payRef determining fields
   resetItems(){
@@ -191,29 +201,39 @@ class transactionsCollection extends Mongo.Collection {
       adminAssign: false,
       promoUsed: null,
       promoId: null,
-      deliveredAtEst: false, //reset here - want to store time from vendor accept.
+      // deliveredAtEst: false,
     };
   }
   customerItems(usr, doc) {
     if(usr) {
       return { id: usr ? usr._id : '', phone: usr ? usr.profile.phone : '', name: usr ? usr.profile.fn : '', };
-    } else if (doc.thirdParty) {
-      return { id: '', phone: doc.customerPhone, name: doc.customerName, };
+    } else if (doc.thirdParty || doc.DaaS) {
+      return {
+        id: '',
+        phone: doc.customer.phone,
+        name: doc.customer.name,
+        email: doc.customer.email
+      };
     }
   }
   request(id, fields, callback){
+    console.log(`inside request`, id)
     const trans = transactions.findOne(id);
 
-    if (trans && trans.payRef &&trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }
-
+    if (trans && trans.payRef && trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }
+    const prep = trans.prepTime;
     //CAN'T USE SUPER HERE, WANT TO USE OVERRIDDEN METHOD TO TRACK LAST UPDATE
-    return this.update(id, {$set: _.extend(fields, this.requestItems(id), {
+    return transactions.update(id, {$set: _.extend(fields, this.requestItems(id), {
       txType: trans.promoId ?
         Instances.findOne(trans.promoId) ?
           Instances.findOne(trans.promoId).acquisition ? 'acquisition' : 'retention'
           : ''
         : '',
-    })}, callback);
+    })}, (err, res) => {
+      if (err) {
+        throwError(err);
+      }
+    });
   }
   timeSinceRequest(txId){
     const tx = transactions.findOne(txId);
@@ -296,6 +316,7 @@ class transactionsCollection extends Mongo.Collection {
   completedAndArchived(){ return [ 'completed', 'archived' ]; }
   active(){ return [ 'pending_vendor', 'pending_runner', 'in_progress' ]; }
   userVisible() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress', 'completed']; }
+  userCart() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress']; }
   closedAndDiscarded() { return ['completed', 'archived', 'discarded', 'cancelled']; }
   pin() { return Math.floor(1000 + Math.random() * 9000); }
   grabRunnerObj(runnerId) {
@@ -319,24 +340,20 @@ deliveryAddressCoords = (txId) => {
   return { lng, lat };
 };
 
+import geolib from 'geolib';
+
 gmapsUrl = (tx) => {
   const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
   const originCoords = biz.geometry.coordinates;
 
-  console.log(`${biz.company_address} to ${tx.deliveryAddress}`);
+  // console.log(`${biz.company_address} to ${tx.deliveryAddress}`);
   const origin = `origin=${originCoords[1]},${originCoords[0]}`;
   const coords = deliveryAddressCoords(tx._id);
 
   const destination = `destination=${coords.lng},${coords.lat}`;
 
-  compass = geolib.getCompassDirection(
-      {latitude: 52.518611, longitude: 13.408056},
-      {latitude: 51.519475, longitude: 7.46694444}
-  );
-  console.log(compass);
-  transactions.update(tx._id, {$set: {
-    compassDirection: compass
-  }});
+  compass = geolib.getCompassDirection( {latitude: 52.518611, longitude: 13.408056}, {latitude: 51.519475, longitude: 7.46694444} );
+  transactions.update(tx._id, {$set: { compassDirection: compass }});
 
   const stopsAlongTheWay = false;
   const wayPoints = !stopsAlongTheWay ? '' : `&waypoints=optimize:true|${stopsAlongTheWay}`;
