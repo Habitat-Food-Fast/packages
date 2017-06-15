@@ -217,6 +217,7 @@ class transactionsCollection extends Mongo.Collection {
     }
   }
   request(id, fields, callback){
+    console.log(`inside request`, id)
     const trans = transactions.findOne(id);
 
     if (trans && trans.payRef && trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }
