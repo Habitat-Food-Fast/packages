@@ -31,8 +31,9 @@ Package.onUse(function (api) {
   api.use('accounts-password');
   api.addFiles([
     'server/api/_config.js',
+    'server/api/ping/endpoint.js',
     'server/api/orders/endpoint.js',
-    'server/api/orders/methods.js',
+    'server/api/zones/endpoint.js',
     'server/api/support/endpoint.js',
     'server/api/vendors/json.endpoint.vendors.js',
     'server/api/vendors/json.endpoint.menus.js',
