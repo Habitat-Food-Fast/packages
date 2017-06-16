@@ -222,6 +222,9 @@ sendReceiptImage: new ValidatedMethod({
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
       const rnr = Meteor.users.findOne(runnerId);
       const runnerObj = transactions.grabRunnerObj(runnerId);
+      if(tx && tx.declinedBy && tx.declinedBy.includes(runnerId)){
+        transactions.update(txId, {$pull: {declinedBy: runnerId}});
+      }
       transactions.update(tx._id, { $set: {
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
@@ -244,6 +247,9 @@ sendReceiptImage: new ValidatedMethod({
       const previousRunnerPhone = Meteor.users.findOne(tx.runnerId).profile.phone;
 
       if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
+        if(tx && tx.declinedBy && tx.declinedBy.includes(runId)){
+          transactions.update(txId, {$pull: {declinedBy: runId}});
+        }
         transactions.update(txId, {$set: {
           runnerId: runId,
           reassignCount: tx.reassignCount && tx.reassignCount.length ? tx.reassignCount.length : 1,

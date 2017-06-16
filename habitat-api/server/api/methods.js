@@ -1,35 +1,15 @@
 import SimpleSchema from 'simpl-schema';
-fetchMenu = (sellerId) => {
-  bp = businessProfiles.findOne(sellerId, { fields: {company_name:1, categories: 1} });
-  console.warn(`found ${bp.categories.length} categories for ${bp.company_name}`);
-  saleItems.find({ uid: bp._id }, {sort: {category: 1}, fields: {
-    isHiddenFromMenu: 1,
-    name: 1,
-    description: 1,
-    category: 1,
-    price: 1,
-    modifiers: 1,
-  }}).map((si) => {
-    saleItemObj = !si.modifiers.length ? si :
-    _.extend(si, {
-      modifiers: si.modifiers.map((modId) => {
-        const mod = Modifiers.findOne(modId, {fields: {
-          name: 1, price: 1, subcategory:1
-        }});
 
-        const subcategory = modCategories.findOne(mod.subcategory, {fields: {
-          order: 1, name: 1, price: 1, selectOne: 1, required: 1
-        }});
-        const fullSi = _.extend(mod, subcategory);
-        return fullSi;
-      }
-    )
-    })
-      console.log(saleItemObj);
-      return saleItemObj;
-  })
-};
 API.methods = {
+  ping: {
+    GET(context, connection){
+      if (!API.utility.hasData(connection.data)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on GET`, });
+      } else{
+        return API.utility.response( context, 200, _.omit(APIKeys.findOne({key: connection.data.api_key}), '_id'));
+      }
+    }
+  },
   vendors: {
     GET( context, connection ) {
       let getVendors;
@@ -42,7 +22,28 @@ API.methods = {
           API.utility.response( context, 404, { error: 404, message: "No vendors found, dude." } );
       } else {
         getVendors = businessProfiles.find().fetch();
-        API.utility.response( context, 200, getVendors);
+        return API.utility.response( context, 200, getVendors);
+      }
+    },
+  },
+  zones: {
+    GET( context, connection ) {
+      let getZones;
+      const hasQuery = API.utility.hasData( connection.data );
+      fields = {
+        name: 1,
+        open: 1,
+        bounds: 1
+      }
+      if (connection.data.zoneId) {
+        connection.data.owner = connection.owner;
+        getZones = Habitats.find(connection.data.zoneId, {fields: fields}).fetch();
+        return getZones.length > 0 ?
+          API.utility.response( context, 200, getZones ) :
+          API.utility.response( context, 404, { error: 404, message: "No zones found." } );
+      } else {
+        getZones = Habitats.find({}, {fields: fields}).fetch();
+        return API.utility.response( context, 200, getZones);
       }
     },
   },
@@ -56,9 +57,8 @@ API.methods = {
       } else if(!businessProfiles.findOne(connection.data.sellerId)) {
         return API.utility.response(context, 400, { error: 400, message: `Invalid request: sellerId doesn't match any vendors`, });
       } else {
-        console.log(`about to fetch menu`)
-        menu = fetchMenu(connection.data.sellerId);
-        API.utility.response( context, 200, { message: 'Here is the menu', data: menu });
+        console.log(`about to fetch menu`);
+        return API.utility.response( context, 200, { message: 'Here is the menu', data: menu });
       }
     }
   },
@@ -75,7 +75,7 @@ API.methods = {
           API.utility.response( context, 404, { error: 404, message: "No transactions found, dude." } );
       } else {
         getOrders = transactions.find({ "owner": connection.owner }).fetch();
-        API.utility.response( context, 200, getOrders);
+        return API.utility.response( context, 200, getOrders);
       }
     },
     POST( context, connection ) {
@@ -97,9 +97,9 @@ API.methods = {
 
           validateOrder(context, connection.data);
           const txId = transactions.insert(connection.data);
-          API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });
+          return API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });
         } catch(exception) {
-          API.utility.response(context, 403, { error: 403, message: exception.message, });
+          return API.utility.response(context, 403, { error: 403, message: exception.message, });
         }
       }
     },
@@ -121,7 +121,7 @@ API.methods = {
           return API.utility.response( context, 404, { "message": "Can't update a non-existent pizza, homeslice." } );
         }
       } else {
-        API.utility.response( context, 403, { error: 403, message: "PUT calls must have a pizza ID and at least a name, crust, or toppings passed in the request body in the correct formats (String, String, Array)." } );
+        return API.utility.response( context, 403, { error: 403, message: "PUT calls must have a pizza ID and at least a name, crust, or toppings passed in the request body in the correct formats (String, String, Array)." } );
       }
     },
   }

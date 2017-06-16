@@ -128,26 +128,26 @@ validateOrder = (context, order) => {
   return schema.validate(order);
 }
 
-menu = {
-   categories: [{
-     rank: 1, //sort rank on menu
-     name: 'Appetizers',
-     items: [{
-       name: 'eggs',
-       price: 2.00,
-       visibleOnFeed: true,
-       add_ons: [{
-          category_name: 'Prep style',
-          category_select_one_required: true,
-          category_items: [{
-            name: 'Over easy',
-            price: 0,
-          },
-          {
-            name: 'Over medium',
-            price: 0,
-          }]
-        }]
-     }]
-   }],
-}
+// menu = {
+//    categories: [{
+//      rank: 1, //sort rank on menu
+//      name: 'Appetizers',
+//      items: [{
+//        name: 'eggs',
+//        price: 2.00,
+//        visibleOnFeed: true,
+//        add_ons: [{
+//           category_name: 'Prep style',
+//           category_select_one_required: true,
+//           category_items: [{
+//             name: 'Over easy',
+//             price: 0,
+//           },
+//           {
+//             name: 'Over medium',
+//             price: 0,
+//           }]
+//         }]
+//      }]
+//    }],
+// }
