@@ -52,6 +52,8 @@ class transactionsCollection extends Mongo.Collection {
       message: null,
       rating_vendor: null,
       week: weeks.find().count(),
+      scheduled: doc.scheduled,
+      deliverBy: doc.deliverBy
     }), (err, txId) => {
       tx = transactions.findOne(txId);
       console.warn(`after insert`, tx.method);
@@ -178,6 +180,20 @@ class transactionsCollection extends Mongo.Collection {
       vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
       deliveredAtEst: this.deliveryEstimate(txId, inMinutes=false, prepTime),
+      cancelledByAdmin: false,
+      cancelledByVendor: false,
+      missedByVendor: false,
+      cancelledTime: false,
+    };
+    return req;
+  }
+  scheduledRequestItems(txId) {
+    req = {
+      week: weeks.find().count(),
+      timeRequested: Date.now(),
+      humanTimeRequested: Date(),
+      vendorPayRef: businessProfiles.rates(txId),
+      deliveredAtEst: transactions.findOne(txId).deliverBy,
       cancelledByAdmin: false,
       cancelledByVendor: false,
       missedByVendor: false,
