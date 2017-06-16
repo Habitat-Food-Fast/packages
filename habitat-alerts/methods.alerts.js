@@ -93,10 +93,23 @@ Alerts.methods = {
       txId: id,
       message: `${tx(id).runnerObj.name} picked up ${tx(id).orderNumber}`,
       opened: new Date()
-    }
+    };
     return Alerts.insert(obj);
   },
   apiError(obj) {
     obj.type = 'danger';
+  },
+  warnScheduled(tx, req) {
+    const obj = {
+      type: 'danger',
+      txId: tx._id,
+      opened: new Date(),
+      noOpen: true,
+      message: `Scheduled order #${tx.orderNumber} ${req ? 'requested' : 'due soon'}  for ${tx.company_name}`,
+      details: {
+        text: `DELIVERY TIME: ${req ? moment(tx.deliverBy).format('h:mm a, M[/]D') : moment(tx.deliverBy).format('h:mm A')}`
+      }
+    };
+    return Alerts.insert(obj);
   }
 }

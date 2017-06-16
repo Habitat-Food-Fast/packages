@@ -34,7 +34,7 @@ _baseSchema = new SimpleSchema({
   orderNumber: {type: Number, optional: true},
   cashTip: { type: Boolean, optional: true, },
   scheduled: { type: Boolean, optional: true },
-  deliverBy: { type: String, optional: true }
+  deliverBy: { type: Number, optional: true }
 });
 
 _timingSchema = new SimpleSchema({

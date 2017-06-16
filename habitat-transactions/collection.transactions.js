@@ -63,6 +63,7 @@ class transactionsCollection extends Mongo.Collection {
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
           transactions.request(txId, {});
         }
+        if (tx.scheduled && tx.status === 'queued') { Alerts.methods.warnScheduled(tx, true); }
         if(doc.buyerId){ Meteor.users.update(doc.buyerId, { $push:{ "profile.transactions": txId } }); }
         if(!doc.thirdParty && !tx.DaaS){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
 
@@ -198,6 +199,7 @@ class transactionsCollection extends Mongo.Collection {
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
+      status: 'pending_runner'
     };
     return req;
   }
