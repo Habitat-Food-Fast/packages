@@ -53,7 +53,8 @@ class transactionsCollection extends Mongo.Collection {
       rating_vendor: null,
       week: weeks.find().count(),
       scheduled: doc.scheduled,
-      deliverBy: doc.deliverBy
+      deliverBy: doc.deliverBy,
+      catering: doc.catering || false
     }), (err, txId) => {
       tx = transactions.findOne(txId);
       console.warn(`after insert`, tx.method);

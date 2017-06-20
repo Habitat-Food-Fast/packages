@@ -149,6 +149,7 @@ class businessProfilesCollection extends Mongo.Collection {
   rates(txId){
     if(!txId) { throwError('No txId passed in'); }
     const tx = transactions.findOne(txId); if(!tx) { throwError('No transaction found'); }
+    const bp = businessProfiles.findOne(tx.sellerId);
     const today = this.getToday(tx.sellerId);
     //TODO: refactor into calc package
     const meetsFreeDelCriteria = (
@@ -167,11 +168,17 @@ class businessProfilesCollection extends Mongo.Collection {
     const txPayout = tx.payRef.tp - (tx.payRef.tp * rates.percent) - rates.flat;
     const DaaSTotal = today.vendorRates.DaaS.flat;
 
-    return _.extend(rates,  {
+    return tx.catering ? {
+      totalPrice: this.cateringPrice(tx.orderSize),
+      vendorPayout: - this.cateringPrice(tx.orderSize)
+    } : _.extend(rates,  {
       totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
       totalWithTax: totalWithTax,
       vendorPayout: tx.DaaS ? - DaaSTotal : txPayout,
     });
+  }
+  cateringPrice(bags) {
+    return bags > 1 ? 15 + (bags * 7) : 15;
   }
   getShortName(company_name) {
     const bizByWord = company_name.split(' ');
