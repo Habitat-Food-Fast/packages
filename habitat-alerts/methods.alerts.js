@@ -1,17 +1,6 @@
 tx = id => { return transactions.findOne(id); }
 
 Meteor.methods({
-  insertTest() {
-    Alerts.insert({
-      type: 'warning',
-      message: 'Call Sangkee Noodle House',
-      opened: new Date(),
-      details: {
-        text: '(443)797-3028'
-      }
-    });
-
-  },
   resolveAlert(id) {
     if (Meteor.user() && Meteor.user().roles.includes('admin')) {
       Alerts.update(id, {$set: {resolved: true, resolvedAt: new Date, resolvedBy: `${Meteor.user().profile.fn} ${Meteor.userId()}`}});
@@ -94,7 +83,9 @@ Alerts.methods = {
       message: `${tx(id).runnerObj.name} picked up ${tx(id).orderNumber}`,
       opened: new Date()
     };
-    return Alerts.insert(obj);
+    if (!Alerts.findOne({txId: obj.txId, message: obj.message})) {
+      return Alerts.insert(obj);
+    }
   },
   apiError(obj) {
     obj.type = 'danger';
