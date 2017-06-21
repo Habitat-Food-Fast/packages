@@ -54,7 +54,7 @@ class transactionsCollection extends Mongo.Collection {
       week: weeks.find().count(),
       scheduled: doc.scheduled,
       deliverBy: doc.deliverBy,
-      catering: doc.catering || false
+      catering: doc.catering ? doc.catering : false
     }), (err, txId) => {
       tx = transactions.findOne(txId);
       console.warn(`after insert`, tx.method);
@@ -64,7 +64,9 @@ class transactionsCollection extends Mongo.Collection {
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
           transactions.request(txId, {});
         }
-        if (tx.scheduled && tx.status === 'queued') { Alerts.methods.warnScheduled(tx, true); }
+        if (tx.scheduled && tx.status === 'queued') {
+          transactions.update(tx._id, {$set: {vendorPayRef: businessProfiles.rates(tx._id)}});
+          Alerts.methods.warnScheduled(tx, true); }
         if(doc.buyerId){ Meteor.users.update(doc.buyerId, { $push:{ "profile.transactions": txId } }); }
         if(!doc.thirdParty && !tx.DaaS){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
 

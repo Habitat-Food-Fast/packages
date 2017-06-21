@@ -215,7 +215,7 @@ sendReceiptImage: new ValidatedMethod({
     }).validator(),
     run({ txId, orderNumber, runnerId, adminAssign }) {
       const tx = transactions.findOne(txId ?
-        {_id: txId, status: 'pending_runner'} :
+        {_id: txId, status: {$in: ['pending_runner', 'queued']}} :
         {orderNumber: orderNumber, status: 'pending_runner'}
       );
 

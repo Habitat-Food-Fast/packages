@@ -95,6 +95,11 @@ Settings.schema = [
     "name" : "userRadius",
     "delivery" : 1,
     "pickup" : 2
+  }, {
+    "_id" : "67b382a1a566cab93dd123r",
+    "name" : "cateringPrice",
+    "first" : 20,
+    "additional" : 10
   }
 
 ];

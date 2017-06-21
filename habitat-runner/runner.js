@@ -202,12 +202,13 @@ generateOrderInfo(tx, runner) {
 
   let msg;
   const pck = tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format('LT') : 'ASAP';
-
+  const deliverAt = moment(tx.deliverBy ? tx.deliverBy : tx.deliveredAtEst).format('h:mm a');
   if(tx.DaaS){
     customerName = tx.customerName || tx.customer.name|| 'unknown';
     customerPhone = tx.customerPhone || tx.customer.phone || 'unknown';
     msg = `Order #${tx.orderNumber} assigned.
 READY AT: ${pck}
+DELIVER BY: ${deliverAt}
 PAYMENT: ${(tx.DaaSType === 'online' || tx.DaaSType === 'credit_card') ? 'Conf drop w/ tip + pic' : tx.DaaSType}
 VENDOR: ${tx.company_name} ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}

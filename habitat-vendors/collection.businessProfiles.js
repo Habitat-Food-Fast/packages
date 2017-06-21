@@ -178,7 +178,8 @@ class businessProfilesCollection extends Mongo.Collection {
     });
   }
   cateringPrice(bags) {
-    return bags > 1 ? 15 + (bags * 7) : 15;
+    const cat = Settings.findOne({name: 'cateringPrice'});
+    return bags > 1 ? cat.first + ((bags - 1) * cat.additional) : cat.first;
   }
   getShortName(company_name) {
     const bizByWord = company_name.split(' ');
