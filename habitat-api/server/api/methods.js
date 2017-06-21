@@ -58,6 +58,7 @@ API.methods = {
         return API.utility.response(context, 400, { error: 400, message: `Invalid request: sellerId doesn't match any vendors`, });
       } else {
         console.log(`about to fetch menu`);
+        menu = Menus.findOne({sellerId: connection.data.sellerId}, {sort: {lastUpdated: -1}});
         return API.utility.response( context, 200, { message: 'Here is the menu', data: menu });
       }
     }

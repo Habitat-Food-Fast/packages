@@ -1,11 +1,12 @@
 Meteor.methods({
   initApiKey( userId ) {
+    key = Random.hexString(32)
     APIKeys.insert({
      owner: userId || this.userId,
-     key: Random.hexString( 32 ),
+     key: key,
    }, (err, id) => { if(err) { console.warn(err.message); } else {
      console.log(`APIKey ${id} inserted for ${this.userId}`);
-     return id;
+     return key;
    }});
   },
   regenerateApiKey( userId ){
