@@ -52,6 +52,9 @@ class transactionsCollection extends Mongo.Collection {
       message: null,
       rating_vendor: null,
       week: weeks.find().count(),
+      scheduled: doc.scheduled,
+      deliverBy: doc.deliverBy,
+      catering: doc.catering || false
     }), (err, txId) => {
       tx = transactions.findOne(txId);
       console.warn(`after insert`, tx.method);
@@ -61,6 +64,7 @@ class transactionsCollection extends Mongo.Collection {
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
           transactions.request(txId, {});
         }
+        if (tx.scheduled && tx.status === 'queued') { Alerts.methods.warnScheduled(tx, true); }
         if(doc.buyerId){ Meteor.users.update(doc.buyerId, { $push:{ "profile.transactions": txId } }); }
         if(!doc.thirdParty && !tx.DaaS){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
 
@@ -182,6 +186,21 @@ class transactionsCollection extends Mongo.Collection {
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
+    };
+    return req;
+  }
+  scheduledRequestItems(txId) {
+    req = {
+      week: weeks.find().count(),
+      timeRequested: Date.now(),
+      humanTimeRequested: Date(),
+      vendorPayRef: businessProfiles.rates(txId),
+      deliveredAtEst: transactions.findOne(txId).deliverBy,
+      cancelledByAdmin: false,
+      cancelledByVendor: false,
+      missedByVendor: false,
+      cancelledTime: false,
+      status: 'pending_runner'
     };
     return req;
   }

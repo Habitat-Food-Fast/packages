@@ -9,6 +9,7 @@ Schemas.Alerts = new SimpleSchema({
   },
   message: { type: String },
   opened: { type: Date },
+  noOpen: { type: Boolean, optional: true },
   details: { type: Object, optional: true },
   'details.text': { type: String, optional: true },
   'details.user': { type: String, optional: true },

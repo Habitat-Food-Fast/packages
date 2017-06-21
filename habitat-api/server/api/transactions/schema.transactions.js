@@ -24,8 +24,8 @@ _baseSchema = new SimpleSchema({
       }
     }
   },
-  status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner'] },
-  DaaSType: { type: String, allowedValues: ['credit_card', 'online', 'cash'] },
+  status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner', 'queued'] },
+  DaaSType: { type: String, allowedValues: ['credit_card', 'online', 'cash', 'catering'] },
   method: { type: String, allowedValues: ['Pickup', 'Delivery']},
   orderSize: { type: Number, optional: true },
   grubhubId: {type: String, optional: true},
@@ -33,6 +33,9 @@ _baseSchema = new SimpleSchema({
   _orderNumber: {type: String, optional: true},
   orderNumber: {type: Number, optional: true},
   cashTip: { type: Boolean, optional: true, },
+  scheduled: { type: Boolean, optional: true },
+  deliverBy: { type: Number, optional: true },
+  catering: { type: Boolean, optional: true }
 });
 
 _timingSchema = new SimpleSchema({
