@@ -39,6 +39,9 @@ Alerts.methods = {
       return Alerts.insert(obj);
     }
   },
+  newParsed(emailId){
+
+  },
   needsAssign(txId) {
     const tx = transactions.findOne(txId);
     const obj = {

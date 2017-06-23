@@ -11,7 +11,6 @@ class transactionsCollection extends Mongo.Collection {
       doc.sellerId
     );
     const usr = Meteor.users.findOne(doc.buyerId) || false;
-    console.warn(`insert`, doc.method);
     return super.insert(_.extend(this.resetItems(), {
       status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
@@ -54,11 +53,10 @@ class transactionsCollection extends Mongo.Collection {
       week: weeks.find().count(),
       scheduled: doc.scheduled,
       deliverBy: doc.deliverBy,
-      catering: doc.catering ? doc.catering : false
+      catering: doc.catering ? doc.catering : false,
+      externalId: doc.externalId || false,
     }), (err, txId) => {
       tx = transactions.findOne(txId);
-      console.warn(`after insert`, tx.method);
-
       if(err) { throwError(err.message); } else {
         if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
@@ -100,7 +98,7 @@ class transactionsCollection extends Mongo.Collection {
       );
     }
 
-    console.log(o); return o;
+    return o;
   }
   formatMods(mods) {
     let modArray = [];
@@ -123,7 +121,6 @@ class transactionsCollection extends Mongo.Collection {
     const bp = businessProfiles.findOne(tx.sellerId || sellerId);
     const prepTime = tx.prepTime || bp.prep_time; //TODO: add prepTime to txs on request so we don't need ternary
     habId = tx.habitat || habitat;
-    console.log(habId);
     const delTime = Habitats.findOne(habId).deliveryTime;
     const estimate = inMinutes ?
       prepTime + delTime :
@@ -159,10 +156,7 @@ class transactionsCollection extends Mongo.Collection {
                   }
                 }
               } }, (err) => {
-                if(err) { console.warn(err.message); } else {
-                  // console.log(calc._roundToTwo((i / count) * 100) + '%');
-                  // console.log(`set ${tx.orderNumber} to`, transactions.findOne(txId).routeInfo.car.distance.text);
-                }
+                if(err) { console.warn(err.message); }
               });
             }
           }
@@ -238,7 +232,6 @@ class transactionsCollection extends Mongo.Collection {
     }
   }
   request(id, fields, callback){
-    console.log(`inside request`, id)
     const trans = transactions.findOne(id);
 
     if (trans && trans.payRef && trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }
@@ -367,7 +360,6 @@ gmapsUrl = (tx) => {
   const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
   const originCoords = biz.geometry.coordinates;
 
-  // console.log(`${biz.company_address} to ${tx.deliveryAddress}`);
   const origin = `origin=${originCoords[1]},${originCoords[0]}`;
   const coords = deliveryAddressCoords(tx._id);
 

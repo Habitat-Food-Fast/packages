@@ -7,7 +7,6 @@ API = {
     const getRequestContents = API.utility.getRequestContents( request ),
           apiKey = getRequestContents.api_key,
           validUser = API.authentication( apiKey );
-          console.warn(validUser, 'validUser')
     if ( validUser ) {
       return { owner: validUser, data: getRequestContents, key: apiKey };
     } else {
@@ -22,10 +21,8 @@ API = {
       });
     } else {
       console.log(`${method} to ${Meteor.absoluteUrl()}api/v1/${resource} from ${connection.owner}`);
-
-      call = API.methods[ resource ][ method ]; console.log(call);
+      call = API.methods[ resource ][ method ];
       response = call( context, connection );
-      console.log('response', response)
       APIRequests.insert({request: connection, response: response}, (err) => {
         if(err) { throwError({reason: `Database connection error inserting API request`})} else {
           return response;
@@ -50,7 +47,7 @@ API = {
     },
     validate( data, pattern ) {return Match.test( data, pattern ); },
     response( context, statusCode, data ) {
-      console.log('response going..',statusCode, data)
+      console.log('Response: ', statusCode); console.log(data);
       context.response.setHeader( 'Content-Type', 'application/json' );
       context.response.statusCode = statusCode;
       context.response.end( JSON.stringify( data ) );

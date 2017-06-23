@@ -61,12 +61,12 @@ class businessProfilesCollection extends Mongo.Collection {
     return docs.forEach((doc) => {
       super.insert(doc, {validate: false}, (err, id) => {
         if(err) { throwError(err.message); } else {
-          fakePhone = getRandomPhone(10);
+          fakePhone = phone.random();
           businessProfiles.update(id, {$set: {
             orderPhone: fakePhone,
             employees: [],
             faxPhone: fakePhone.toString(),
-            company_name: `FAKE ${doc.company_name}`,
+            // company_name: `FAKE ${doc.company_name}`,
             company_phone: fakePhone.toString(),
             company_email: Random.id() + '@hotmail.com',
           }}, (err) => { if(err) { throwError(err.message); }});

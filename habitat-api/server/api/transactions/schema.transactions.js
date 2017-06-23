@@ -4,6 +4,8 @@ _baseSchema = new SimpleSchema({
   partnerName: { type: String }, //PRIVATE: (not passed up)
   thirdParty: { type: Boolean }, //PRIVATE: (not passed up)
   DaaS: { type: Boolean }, //PRIVATE: (not passed up)
+  __emailOrder: { type: Object, blackbox: true, optional: true }, //debugging purposes for duplicates
+  'body-html': { type: String, optional: true }, //debugging purposes for duplicates
   sellerId: {
     type: String,
     custom(){
@@ -28,7 +30,8 @@ _baseSchema = new SimpleSchema({
   DaaSType: { type: String, allowedValues: ['credit_card', 'online', 'cash', 'catering'] },
   method: { type: String, allowedValues: ['Pickup', 'Delivery']},
   orderSize: { type: Number, optional: true },
-  grubhubId: {type: String, optional: true},
+  externalId: {type: String, optional: true},
+  externalVendorId: {type: String, optional: true},
   company_name: {type: String, optional: true},
   _orderNumber: {type: String, optional: true},
   orderNumber: {type: Number, optional: true},
@@ -113,6 +116,7 @@ function handleDelivery(context, tx){
 
 
 validateOrder = (context, order) => {
+  console.log(`customer`, order.customer)
   let schema = _baseSchema
   .extend(_customerSchema)
   .extend(_timingSchema)
@@ -121,7 +125,6 @@ validateOrder = (context, order) => {
   if (order.plainOrder && order.plainOrder.length) {
     schema.extend(_orderSchema).extend(_payRefSchema)
   }
-  console.log('validate', order)
   if(order.method === 'Delivery' || order.isDelivery){
     order = _.extend(order, handleDelivery(context, order));
   }
