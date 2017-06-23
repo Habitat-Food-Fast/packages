@@ -24,7 +24,7 @@ class transactionsCollection extends Mongo.Collection {
       vendorPayRef: {},
       runnerPayRef: {},
       prepTime: doc.prepTime || bizProf.prep_time,
-      order: doc.order || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
+      order: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       plainOrder: doc.plainOrder,
       // || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       orderNumber: doc.orderNumber || this.pin(),
@@ -100,7 +100,7 @@ class transactionsCollection extends Mongo.Collection {
       );
     }
 
-    console.log(o); return o;
+    return o;
   }
   formatMods(mods) {
     let modArray = [];
