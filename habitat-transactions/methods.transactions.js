@@ -17,6 +17,8 @@ transactions.methods = {
       if(arguments[0].DaaS && Meteor.user() && !Meteor.user().roles.includes('vendor')) {
         throwError('Must be vendor to insert DaaS');
       } else {
+        console.log('heres the insert');
+        console.log(arguments[0]);
         return transactions.insert(arguments[0]);
       }
     }
