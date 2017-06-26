@@ -448,13 +448,22 @@ runner.payouts = {
     return runnerTxs.map(t => t.payRef.tip || 0).reduce((sum, num) => { return sum + num; }, 0);
   },
   _perTxKeep(runnerTxs){
-    return (runnerTxs.length * 1.5);
+    return runnerTxs
+    // .filter(t => !t.catering)
+    .length * 1.5;
   },
   _onDemandOwed(runnerTxs){
     return runnerTxs
       .filter(t => t.runnerPayRef && t.runnerPayRef.onDemand)
       .map(t => t.runnerPayRef.onDemandRate)
       .reduce((sum, num) => { return sum + num; }, 0);
+  },
+  _catering(runnerTxs){
+    return runnerTxs
+      .filter(t => t.catering)
+      .map(t => t.vendorPayRef.totalPrice)
+      .reduce((sum, num) => { sum + num; }, 0)
+      * .4;
   },
   _totalOwed(runnerTxs, allShifts, staffJoyId){
     hourlyRate = (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4);
@@ -482,6 +491,7 @@ runner.payouts = {
       owedHourTotal: accounting.formatMoney(this._totalHoursWorked(runnerTxs, allShifts, worker.id) * 4),
       owedDeliveryFee: accounting.formatMoney(this._perTxKeep(runnerTxs)),
       owedTips: accounting.formatMoney(this._tips(runnerTxs)),
+      // owedCatering: accounting.formatMoney(this._catering(runnerTxs)),
       runnerOwed: this._totalOwed(runnerTxs, allShifts, worker.id),
     });
     return query;
