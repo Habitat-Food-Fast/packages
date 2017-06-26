@@ -449,7 +449,7 @@ runner.payouts = {
   },
   _perTxKeep(runnerTxs){
     return runnerTxs
-    // .filter(t => !t.catering)
+    .filter(t => !t.catering)
     .length * 1.5;
   },
   _onDemandOwed(runnerTxs){
@@ -485,13 +485,14 @@ runner.payouts = {
       templeCount: runnerTxs.filter(t => t.habitat === 'g77XEv8LqxJKjTT8k').length,
       ucCount: runnerTxs.filter(t => t.habitat === 'zfY5SkgFSjXcjXbgW').length,
       daasCount: runnerTxs.filter(t => t.DaaS).length,
+      cateringCount: runnerTxs.finter(t => t.catering).length,
       onDemand: runnerTxs.filter(t => t.runnerPayRef && t.runnerPayRef.onDemand).length,
       runnerHourlyRate: accounting.formatMoney(4),
       owedOnDemandTotal: this._onDemandOwed(runnerTxs),
       owedHourTotal: accounting.formatMoney(this._totalHoursWorked(runnerTxs, allShifts, worker.id) * 4),
       owedDeliveryFee: accounting.formatMoney(this._perTxKeep(runnerTxs)),
       owedTips: accounting.formatMoney(this._tips(runnerTxs)),
-      // owedCatering: accounting.formatMoney(this._catering(runnerTxs)),
+      owedCatering: accounting.formatMoney(this._catering(runnerTxs)),
       runnerOwed: this._totalOwed(runnerTxs, allShifts, worker.id),
     });
     return query;
