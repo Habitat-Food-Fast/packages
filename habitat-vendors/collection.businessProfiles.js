@@ -30,15 +30,17 @@ class businessProfilesCollection extends Mongo.Collection {
               phone: doc.orderPhone,
               password: pw,
               habitat: doc.habitat[0],
-              businesses: bizArr
+              businesses: bizArr,
+              vendor: true
             };
             Accounts.createUser(obj);
+            const key = Meteor.call('initApiKey', newBizId);
             Meteor.users.update(newid, {$set: {'profile.businesses': bizArr}}, (err, res) => {
               if (err) {
                 throwError(err);
               }
             });
-            businessProfiles.update(newBizId, {$set: { uid: newid }}, (err, res) => {
+            businessProfiles.update(newBizId, {$set: { uid: newid, apiKey: key }}, (err, res) => {
               if(err) { throwError(err.message); }
               Roles.addUsersToRoles(newid, 'vendor');
               mailman.onboard.biz(bp, pw);
