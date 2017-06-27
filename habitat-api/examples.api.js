@@ -5,7 +5,7 @@ Meteor.methods({
      owner: userId || this.userId,
      key: key,
    }, (err, id) => { if(err) { console.warn(err.message); } else {
-     console.log(`APIKey ${id} inserted for ${this.userId}`);
+     console.log(`APIKey ${id} inserted for ${userId}`);
      return key;
    }});
   },

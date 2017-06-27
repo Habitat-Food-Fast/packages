@@ -19,31 +19,13 @@ class businessProfilesCollection extends Mongo.Collection {
           grubhubId: doc.grubhubId
         }), (err, newBizId) => {
           if(err) { throwError(err.message); }
-            const bp = businessProfiles.findOne(newBizId);
-            const bizArr = [newBizId];
-            const pw = `${generateBizPass(doc.company_name)}`;
-            const newid = Random.id();
-            const obj = {
-              _id: newid,
-              fn: doc.company_name,
-              email: doc.company_email,
-              phone: doc.orderPhone,
-              password: pw,
-              habitat: doc.habitat[0],
-              businesses: bizArr,
-              vendor: true
-            };
-            Accounts.createUser(obj);
-            const key = Meteor.call('initApiKey', newBizId);
-            Meteor.users.update(newid, {$set: {'profile.businesses': bizArr}}, (err, res) => {
+            Meteor.call('initApiKey', newBizId, (err, res) => {
               if (err) {
                 throwError(err);
+              } else {
+                const bp = businessProfiles.findOne(newBizId);
+                Meteor.users.update(bp.uid, {$set: { apiKey: APIKeys.findOne({owner: newBizId}).key }});
               }
-            });
-            businessProfiles.update(newBizId, {$set: { uid: newid, apiKey: key }}, (err, res) => {
-              if(err) { throwError(err.message); }
-              Roles.addUsersToRoles(newid, 'vendor');
-              mailman.onboard.biz(bp, pw);
             });
         }, callback);
       }
@@ -231,7 +213,7 @@ if (Meteor.isServer) {
   businessProfiles._ensureIndex({ 'geometry.coordinates': '2d'});
 }
 generateBizPass = function (company_name) {
-  return  company_name
+  return  company_name.substr(0, 5)
           .toLowerCase()
           .replace(/\s+/g, '') +
           ("0" + Math.floor(Math.random() * (9999 - 0 + 1)))

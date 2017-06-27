@@ -2,6 +2,7 @@ businessProfiles.methods = {
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',
     validate: new SimpleSchema({
+      _id: {type: String, optional: true},
       habitat: { type: [String] },
       company_name: { type: String },
       company_email: { type: String },
@@ -22,7 +23,35 @@ businessProfiles.methods = {
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
-        return businessProfiles.insert(arguments[0]);
+        bizObj = arguments[0];
+        const newBizId = arguments[0]._id || Random.id();
+        const newUserId = Random.id();
+        const bizArr = [newBizId];
+        bizObj._id = newBizId;
+        bizObj.uid = newUserId;
+        const pw = `${generateBizPass(bizObj.company_name)}`;
+        const obj = {
+          _id: newUserId,
+          fn: bizObj.company_name,
+          username: bizObj.company_email,
+          email: bizObj.company_email,
+          phone: bizObj.orderPhone,
+          password: pw,
+          habitat: bizObj.habitat[0],
+          businesses: bizArr,
+          vendor: true
+        };
+        Accounts.createUser(obj);
+        return businessProfiles.insert(bizObj, (err, res) => {
+          if (err) {
+            throwError(err);
+          } else {
+            console.warn(`result of insert ${res}`);
+            const bp = businessProfiles.findOne(res);
+            mailman.onboard.biz(bp, pw);
+            return res;
+          }
+        });
       }
   }
   }),
@@ -217,7 +246,7 @@ Meteor.methods({
       if (this.userId === uid || Roles.userIsInRole(this.userId, ['admin'])) {
         saleItems.update(saleItemId, {$set: {isHiddenFromMenu: trueOrFalse}});
         return saleItemId;
-      }  
+      }
     }
   },
 
