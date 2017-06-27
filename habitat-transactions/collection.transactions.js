@@ -25,7 +25,6 @@ class transactionsCollection extends Mongo.Collection {
       prepTime: doc.prepTime || bizProf.prep_time,
       order: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       plainOrder: doc.plainOrder,
-      // || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       orderNumber: doc.orderNumber || this.pin(),
       orderSize: doc.orderSize || 1,
       habitat: doc.habitat || bizProf.habitat[0],
@@ -77,16 +76,25 @@ class transactionsCollection extends Mongo.Collection {
   forceRemove() { return super.remove({}); }
   formatOrder(order, thirdParty){
     if(!thirdParty){
-      o= order.length === 0 ? order : order.map(order =>
-         _.extend(order, {
-          orderId: this.pin(),
-          itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
-          itemName: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).name : '',
-          itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
-          modifiers: order.modifiers,
-          modifiersText: order.modifiers === [] ? [] : this.formatMods(order.modifiers)
-        })
-      );
+      if (order.length === 0) {
+        o = order;
+      } else {
+        o = [];
+        const out = this;
+        _.each(order, function(orderObj) {
+          const saleObj = saleItems.findOne(orderObj.saleItemId);
+          if (saleObj) {
+            _.extend(orderObj, {
+             orderId: out.pin(),
+             itemPrice: saleObj ? saleObj.price : 0,
+             itemName: saleObj ? saleObj.name : '',
+             itemCategory: saleObj.category || undefined,
+             modifiersText: orderObj.modifiers === [] ? [] : out.formatMods(orderObj.modifiers)
+           });
+          }
+         o.push(orderObj);
+        });
+      }
     } else {
       o= order.length === 0 ? order : order.map(order =>
          _.extend(order, {
@@ -107,7 +115,7 @@ class transactionsCollection extends Mongo.Collection {
       if (mod) {
         modArray.push({
           name: mod.name,
-          category: modCategories.findOne(mod.subcategory).name,
+          category: modCategories.findOne(mod.subcategory) ? modCategories.findOne(mod.subcategory).name : null,
           price: mod.price
         });
       }
