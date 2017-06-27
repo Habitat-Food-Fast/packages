@@ -90,6 +90,17 @@ Alerts.methods = {
       return Alerts.insert(obj);
     }
   },
+  runnerText(runnerId, message) {
+    usr = Meteor.users.findOne(runnerId);
+    return Alerts.insert({
+      type: 'warning',
+      message: `${usr.profile.fn} texted back ${message}`,
+      opened: new Date(),
+      details: {
+        text: `${usr.profile.fn}`
+      }
+    });
+  },
   apiError(obj) {
     obj.type = 'danger';
   },
