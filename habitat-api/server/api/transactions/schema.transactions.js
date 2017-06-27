@@ -86,7 +86,7 @@ _deliverySchema = new SimpleSchema({
   'cross-street': { type: String, optional: true},
 })
 
-function handleDelivery(context, tx){
+handleDelivery = (context, tx) =>{
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${tx.deliveryAddress}.json`;
   const params = {
     params: {
@@ -131,27 +131,3 @@ validateOrder = (context, order) => {
 
   return schema.validate(order);
 }
-
-// menu = {
-//    categories: [{
-//      rank: 1, //sort rank on menu
-//      name: 'Appetizers',
-//      items: [{
-//        name: 'eggs',
-//        price: 2.00,
-//        visibleOnFeed: true,
-//        add_ons: [{
-//           category_name: 'Prep style',
-//           category_select_one_required: true,
-//           category_items: [{
-//             name: 'Over easy',
-//             price: 0,
-//           },
-//           {
-//             name: 'Over medium',
-//             price: 0,
-//           }]
-//         }]
-//      }]
-//    }],
-// }

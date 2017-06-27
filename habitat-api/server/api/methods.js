@@ -47,18 +47,94 @@ API.methods = {
       }
     },
   },
+  rates: {
+    /////Ye all who enter, read the comments.
+    /////this is a naive MVP implementation of delivery fee calculation based on distance.
+    GET( context, connection ) {
+      let getZones;
+      const hasQuery = API.utility.hasData( connection.data );
+
+      const request = {
+        vendorId,
+        destination,
+        bagCount,
+      } = connection.data;
+      console.log(request);
+
+      if (!connection.data.vendorId) {
+          API.utility.response( context, 404, { error: 404, message: "Invalid request: No vendor Id attached." });
+      } else if(!businessProfiles.findOne(connection.data.vendorId)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: vendorId doesn't match any vendors`, });
+      } else {
+        bp = businessProfiles.findOne(connection.data.vendorId);
+        //because we don't have full geojson data for each individual vendor, look to backend_habitat
+        //currently we don't know what the habitat array is for anymore, and backend habitat has become
+        //definitive source for data, runners, etc.
+        //Therefore, vendor's zone is the backend_habitat's coordinates
+        hab = Habitats.findOne({name: bp.backend_habitat});
+
+        //handle delivery address vs coords being passed up
+          console.warn(`Contains characters, this must be an address`);
+          try {
+            //${lng},${lat}
+            const result = HTTP.get(`https://api.mapbox.com/geocoding/v5/mapbox.places/${request.destination}.json`, {
+              params: {
+                country: 'us',
+                types: 'address',
+                proximity: [ -75.1597308, 39.9802519 ],
+                bbox: [-75.27935,39.888665,-75.084343,40.047854],
+                access_token: Meteor.settings.public.mapboxKey
+              }
+            });
+
+
+            if(result.statusCode === 200){
+              const res = JSON.parse(result.content);
+              if(!res.features.length){
+                return API.utility.response(context, 400, { error: 400, message: `Sorry, outside delivery range`, });
+              } else {
+                //get today's rates object, double the daas rate if outside backend habitat.
+                //api does not have a catering flag, but will have to calculate in
+                const today = businessProfiles.getToday(bp._id);
+                const insideZone = turf.inside(
+                  turf.point(res.features[0].center),
+                  turf.polygon(hab.bounds.data.geometry.coordinates)
+                );
+
+                const rate = insideZone ?
+                  today.vendorRates.DaaS.flat :
+                  today.vendorRates.DaaS.flat * 2;
+
+                console.log(res.features[0]);
+                return API.utility.response( context, 200, {
+                  insideZone,
+                  rate: calc._roundToTwo(rate),
+                  currency: 'USD',
+                  companyName: bp.company_name,
+                  vendorId: bp._id,
+                  coordinates: res.features[0].center,
+                  address: res.features[0].place_name
+                });
+              }
+            }
+          } catch (e) {
+            return API.utility.response(context, 400, { error: 400, message: 400, });
+          }
+      }
+    },
+  },
   menus: {
     GET(context, connection){
       console.warn('hit menu get')
       if (!API.utility.hasData(connection.data)) {
         return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on GET`, });
-      } else if(!connection.data.sellerId){
-        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No sellerId passed on GET`, });
-      } else if(!businessProfiles.findOne(connection.data.sellerId)) {
-        return API.utility.response(context, 400, { error: 400, message: `Invalid request: sellerId doesn't match any vendors`, });
+      } else if(!connection.data.vendorId){
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: No vendorId passed on GET`, });
+      } else if(!businessProfiles.findOne(connection.data.vendorId)) {
+        return API.utility.response(context, 400, { error: 400, message: `Invalid request: vendorId doesn't match any vendors`, });
       } else {
         console.log(`about to fetch menu`);
-        menu = Menus.findOne({sellerId: connection.data.sellerId}, {sort: {lastUpdated: -1}});
+        menu = Menus.findOne({vendorId: connection.data.vendorId}, {sort: {lastUpdated: -1}});
         return API.utility.response( context, 200, { message: 'Here is the menu', data: menu });
       }
     }
