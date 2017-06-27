@@ -332,7 +332,7 @@ sendReceiptImage: new ValidatedMethod({
         const params = {
           params: {
             country: 'us',
-            types: 'country,region,postcode,place,locality,neighborhood,address,poi',
+            types: 'address',
             proximity: [ -75.1597308, 39.9802519 ],
             bbox: [-75.27935,39.888665,-75.084343,40.047854],
             access_token: Meteor.settings.public.mapboxKey
