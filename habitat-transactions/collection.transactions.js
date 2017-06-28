@@ -176,6 +176,7 @@ class transactionsCollection extends Mongo.Collection {
     tx = transactions.findOne(txId);
   }
   requestItems(txId, prepTime, daas) {
+    tx = transactions.findOne(txId);
     const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
     req = {
@@ -186,6 +187,7 @@ class transactionsCollection extends Mongo.Collection {
       vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
       deliveredAtEst: this.deliveryEstimate(txId, inMinutes=false, prepTime),
+      pickupAtEst: tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format() : moment().format(),
       cancelledByAdmin: false,
       cancelledByVendor: false,
       missedByVendor: false,
