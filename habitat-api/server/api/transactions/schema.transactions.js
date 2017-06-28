@@ -6,6 +6,7 @@ _baseSchema = new SimpleSchema({
   DaaS: { type: Boolean }, //PRIVATE: (not passed up)
   __emailOrder: { type: Object, blackbox: true, optional: true }, //debugging purposes for duplicates
   'body-html': { type: String, optional: true }, //debugging purposes for duplicates
+  createdAt: { type: Date, optional: true, },
   sellerId: {
     type: String,
     custom(){
