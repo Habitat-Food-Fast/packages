@@ -104,7 +104,7 @@ API.methods = {
                   console.log(url);
                   const directions = HTTP.get(url, { params: { access_token: Meteor.settings.public.mapboxKey } });
                   const route = directions.data.routes[0];
-                  const distanceInMiles = route.distance * 0.000621371192
+                  const distanceInMiles = calc._roundToTwo(route.distance * 0.000621371192);
                   const isAvailable = distanceInMiles < 2;
                   //get today's rates object, double the daas rate if outside backend habitat.
                   //api does not have a catering flag, but will have to calculate i
@@ -114,6 +114,9 @@ API.methods = {
 
                   try {
                     const quoteId = Quotes.insert({
+                      createdAt: new Date(),
+                      apiKey: connection.data.api_key,
+                      partner: connection.owner,
                       vendorId: bp._id,
                       companyName: bp.company_name,
                       isAvailable: isAvailable,
@@ -122,7 +125,7 @@ API.methods = {
                       distance: distanceInMiles,
                       metric: false
                     });
-                    const quote = Quotes.findOne(quoteId); console.log(quote);
+                    const quote = Quotes.findOne(quoteId, {fields: { createdAt: 0, apiKey: 0, partner: 0, companyName: 0, vendorId: 0 }});
                     return API.utility.response( context, 200, quote );
                   } catch (e) {
                     return API.utility.response(context, 400, { error: 400, message: e.message, });
@@ -186,7 +189,6 @@ API.methods = {
             usr.roles.includes('admin') ||
             usr.roles.includes('vendor') ||
             connection.data.thirdParty && connection.data.method === 'Delivery';
-
           validateOrder(context, connection.data);
           const txId = transactions.insert(connection.data);
           return API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });

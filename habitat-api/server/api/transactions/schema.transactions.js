@@ -51,8 +51,8 @@ _orderSchema = new SimpleSchema ({
     'plainOrder.$': { type: Object, optional: true, },
       'plainOrder.$.orderId': { type: Number, optional: true, }, //the index
       'plainOrder.$.quantity': { type: Number, optional: true, },
-      'plainOrder.$.itemInstructions': { type: String, },
-      'plainOrder.$.itemName': { type: String, },
+      'plainOrder.$.itemInstructions': { type: String, optional: true},
+      'plainOrder.$.itemName': { type: String, optional: true},
       'plainOrder.$.itemCategory': { type: String, optional: true, },
       'plainOrder.$.itemPrice': { type: Number, optional: true, },
       'plainOrder.$.modifiersText': { type: Array, optional: true, },
@@ -63,6 +63,7 @@ _orderSchema = new SimpleSchema ({
 });
 _customerSchema = new SimpleSchema({
   customer: { type: Object },
+    'customer.id': { type: String, optional: true },
     'customer.name': { type: String, optional: true },
     'customer.phone': { type: String },
     'customer.email': { type: String, optional: true },
@@ -72,6 +73,7 @@ _payRefSchema = new SimpleSchema({
     'payRef.tp': { type: Number, optional: true },
     'payRef.tax': { type: Number, optional: true },
     'payRef.tip': { type: Number, optional: true },
+    'payRef.total': { type: Number, optional: true },
 });
 _deliverySchema = new SimpleSchema({
   deliveryAddress: { type: String, optional: true },
