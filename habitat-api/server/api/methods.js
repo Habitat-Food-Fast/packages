@@ -53,11 +53,14 @@ API.methods = {
     GET( context, connection ) {
       let getZones;
       const hasQuery = API.utility.hasData( connection.data );
-
+      // const validData = API.utility.validate( connection.data, Match.OneOf(
+      //   { "_id": String, "status": String }
+      // ));
       const request = {
         vendorId,
         destination,
         bagCount,
+        allowedTransport,
       } = connection.data;
       console.log(request);
 
@@ -87,38 +90,51 @@ API.methods = {
               }
             });
 
-
             if(result.statusCode === 200){
               const res = JSON.parse(result.content);
               if(!res.features.length){
                 return API.utility.response(context, 400, { error: 400, message: `Sorry, outside delivery range`, });
               } else {
-                //get today's rates object, double the daas rate if outside backend habitat.
-                //api does not have a catering flag, but will have to calculate in
-                const today = businessProfiles.getToday(bp._id);
-                const insideZone = turf.inside(
-                  turf.point(res.features[0].center),
-                  turf.polygon(hab.bounds.data.geometry.coordinates)
-                );
+                const originCoords = bp.geometry.coordinates; //array [lng,lat]
+                const destinationCoords = res.features[0].center; //array [lng,lat]
+                const vendorZonePolygon = hab.bounds.data.geometry.coordinates; //array of array of array of [lng, lat]s
 
-                const rate = insideZone ?
-                  today.vendorRates.DaaS.flat :
-                  today.vendorRates.DaaS.flat * 2;
+                try {
+                  url = `https://api.mapbox.com/directions/v5/mapbox/walking/${originCoords.join(',')};${destinationCoords.join(',')}`;
+                  console.log(url);
+                  const directions = HTTP.get(url, { params: { access_token: Meteor.settings.public.mapboxKey } });
+                  const route = directions.data.routes[0];
+                  const distanceInMiles = route.distance * 0.000621371192
+                  const isAvailable = distanceInMiles < 2;
+                  //get today's rates object, double the daas rate if outside backend habitat.
+                  //api does not have a catering flag, but will have to calculate i
 
-                console.log(res.features[0]);
-                return API.utility.response( context, 200, {
-                  insideZone,
-                  rate: calc._roundToTwo(rate),
-                  currency: 'USD',
-                  companyName: bp.company_name,
-                  vendorId: bp._id,
-                  coordinates: res.features[0].center,
-                  address: res.features[0].place_name
-                });
+                  const today = businessProfiles.getToday(bp._id);
+                  const chargePremium = _chargePremium(bp._id, today, destinationCoords, vendorZonePolygon);
+
+                  try {
+                    const quoteId = Quotes.insert({
+                      vendorId: bp._id,
+                      companyName: bp.company_name,
+                      isAvailable: isAvailable,
+                      rate: calc._roundToTwo(chargePremium ? today.vendorRates.DaaS.flat * 2 : today.vendorRates.DaaS.flat),
+                      currency: 'USD',
+                      distance: distanceInMiles,
+                      metric: false
+                    });
+                    const quote = Quotes.findOne(quoteId); console.log(quote);
+                    return API.utility.response( context, 200, quote );
+                  } catch (e) {
+                    return API.utility.response(context, 400, { error: 400, message: e.message, });
+
+                  }
+                } catch (e) {
+                  return API.utility.response(context, 400, { error: 400, message: e.message, });
+                }
               }
             }
           } catch (e) {
-            return API.utility.response(context, 400, { error: 400, message: 400, });
+            return API.utility.response(context, 400, { error: 400, message: `Sorry, outside delivery range`, });
           }
       }
     },
@@ -133,7 +149,6 @@ API.methods = {
       } else if(!businessProfiles.findOne(connection.data.vendorId)) {
         return API.utility.response(context, 400, { error: 400, message: `Invalid request: vendorId doesn't match any vendors`, });
       } else {
-        console.log(`about to fetch menu`);
         menu = Menus.findOne({vendorId: connection.data.vendorId}, {sort: {lastUpdated: -1}});
         return API.utility.response( context, 200, { message: 'Here is the menu', data: menu });
       }
@@ -203,3 +218,7 @@ API.methods = {
     },
   }
 };
+
+function _chargePremium(bizId, today, destinationCoords, vendorZonePolygon){
+  return !turf.inside( turf.point(destinationCoords), turf.polygon(vendorZonePolygon) );
+}
