@@ -489,7 +489,7 @@ runner.payouts = {
       onDemand: runnerTxs.filter(t => t.runnerPayRef && t.runnerPayRef.onDemand).length,
       runnerHourlyRate: accounting.formatMoney(4),
       owedOnDemandTotal: this._onDemandOwed(runnerTxs),
-      owedHourTotal: accounting.formatMoney(this._totalHoursWorked(runnerTxs, allShifts, worker.id) * 4),
+      owedHourTotal: accounting.formatMoney(this._totalHoursFWorked(runnerTxs, allShifts, worker.id) * 4),
       owedDeliveryFee: accounting.formatMoney(this._perTxKeep(runnerTxs)),
       owedTips: accounting.formatMoney(this._tips(runnerTxs)),
       owedCatering: accounting.formatMoney(this._catering(runnerTxs)),
