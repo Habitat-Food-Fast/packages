@@ -207,7 +207,6 @@ API.methods = {
           request.externalId = request.externalId ? request.externalId.toString() : false;
           request.externalVendorId = request.externalVendorId ? request.externalVendorId.toString() : false;
 
-          queued = request.scheduled
           if(!request.status){
             if(request.scheduled){
               request.status = 'queued';
@@ -217,11 +216,12 @@ API.methods = {
               request.status = 'pending_vendor';
             }
           }
-          validateOrder(context, request);
-          const txId = transactions.insert(connection.data);
+          console.log(connection.data);
+          cleanDoc = transactions.validate(connection.data);
+          const txId = transactions.insert(cleanDoc);
           return API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });
         } catch(exception) {
-          return API.utility.response(context, 403, { error: 403, message: ' post failed' + exception, });
+          return API.utility.response(context, 403, { error: 403, message: exception, });
         }
       }
     },

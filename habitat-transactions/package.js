@@ -6,7 +6,8 @@ Package.describe({
 Npm.depends({
   "phaxio": "0.0.6",
   "geolib": "2.0.22",
-  "json-2-csv": "2.1.1"
+  "json-2-csv": "2.1.1",
+  "simpl-schema": "0.3.0"
 });
 
 Package.onUse(function (api) {
@@ -27,6 +28,7 @@ Package.onUse(function (api) {
   api.addFiles('collection.transactions.js', ['client', 'server']);
   api.addFiles('methods.transactions.js', ['client', 'server']);
   api.addFiles('resolvers.transactions.js', ['client', 'server']);
+  api.addFiles('schema.transactions.js', ['client', 'server']);
   api.addFiles('util.transactions.js', ['client', 'server']);
 
   api.export('handleInitialVendorContact');

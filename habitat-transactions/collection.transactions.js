@@ -73,6 +73,15 @@ class transactionsCollection extends Mongo.Collection {
       }
     });
   }
+  validate(order){
+    let schema = _baseSchema.extend(_customerSchema).extend(_timingSchema).extend(_deliverySchema);
+    if (order.plainOrder && order.plainOrder.length) { schema.extend(_orderSchema); schema.extend(_payRefSchema); }
+    if(order.method === 'Delivery' || order.isDelivery){ order = _.extend(order, handleDelivery(order)); }
+
+    const cleanDoc = schema.clean(order);
+    schema.validate(cleanDoc);
+    return cleanDoc;
+  }
   forceInsertSingle(doc){ if(!transactions.findOne(doc._id)){ return super.insert(doc); } }
   forceInsert(txs) { return transactions.batchInsert(txs, (err) => { if(err) { throwError(err.message); } else { } }); }
   forceRemove() { return super.remove({}); }
