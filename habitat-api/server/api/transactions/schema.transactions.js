@@ -6,6 +6,7 @@ _baseSchema = new SimpleSchema({
   DaaS: { type: Boolean }, //PRIVATE: (not passed up)
   __emailOrder: { type: Object, blackbox: true, optional: true }, //debugging purposes for duplicates
   'body-html': { type: String, optional: true }, //debugging purposes for duplicates
+  createdAt: { type: Date, optional: true, },
   sellerId: {
     type: String,
     custom(){
@@ -27,11 +28,11 @@ _baseSchema = new SimpleSchema({
     }
   },
   status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner', 'queued'] },
-  DaaSType: { type: String, allowedValues: ['credit_card', 'online', 'cash', 'catering'] },
+  DaaSType: { type: String, allowedValues: ['credit_card', 'prepaid', 'cash', 'online', 'catering'] },
   method: { type: String, allowedValues: ['Pickup', 'Delivery']},
   orderSize: { type: Number, optional: true },
-  externalId: {type: String, optional: true},
-  externalVendorId: {type: String, optional: true},
+  externalId: {type: SimpleSchema.oneOf(String, Boolean), optional: true},
+  externalVendorId: {type: SimpleSchema.oneOf(String, Boolean), optional: true},
   company_name: {type: String, optional: true},
   _orderNumber: {type: String, optional: true},
   orderNumber: {type: Number, optional: true},
@@ -50,8 +51,8 @@ _orderSchema = new SimpleSchema ({
     'plainOrder.$': { type: Object, optional: true, },
       'plainOrder.$.orderId': { type: Number, optional: true, }, //the index
       'plainOrder.$.quantity': { type: Number, optional: true, },
-      'plainOrder.$.itemInstructions': { type: String, },
-      'plainOrder.$.itemName': { type: String, },
+      'plainOrder.$.itemInstructions': { type: String, optional: true},
+      'plainOrder.$.itemName': { type: String, optional: true},
       'plainOrder.$.itemCategory': { type: String, optional: true, },
       'plainOrder.$.itemPrice': { type: Number, optional: true, },
       'plainOrder.$.modifiersText': { type: Array, optional: true, },
@@ -62,6 +63,7 @@ _orderSchema = new SimpleSchema ({
 });
 _customerSchema = new SimpleSchema({
   customer: { type: Object },
+    'customer.id': { type: String, optional: true },
     'customer.name': { type: String, optional: true },
     'customer.phone': { type: String },
     'customer.email': { type: String, optional: true },
@@ -71,6 +73,7 @@ _payRefSchema = new SimpleSchema({
     'payRef.tp': { type: Number, optional: true },
     'payRef.tax': { type: Number, optional: true },
     'payRef.tip': { type: Number, optional: true },
+    'payRef.total': { type: Number, optional: true },
 });
 _deliverySchema = new SimpleSchema({
   deliveryAddress: { type: String, optional: true },
@@ -86,7 +89,7 @@ _deliverySchema = new SimpleSchema({
   'cross-street': { type: String, optional: true},
 })
 
-function handleDelivery(context, tx){
+handleDelivery = (context, tx) =>{
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${tx.deliveryAddress}.json`;
   const params = {
     params: {
@@ -131,27 +134,3 @@ validateOrder = (context, order) => {
 
   return schema.validate(order);
 }
-
-// menu = {
-//    categories: [{
-//      rank: 1, //sort rank on menu
-//      name: 'Appetizers',
-//      items: [{
-//        name: 'eggs',
-//        price: 2.00,
-//        visibleOnFeed: true,
-//        add_ons: [{
-//           category_name: 'Prep style',
-//           category_select_one_required: true,
-//           category_items: [{
-//             name: 'Over easy',
-//             price: 0,
-//           },
-//           {
-//             name: 'Over medium',
-//             price: 0,
-//           }]
-//         }]
-//      }]
-//    }],
-// }

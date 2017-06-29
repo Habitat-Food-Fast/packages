@@ -6,6 +6,7 @@ finalDelay = Meteor.settings.devMode ? 40000 : 90000;
 
 class transactionsCollection extends Mongo.Collection {
   insert(doc) {
+    console.warn(`got to insert`)
     const bizProf = businessProfiles.findOne(doc.company_name ?
       { company_name: doc.company_name} :
       doc.sellerId
@@ -25,7 +26,6 @@ class transactionsCollection extends Mongo.Collection {
       prepTime: doc.prepTime || bizProf.prep_time,
       order: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       plainOrder: doc.plainOrder,
-      // || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       orderNumber: doc.orderNumber || this.pin(),
       orderSize: doc.orderSize || 1,
       habitat: doc.habitat || bizProf.habitat[0],
@@ -55,6 +55,7 @@ class transactionsCollection extends Mongo.Collection {
       deliverBy: doc.deliverBy,
       catering: doc.catering ? doc.catering : false,
       externalId: doc.externalId || false,
+      externalVendorId: doc.externalVendorId || false,
     }), (err, txId) => {
       tx = transactions.findOne(txId);
       if(err) { throwError(err.message); } else {
@@ -77,16 +78,25 @@ class transactionsCollection extends Mongo.Collection {
   forceRemove() { return super.remove({}); }
   formatOrder(order, thirdParty){
     if(!thirdParty){
-      o= order.length === 0 ? order : order.map(order =>
-         _.extend(order, {
-          orderId: this.pin(),
-          itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
-          itemName: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).name : '',
-          itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
-          modifiers: order.modifiers,
-          modifiersText: order.modifiers === [] ? [] : this.formatMods(order.modifiers)
-        })
-      );
+      if (order.length === 0) {
+        o = order;
+      } else {
+        o = [];
+        const out = this;
+        _.each(order, function(orderObj) {
+          const saleObj = saleItems.findOne(orderObj.saleItemId);
+          if (saleObj) {
+            _.extend(orderObj, {
+             orderId: out.pin(),
+             itemPrice: saleObj ? saleObj.price : 0,
+             itemName: saleObj ? saleObj.name : '',
+             itemCategory: saleObj.category || undefined,
+             modifiersText: orderObj.modifiers === [] ? [] : out.formatMods(orderObj.modifiers)
+           });
+          }
+         o.push(orderObj);
+        });
+      }
     } else {
       o= order.length === 0 ? order : order.map(order =>
          _.extend(order, {
@@ -107,7 +117,7 @@ class transactionsCollection extends Mongo.Collection {
       if (mod) {
         modArray.push({
           name: mod.name,
-          category: modCategories.findOne(mod.subcategory).name,
+          category: modCategories.findOne(mod.subcategory) ? modCategories.findOne(mod.subcategory).name : null,
           price: mod.price
         });
       }
@@ -168,6 +178,7 @@ class transactionsCollection extends Mongo.Collection {
     tx = transactions.findOne(txId);
   }
   requestItems(txId, prepTime, daas) {
+    tx = transactions.findOne(txId);
     const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
     req = {
@@ -178,6 +189,7 @@ class transactionsCollection extends Mongo.Collection {
       vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
       deliveredAtEst: this.deliveryEstimate(txId, inMinutes=false, prepTime),
+      pickupAtEst: tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format() : moment().format(),
       cancelledByAdmin: false,
       cancelledByVendor: false,
       missedByVendor: false,

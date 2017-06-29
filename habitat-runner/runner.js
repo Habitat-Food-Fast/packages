@@ -15,7 +15,8 @@ runner = {
   updateDropoffInfo(t, callback) {
     const dropoffInMs = t.deliveredAtEst - Date.now();
     const dropoffInString = this.getTimeTillDropoff(t.deliveredAtEst);
-    return transactions.update(t._id, { $set: { dropoffInString, dropoffInMs }}, callback);
+    const pickupInString = this.getTimeTillDropoff(moment(t.pickupAtEst).add(4, 'hours').format());
+    return transactions.update(t._id, { $set: { pickupInString, dropoffInString, dropoffInMs }}, callback);
   },
   watchPendingOrders () {
     Habitats.find().forEach((h) => {
