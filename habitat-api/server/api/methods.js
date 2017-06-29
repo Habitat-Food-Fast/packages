@@ -158,16 +158,27 @@ API.methods = {
     }
   },
   orders: {
-    GET( context, connection ) {
+    GET( context, connection, params ) {
       let getOrders;
+      const txId = context.params.orderId;
+      console.log(txId);
       const hasQuery = API.utility.hasData( connection.data );
+      console.log('hasquery', hasQuery);
       if ( hasQuery ) {
         connection.data.owner = connection.owner;
-        getOrders = transactions.find( connection.data ).fetch();
 
-        return getOrders.length > 0 ?
-          API.utility.response( context, 200, getOrders ) :
-          API.utility.response( context, 404, { error: 404, message: "No transactions found, dude." } );
+        if(txId){
+          order = transactions.findOne(txId);
+          console.log(order);
+          if(order){
+            if(order.partnerName === connection.owner || order.buyerId === connection.owner || order.sellerId === connection.owner) {
+              return API.utility.response( context, 200, order );
+            } else {
+              return API.utility.response( context, 401, { error: 401, message: "Can't find that order" } )
+            }
+            return API.utility.response( context, 401, { error: 401, message: "Can't find that order" } )
+          }
+        }
       } else {
         getOrders = transactions.find({ "owner": connection.owner }).fetch();
         return API.utility.response( context, 200, getOrders);
@@ -178,26 +189,43 @@ API.methods = {
         return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on POST`, });
       } else {
         try {
-          delete connection.data.api_key; //no longer need this now that partner has been validated
-          const bp = businessProfiles.findOne(connection.data.sellerId);
+          request = connection.data;
+          delete request.api_key; //no longer need this now that partner has been validated
+          const bp = businessProfiles.findOne(request.sellerId);
+          if(!bp) { throw new Error(`Sorry, can't find vendor with that ID`) }
           const usr = Meteor.users.findOne(businessProfiles.findOne(connection.owner) ? bp.uid : connection.owner);
-          connection.data.sellerId =  bp ? bp._id : '';
-          connection.data.company_name = bp ? bp.company_name : '';
-          connection.data.thirdParty = !usr //if owner is not habitat user
-          connection.data.partnerName = usr ? '' : connection.owner;
-          connection.data.DaaS = !usr ||
+          request.sellerId =  bp ? bp._id : '';
+          request.company_name = bp ? bp.company_name : '';
+          request.thirdParty = !usr //if owner is not habitat user
+          request.partnerName = usr ? '' : connection.owner;
+          request.DaaS = !usr ||
             usr.roles.includes('admin') ||
             usr.roles.includes('vendor') ||
-            connection.data.thirdParty && connection.data.method === 'Delivery';
-          validateOrder(context, connection.data);
+            request.scheduled ||
+            request.catering ||
+            request.thirdParty && request.method === 'Delivery';
+          request.externalId = request.externalId ? request.externalId.toString() : false;
+          request.externalVendorId = request.externalVendorId ? request.externalVendorId.toString() : false;
+
+          queued = request.scheduled
+          if(!request.status){
+            if(request.scheduled){
+              request.status = 'queued';
+            } else if (request.DaaS && request.partnerName !== 'grubhub'){
+              request.status = 'pending_runner';
+            } else {
+              request.status = 'pending_vendor';
+            }
+          }
+          validateOrder(context, request);
           const txId = transactions.insert(connection.data);
           return API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });
         } catch(exception) {
-          return API.utility.response(context, 403, { error: 403, message: exception.message, });
+          return API.utility.response(context, 403, { error: 403, message: ' post failed' + exception, });
         }
       }
     },
-    PUT( context, connection ) {
+    PATCH( context, connection ) {
       var hasQuery  = API.utility.hasData( connection.data ),
           validData = API.utility.validate( connection.data, Match.OneOf(
             { "_id": String, "status": String }
