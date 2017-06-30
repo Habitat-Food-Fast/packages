@@ -61,4 +61,5 @@ Package.onUse(function (api) {
   api.export('APIKeys');
   api.export('APIRequests');
   api.export('Router');
+  api.export('Ontray');
 });
