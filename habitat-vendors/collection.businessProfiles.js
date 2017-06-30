@@ -19,12 +19,10 @@ class businessProfilesCollection extends Mongo.Collection {
           grubhubId: doc.grubhubId
         }), (err, newBizId) => {
           if(err) { throwError(err.message); }
-            Meteor.call('initApiKey', newBizId, (err, res) => {
+          const bp = businessProfiles.findOne(newBizId);
+            Meteor.call('createApiKey', bp.uid, (err, res) => {
               if (err) {
-                throwError(err);
-              } else {
-                const bp = businessProfiles.findOne(newBizId);
-                Meteor.users.update(bp.uid, {$set: { apiKey: APIKeys.findOne({owner: newBizId}).key }});
+                console.log(err);
               }
             });
         }, callback);
