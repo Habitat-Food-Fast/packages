@@ -37,7 +37,7 @@ Meteor.methods({
          throwError(`Sorry, ${bp.company_name} is closed`);
        } else if (!paymentMethodNonce) {
         if (transactions.creditsCoverFullOrder(txId) || paymentMethodNonce && tx.payRef.platformRevenue === 0) {
-        __request(txId, isFirstTransaction);
+        __request(txId, isFirstTransaction, braintreeId=false);
         return { success: true, isFirstTransaction: isFirstTransaction };
         }
       } else {
@@ -49,7 +49,8 @@ Meteor.methods({
         if(!result.success) {
           throwError(result);
         } else {
-          __request(txId, isFirstTransaction);
+          console.log(result);
+          __request(txId, isFirstTransaction, result.transaction.id);
           return _.extend(result, {
             success: true,
             isFirstTransaction: isFirstTransaction,
@@ -298,9 +299,9 @@ BT = {
 }
 
 
-function __request(txId, isFirstTransaction){
+function __request(txId, isFirstTransaction, braintreeId){
   transactions.request(txId, {
-    braintreeId: null,
+    braintreeId: braintreeId,
     firstOrder: isFirstTransaction,
     status: 'pending_vendor',
   }, (err) => { if (err) { throwError(err.reason); } else {
