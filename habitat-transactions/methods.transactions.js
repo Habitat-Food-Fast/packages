@@ -121,7 +121,9 @@ transactions.methods = {
     }).validator(),
     run({ txId }) {
       const tx = transactions.findOne(txId);
-      DDPenv().call('sendPickupAcceptedUserText', Meteor.users.findOne(tx.buyerId).profile.phone, tx._id);
+      if (Meteor.users.findOne(tx.buyerId)) {
+        DDPenv().call('sendPickupAcceptedUserText', Meteor.users.findOne(tx.buyerId).profile.phone, tx._id);
+      }
       transactions.update(txId, {$set: {status: 'in_progress'}});
     }
   }),
