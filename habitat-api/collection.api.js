@@ -13,9 +13,32 @@ class APIKeyCollection extends Mongo.Collection {
         complete: '',
         refund: '',
       },
-      permissions: doc.permissions
+      permissions: doc.permissions,
     }); console.log(_doc);
     return super.insert(_doc, callback);
+  }
+  addPartner(ownerName, callback){
+    return super.insert({
+      createdAt: new Date(),
+      key: doc.key,
+      owner: doc.owner,
+      role: 'partner',
+      webhooks: {
+        menu: '',
+        accept: '',
+        decline: '',
+        assign: '',
+        complete: '',
+        refund: '',
+      },
+      permissions: {
+        order: true,
+        accept: true,
+        decline: true,
+        assign: true,
+        menu: true,
+      }
+    })
   }
 }
 APIKeys = new APIKeyCollection( 'api-keys' );
@@ -26,7 +49,7 @@ APIKeys.schema = new SimpleSchema({
   createdAt: { type: Date, },
   owner: { type: String, },
   key: { type: String, },
-  roles: { type: [String], optional: true },
+  role: { type: String, optional: true, allowedValues: ['admin', 'vendor', 'partner', 'user', 'runner', 'developer'] },
   permissions: { type: Object, },
     'permissions.order': { type: Boolean, optional: true,  },
     'permissions.accept': { type: Boolean, optional: true,  },

@@ -13,13 +13,14 @@ API.methods = {
   vendors: {
     GET( context, connection ) {
       let getVendors;
+      const vendorId = context.params.orderId;
       const hasQuery = API.utility.hasData( connection.data );
-      if (connection.data.vendorId) {
+      if (vendorId) {
         connection.data.owner = connection.owner;
-        getVendors = businessProfiles.find(connection.data.vendorId).fetch();
-        return getVendors.length > 0 ?
+        vendor = businessProfiles.findOne(vendorId);
+        return _.isObject(vendor) ?
           API.utility.response( context, 200, getVendors ) :
-          API.utility.response( context, 404, { error: 404, message: "No vendors found, dude." } );
+          API.utility.response( context, 404, { error: 404, message: "No vendor found." } );
       } else {
         getVendors = businessProfiles.find().fetch();
         return API.utility.response( context, 200, getVendors);
@@ -163,7 +164,6 @@ API.methods = {
       const txId = context.params.orderId;
       console.log(txId);
       const hasQuery = API.utility.hasData( connection.data );
-      console.log('hasquery', hasQuery);
       if ( hasQuery ) {
         connection.data.owner = connection.owner;
 
