@@ -1,7 +1,7 @@
 import SimpleSchema from 'simpl-schema';
 _baseSchema = new SimpleSchema({
   prepTime: { type: Number, optional: true }, //only used if vendor mode
-  partnerName: { type: String }, //PRIVATE: (not passed up)
+  partnerName: { type: String, optional: true, }, //PRIVATE: (not passed up)
   thirdParty: { type: Boolean }, //PRIVATE: (not passed up)
   DaaS: { type: Boolean }, //PRIVATE: (not passed up)
   __emailOrder: { type: Object, blackbox: true, optional: true }, //debugging purposes for duplicates
@@ -31,8 +31,8 @@ _baseSchema = new SimpleSchema({
   DaaSType: { type: String, allowedValues: ['credit_card', 'prepaid', 'cash', 'online', 'catering'] },
   method: { type: String, allowedValues: ['Pickup', 'Delivery']},
   orderSize: { type: Number, optional: true },
-  externalId: {type: SimpleSchema.oneOf(String, Boolean), optional: true},
-  externalVendorId: {type: SimpleSchema.oneOf(String, Boolean), optional: true},
+  externalId: {type: SimpleSchema.oneOf(Boolean, String), optional: true},
+  externalVendorId: {type: SimpleSchema.oneOf(Boolean, String), optional: true},
   company_name: {type: String, optional: true},
   _orderNumber: {type: String, optional: true},
   orderNumber: {type: Number, optional: true},
@@ -74,7 +74,8 @@ _payRefSchema = new SimpleSchema({
     'payRef.tax': { type: Number, optional: true },
     'payRef.tip': { type: Number, optional: true },
     'payRef.total': { type: Number, optional: true },
-});
+  }
+);
 _deliverySchema = new SimpleSchema({
   deliveryAddress: { type: String, optional: true },
   deliveryInstructions: { type: String, optional: true },
@@ -89,7 +90,7 @@ _deliverySchema = new SimpleSchema({
   'cross-street': { type: String, optional: true},
 })
 
-handleDelivery = (context, tx) =>{
+handleDelivery = (tx) =>{
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${tx.deliveryAddress}.json`;
   const params = {
     params: {
@@ -117,20 +118,4 @@ handleDelivery = (context, tx) =>{
   }
 }
 
-
-validateOrder = (context, order) => {
-  console.log(`customer`, order.customer)
-  let schema = _baseSchema
-  .extend(_customerSchema)
-  .extend(_timingSchema)
-  .extend(_deliverySchema);
-
-  if (order.plainOrder && order.plainOrder.length) {
-    schema.extend(_orderSchema).extend(_payRefSchema)
-  }
-  if(order.method === 'Delivery' || order.isDelivery){
-    order = _.extend(order, handleDelivery(context, order));
-  }
-
-  return schema.validate(order);
-}
+SimpleSchema.debug = true;

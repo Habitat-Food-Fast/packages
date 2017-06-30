@@ -13,13 +13,14 @@ API.methods = {
   vendors: {
     GET( context, connection ) {
       let getVendors;
+      const vendorId = context.params.orderId;
       const hasQuery = API.utility.hasData( connection.data );
-      if (connection.data.vendorId) {
+      if (vendorId) {
         connection.data.owner = connection.owner;
-        getVendors = businessProfiles.find(connection.data.vendorId).fetch();
-        return getVendors.length > 0 ?
+        vendor = businessProfiles.findOne(vendorId);
+        return _.isObject(vendor) ?
           API.utility.response( context, 200, getVendors ) :
-          API.utility.response( context, 404, { error: 404, message: "No vendors found, dude." } );
+          API.utility.response( context, 404, { error: 404, message: "No vendor found." } );
       } else {
         getVendors = businessProfiles.find().fetch();
         return API.utility.response( context, 200, getVendors);
@@ -163,7 +164,6 @@ API.methods = {
       const txId = context.params.orderId;
       console.log(txId);
       const hasQuery = API.utility.hasData( connection.data );
-      console.log('hasquery', hasQuery);
       if ( hasQuery ) {
         connection.data.owner = connection.owner;
 
@@ -207,7 +207,6 @@ API.methods = {
           request.externalId = request.externalId ? request.externalId.toString() : false;
           request.externalVendorId = request.externalVendorId ? request.externalVendorId.toString() : false;
 
-          queued = request.scheduled
           if(!request.status){
             if(request.scheduled){
               request.status = 'queued';
@@ -217,35 +216,109 @@ API.methods = {
               request.status = 'pending_vendor';
             }
           }
-          validateOrder(context, request);
-          const txId = transactions.insert(connection.data);
+          console.log(connection.data);
+          cleanDoc = transactions.validate(connection.data);
+          const txId = transactions.insert(cleanDoc);
           return API.utility.response( context, 200, { message: 'Successfully created order!', orderId: txId });
         } catch(exception) {
-          return API.utility.response(context, 403, { error: 403, message: ' post failed' + exception, });
+          return API.utility.response(context, 403, { error: 403, message: exception, });
         }
       }
     },
     PATCH( context, connection ) {
-      var hasQuery  = API.utility.hasData( connection.data ),
-          validData = API.utility.validate( connection.data, Match.OneOf(
-            { "_id": String, "status": String }
-          ));
-
-      if ( hasQuery && validData ) {
-        const transaction = transactions.findOne(connection.data._id, { fields: { "_id": 1 } } );
-        if (transaction) {
-          return transactions.update(connection.data._id, { $set: connection.data }, (err) => {
-            if(err) { console.warn(err.message); } else {
-              return API.utility.response( context, 200, { "message": "Order successfully updated!" } );
+      const hasQuery  = API.utility.hasData( connection.data );
+      const txId = context.params.orderId;
+      if ( hasQuery || txId ) {
+        console.log(connection.data);
+        const apiObj = APIKeys.findOne({key: connection.data.api_key});
+          const tx = transactions.findOne(txId);
+          if (tx) {
+            const url = context.route.handler.path;
+            if (url.includes === 'accept' && apiObj.permissions.accept) {
+              API.methods.acceptOrder(txId, apiObj);
+              return API.utility.response( context, 200, { message: 'Successfully accepted order!', orderId: txId });
+            } else if (url.includes === 'assign' && apiObj.permissions.assign) {
+              API.methods.assignRunner(txId, connection.data.runnerId, apiObj);
+              return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
+            } else if (url.includes === 'decline' && apiObj.permissions.decline) {
+              API.methods.declineOrder(txId, apiObj);
+              return API.utility.response( context, 200, { message: 'Successfully declined order.', orderId: txId });
+            } else {
+              return API.utility.response( context, 403, { error: 401, message: "Your permissions don't allow for that PATCH." } );
             }
-          });
-        } else {
-          return API.utility.response( context, 404, { "message": "Can't update a non-existent pizza, homeslice." } );
-        }
+          } else {
+            return API.utility.response( context, 404, { "message": "No order found for the orderId in your PATCH URL." } );
+          }
       } else {
-        return API.utility.response( context, 403, { error: 403, message: "PUT calls must have a pizza ID and at least a name, crust, or toppings passed in the request body in the correct formats (String, String, Array)." } );
+        return API.utility.response( context, 403, { error: 403, message: "PATCH calls require an orderId in the URL, and an object with the appropriate data." } );
       }
     },
+  },
+  acceptOrder(txId, apiObj) {
+    const tx = transactions.findOne(txId);
+    transactions.update(txId, { $set: {
+      acceptedByVendor: apiObj.permissions.role === 'vendor',
+      acceptedByAdmin: apiObj.permissions.role === 'admin',
+      acceptedAt: new Date(),
+      acceptedBy: apiObj.owner,
+    }}, (err, res) => {
+      if (err) { throwError(err.message); }
+      if (!tx.DaaS) {
+        Meteor.call('sendUserReceiptEmail', txId);
+      }
+      if (tx.promoId) { Instances.redeem(tx.promoId, tx.buyerId, true); }
+      if (!tx.DaaS && tx.payRef.platformRevenue > 0) {
+        Meteor.call('submitForSettlement', tx.braintreeId, tx.payRef.platformRevenue, (err, res) => {
+          if (err) { throw new Meteor.Error(err.message); }
+        });
+      }
+    });
+    const type = tx.method === 'Pickup' ? acceptPickup : acceptDelivery;
+    return transactions.methods.type.call({txId: id});
+  },
+  declineOrder(txId, apiObj) {
+    let role = apiObj.permissions.role;
+    if (role === 'admin') { role = 'god'; }
+    const tx = transactions.findOne(txId);
+    if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
+    if (!tx.DaaS) {
+      Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
+        console.log(JSON.stringify(err, null, 2));
+        console.log(JSON.stringify(res, null, 2));
+          });
+      Meteor.call('orderDeclinedBuyerText', tx.buyerId, tx.sellerId, (err, res) => {
+        console.log('inside of the send buyer text');
+        console.log(JSON.stringify(err, null, 2));
+        console.log(JSON.stringify(res, null, 2));
+        });
+      return Meteor.call('voidTransaction', tx.braintreeId, (err) => {
+        if(err && tx.braintreeId) { throw new Meteor.Error(err.message); } else {
+          console.log('transaction voided');
+          Meteor.call('nullifyTransaction', tx._id, (err, res) => {
+            if(err) { throw new Meteor.Error(err.message); }
+          });
+        }
+      });
+    } else {
+      Meteor.call('nullifyTransaction', tx._id, (err, res) => {
+        if(err) { throw new Meteor.Error(err.message); }
+      });
+    }
+  },
+  assignRunner(txId, runnerId, apiObj) {
+    const tx = transactions.findOne(txId);
+    const rnr = Meteor.users.findOne(runnerId);
+    const runnerObj = transactions.grabRunnerObj(runnerId);
+    if(tx && tx.declinedBy && tx.declinedBy.includes(runnerId)){
+      transactions.update(txId, {$pull: {declinedBy: runnerId}});
+    }
+    transactions.update(tx._id, { $set: {
+      status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
+    }}, (err, num) => {
+      DDPenv().call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
+        if(err) { throwError(err.message); }
+      });
+    });
   }
 };
 

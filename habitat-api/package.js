@@ -49,7 +49,6 @@ Package.onUse(function (api) {
     'server/api/transactions/csv.endpoints.transactions.js',
     'server/api/transactions/csv.query.transactions.js',
     'server/api/transactions/json.endpoints.transactions.js',
-    'server/api/transactions/schema.transactions.js',
     'server/api/methods.js',
     'server/_test-data.js',
     'server/emails.reset.js',

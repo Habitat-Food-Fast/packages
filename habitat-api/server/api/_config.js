@@ -37,6 +37,7 @@ API = {
         case "GET":
           return request.body;
         case "POST":
+        case "PATCH":
         case "PUT":
         case "DELETE":
           return request.body;
