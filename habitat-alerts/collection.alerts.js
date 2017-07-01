@@ -5,12 +5,13 @@ Schemas.Alerts = new SimpleSchema({
   txId: { type: String, optional: true },
   type: {
     type: String,
-    allowedValues: ['warning', 'success', 'danger', 'info']
+    allowedValues: ['warning', 'success', 'danger', 'info', 'default']
   },
   message: { type: String },
   opened: { type: Date },
   details: { type: Object, optional: true },
   'details.text': { type: String, optional: true },
+  'details.reason': {type: String, optional: true},
   'details.user': { type: String, optional: true },
   'details.contact': { type: String, optional: true },
   resolvedAt: { type: Date, optional: true },
