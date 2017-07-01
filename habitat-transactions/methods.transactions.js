@@ -17,6 +17,8 @@ transactions.methods = {
       if(arguments[0].DaaS && Meteor.user() && !Meteor.user().roles.includes('vendor')) {
         throwError('Must be vendor to insert DaaS');
       } else {
+        console.log('heres the insert');
+        console.log(arguments[0]);
         return transactions.insert(arguments[0]);
       }
     }
@@ -119,7 +121,9 @@ transactions.methods = {
     }).validator(),
     run({ txId }) {
       const tx = transactions.findOne(txId);
-      DDPenv().call('sendPickupAcceptedUserText', Meteor.users.findOne(tx.buyerId).profile.phone, tx._id);
+      if (Meteor.users.findOne(tx.buyerId)) {
+        DDPenv().call('sendPickupAcceptedUserText', Meteor.users.findOne(tx.buyerId).profile.phone, tx._id);
+      }
       transactions.update(txId, {$set: {status: 'in_progress'}});
     }
   }),
@@ -219,13 +223,16 @@ sendReceiptImage: new ValidatedMethod({
     }).validator(),
     run({ txId, orderNumber, runnerId, adminAssign }) {
       const tx = transactions.findOne(txId ?
-        {_id: txId, status: 'pending_runner'} :
+        {_id: txId, status: {$in: ['pending_runner', 'queued']}} :
         {orderNumber: orderNumber, status: 'pending_runner'}
       );
 
       if(runnerId && tx.runnerId){ throwError('409', 'Already Accepted!'); }
       const rnr = Meteor.users.findOne(runnerId);
       const runnerObj = transactions.grabRunnerObj(runnerId);
+      if(tx && tx.declinedBy && tx.declinedBy.includes(runnerId)){
+        transactions.update(txId, {$pull: {declinedBy: runnerId}});
+      }
       transactions.update(tx._id, { $set: {
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
@@ -248,6 +255,9 @@ sendReceiptImage: new ValidatedMethod({
       const previousRunnerPhone = Meteor.users.findOne(tx.runnerId).profile.phone;
 
       if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
+        if(tx && tx.declinedBy && tx.declinedBy.includes(runId)){
+          transactions.update(txId, {$pull: {declinedBy: runId}});
+        }
         transactions.update(txId, {$set: {
           runnerId: runId,
           reassignCount: tx.reassignCount && tx.reassignCount.length ? tx.reassignCount.length : 1,
@@ -328,7 +338,7 @@ sendReceiptImage: new ValidatedMethod({
         const params = {
           params: {
             country: 'us',
-            types: 'country,region,postcode,place,locality,neighborhood,address,poi',
+            types: 'address',
             proximity: [ -75.1597308, 39.9802519 ],
             bbox: [-75.27935,39.888665,-75.084343,40.047854],
             access_token: Meteor.settings.public.mapboxKey

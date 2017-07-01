@@ -19,29 +19,11 @@ class businessProfilesCollection extends Mongo.Collection {
           grubhubId: doc.grubhubId
         }), (err, newBizId) => {
           if(err) { throwError(err.message); }
-            const bp = businessProfiles.findOne(newBizId);
-            const bizArr = [newBizId];
-            const pw = `${generateBizPass(doc.company_name)}`;
-            const newid = Random.id();
-            const obj = {
-              _id: newid,
-              fn: doc.company_name,
-              email: doc.company_email,
-              phone: doc.orderPhone,
-              password: pw,
-              habitat: doc.habitat[0],
-              businesses: bizArr
-            };
-            Accounts.createUser(obj);
-            Meteor.users.update(newid, {$set: {'profile.businesses': bizArr}}, (err, res) => {
+          const bp = businessProfiles.findOne(newBizId);
+            Meteor.call('createApiKey', bp.uid, (err, res) => {
               if (err) {
-                throwError(err);
+                console.log(err);
               }
-            });
-            businessProfiles.update(newBizId, {$set: { uid: newid }}, (err, res) => {
-              if(err) { throwError(err.message); }
-              Roles.addUsersToRoles(newid, 'vendor');
-              mailman.onboard.biz(bp, pw);
             });
         }, callback);
       }
@@ -61,12 +43,12 @@ class businessProfilesCollection extends Mongo.Collection {
     return docs.forEach((doc) => {
       super.insert(doc, {validate: false}, (err, id) => {
         if(err) { throwError(err.message); } else {
-          fakePhone = getRandomPhone(10);
+          fakePhone = phone.random();
           businessProfiles.update(id, {$set: {
             orderPhone: fakePhone,
             employees: [],
             faxPhone: fakePhone.toString(),
-            company_name: `FAKE ${doc.company_name}`,
+            // company_name: `FAKE ${doc.company_name}`,
             company_phone: fakePhone.toString(),
             company_email: Random.id() + '@hotmail.com',
           }}, (err) => { if(err) { throwError(err.message); }});
@@ -149,6 +131,7 @@ class businessProfilesCollection extends Mongo.Collection {
   rates(txId){
     if(!txId) { throwError('No txId passed in'); }
     const tx = transactions.findOne(txId); if(!tx) { throwError('No transaction found'); }
+    const bp = businessProfiles.findOne(tx.sellerId);
     const today = this.getToday(tx.sellerId);
     //TODO: refactor into calc package
     const meetsFreeDelCriteria = (
@@ -167,11 +150,18 @@ class businessProfilesCollection extends Mongo.Collection {
     const txPayout = tx.payRef.tp - (tx.payRef.tp * rates.percent) - rates.flat;
     const DaaSTotal = today.vendorRates.DaaS.flat;
 
-    return _.extend(rates,  {
+    return tx.catering ? {
+      totalPrice: this.cateringPrice(tx.orderSize),
+      vendorPayout: - this.cateringPrice(tx.orderSize)
+    } : _.extend(rates,  {
       totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
       totalWithTax: totalWithTax,
       vendorPayout: tx.DaaS ? - DaaSTotal : txPayout,
     });
+  }
+  cateringPrice(bags) {
+    const cat = Settings.findOne({name: 'cateringPrice'});
+    return bags > 1 ? cat.first + ((bags - 1) * cat.additional) : cat.first;
   }
   getShortName(company_name) {
     const bizByWord = company_name.split(' ');
@@ -221,7 +211,7 @@ if (Meteor.isServer) {
   businessProfiles._ensureIndex({ 'geometry.coordinates': '2d'});
 }
 generateBizPass = function (company_name) {
-  return  company_name
+  return  company_name.substr(0, 5)
           .toLowerCase()
           .replace(/\s+/g, '') +
           ("0" + Math.floor(Math.random() * (9999 - 0 + 1)))

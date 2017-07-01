@@ -1,17 +1,6 @@
 tx = id => { return transactions.findOne(id); }
 
 Meteor.methods({
-  insertTest() {
-    Alerts.insert({
-      type: 'warning',
-      message: 'Call Sangkee Noodle House',
-      opened: new Date(),
-      details: {
-        text: '(443)797-3028'
-      }
-    });
-
-  },
   resolveAlert(id) {
     if (Meteor.user() && Meteor.user().roles.includes('admin')) {
       Alerts.update(id, {$set: {resolved: true, resolvedAt: new Date(), resolvedBy: `${Meteor.user().profile.fn} ${Meteor.userId()}`}});
@@ -49,6 +38,9 @@ Alerts.methods = {
       }
       return Alerts.insert(obj);
     }
+  },
+  newParsed(emailId){
+
   },
   needsAssign(txId) {
     const tx = transactions.findOne(txId);
@@ -93,10 +85,36 @@ Alerts.methods = {
       txId: id,
       message: `${tx(id).runnerObj.name} picked up ${tx(id).orderNumber}`,
       opened: new Date()
+    };
+    if (!Alerts.findOne({txId: obj.txId, message: obj.message})) {
+      return Alerts.insert(obj);
     }
-    return Alerts.insert(obj);
+  },
+  runnerText(runnerId, message) {
+    usr = Meteor.users.findOne(runnerId);
+    return Alerts.insert({
+      type: 'warning',
+      message: `${usr.profile.fn} texted back ${message}`,
+      opened: new Date(),
+      details: {
+        text: `${usr.profile.fn}`
+      }
+    });
   },
   apiError(obj) {
     obj.type = 'danger';
+  },
+  warnScheduled(tx, req) {
+    const obj = {
+      type: 'danger',
+      txId: tx._id,
+      opened: new Date(),
+      noOpen: true,
+      message: `Scheduled order #${tx.orderNumber} ${req ? 'requested' : 'due soon'}  for ${tx.company_name}`,
+      details: {
+        text: `DELIVERY TIME: ${req ? moment(tx.deliverBy).format('h:mm a, M[/]D') : moment(tx.deliverBy).format('h:mm A')}`
+      }
+    };
+    return Alerts.insert(obj);
   }
 }

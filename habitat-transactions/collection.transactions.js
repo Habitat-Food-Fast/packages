@@ -6,12 +6,12 @@ finalDelay = Meteor.settings.devMode ? 40000 : 90000;
 
 class transactionsCollection extends Mongo.Collection {
   insert(doc) {
+    console.warn(`got to insert`)
     const bizProf = businessProfiles.findOne(doc.company_name ?
       { company_name: doc.company_name} :
       doc.sellerId
     );
     const usr = Meteor.users.findOne(doc.buyerId) || false;
-    console.warn(`insert`, doc.method);
     return super.insert(_.extend(this.resetItems(), {
       status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
@@ -24,9 +24,8 @@ class transactionsCollection extends Mongo.Collection {
       vendorPayRef: {},
       runnerPayRef: {},
       prepTime: doc.prepTime || bizProf.prep_time,
-      order: doc.order || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
+      order: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       plainOrder: doc.plainOrder,
-      // || (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       orderNumber: doc.orderNumber || this.pin(),
       orderSize: doc.orderSize || 1,
       habitat: doc.habitat || bizProf.habitat[0],
@@ -52,15 +51,21 @@ class transactionsCollection extends Mongo.Collection {
       message: null,
       rating_vendor: null,
       week: weeks.find().count(),
+      scheduled: doc.scheduled,
+      deliverBy: doc.deliverBy,
+      catering: doc.catering ? doc.catering : false,
+      externalId: doc.externalId || false,
+      externalVendorId: doc.externalVendorId || false,
     }), (err, txId) => {
       tx = transactions.findOne(txId);
-      console.warn(`after insert`, tx.method);
-
       if(err) { throwError(err.message); } else {
         if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
           transactions.request(txId, {});
         }
+        if (tx.scheduled && tx.status === 'queued') {
+          transactions.update(tx._id, {$set: {deliveredAtEst: tx.deliverBy, vendorPayRef: businessProfiles.rates(tx._id)}});
+          Alerts.methods.warnScheduled(tx, true); }
         if(doc.buyerId){ Meteor.users.update(doc.buyerId, { $push:{ "profile.transactions": txId } }); }
         if(!doc.thirdParty && !tx.DaaS){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
 
@@ -68,21 +73,39 @@ class transactionsCollection extends Mongo.Collection {
       }
     });
   }
+  validate(order){
+    let schema = _baseSchema.extend(_customerSchema).extend(_timingSchema).extend(_deliverySchema);
+    if (order.plainOrder && order.plainOrder.length) { schema.extend(_orderSchema); schema.extend(_payRefSchema); }
+    if(order.method === 'Delivery' || order.isDelivery){ order = _.extend(order, handleDelivery(order)); }
+
+    const cleanDoc = schema.clean(order);
+    schema.validate(cleanDoc);
+    return cleanDoc;
+  }
   forceInsertSingle(doc){ if(!transactions.findOne(doc._id)){ return super.insert(doc); } }
   forceInsert(txs) { return transactions.batchInsert(txs, (err) => { if(err) { throwError(err.message); } else { } }); }
   forceRemove() { return super.remove({}); }
   formatOrder(order, thirdParty){
     if(!thirdParty){
-      o= order.length === 0 ? order : order.map(order =>
-         _.extend(order, {
-          orderId: this.pin(),
-          itemPrice: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).price : 0,
-          itemName: saleItems.findOne(order.saleItemId) ? saleItems.findOne(order.saleItemId).name : '',
-          itemCategory: saleItems.findOne(order.saleItemId).category || undefined,
-          modifiers: order.modifiers,
-          modifiersText: order.modifiers === [] ? [] : this.formatMods(order.modifiers)
-        })
-      );
+      if (order.length === 0) {
+        o = order;
+      } else {
+        o = [];
+        const out = this;
+        _.each(order, function(orderObj) {
+          const saleObj = saleItems.findOne(orderObj.saleItemId);
+          if (saleObj) {
+            _.extend(orderObj, {
+             orderId: out.pin(),
+             itemPrice: saleObj ? saleObj.price : 0,
+             itemName: saleObj ? saleObj.name : '',
+             itemCategory: saleObj.category || undefined,
+             modifiersText: orderObj.modifiers === [] ? [] : out.formatMods(orderObj.modifiers)
+           });
+          }
+         o.push(orderObj);
+        });
+      }
     } else {
       o= order.length === 0 ? order : order.map(order =>
          _.extend(order, {
@@ -94,7 +117,7 @@ class transactionsCollection extends Mongo.Collection {
       );
     }
 
-    console.log(o); return o;
+    return o;
   }
   formatMods(mods) {
     let modArray = [];
@@ -103,7 +126,7 @@ class transactionsCollection extends Mongo.Collection {
       if (mod) {
         modArray.push({
           name: mod.name,
-          category: modCategories.findOne(mod.subcategory).name,
+          category: modCategories.findOne(mod.subcategory) ? modCategories.findOne(mod.subcategory).name : null,
           price: mod.price
         });
       }
@@ -117,7 +140,6 @@ class transactionsCollection extends Mongo.Collection {
     const bp = businessProfiles.findOne(tx.sellerId || sellerId);
     const prepTime = tx.prepTime || bp.prep_time; //TODO: add prepTime to txs on request so we don't need ternary
     habId = tx.habitat || habitat;
-    console.log(habId);
     const delTime = Habitats.findOne(habId).deliveryTime;
     const estimate = inMinutes ?
       prepTime + delTime :
@@ -153,10 +175,7 @@ class transactionsCollection extends Mongo.Collection {
                   }
                 }
               } }, (err) => {
-                if(err) { console.warn(err.message); } else {
-                  // console.log(calc._roundToTwo((i / count) * 100) + '%');
-                  // console.log(`set ${tx.orderNumber} to`, transactions.findOne(txId).routeInfo.car.distance.text);
-                }
+                if(err) { console.warn(err.message); }
               });
             }
           }
@@ -179,10 +198,26 @@ class transactionsCollection extends Mongo.Collection {
       vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
       deliveredAtEst: this.deliveryEstimate(txId, inMinutes=false, prepTime),
+      pickupAtEst: tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format() : moment().format(),
       cancelledByAdmin: false,
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
+    };
+    return req;
+  }
+  scheduledRequestItems(txId) {
+    req = {
+      week: weeks.find().count(),
+      timeRequested: Date.now(),
+      humanTimeRequested: Date(),
+      vendorPayRef: businessProfiles.rates(txId),
+      deliveredAtEst: transactions.findOne(txId).deliverBy,
+      cancelledByAdmin: false,
+      cancelledByVendor: false,
+      missedByVendor: false,
+      cancelledTime: false,
+      status: 'pending_runner'
     };
     return req;
   }
@@ -219,7 +254,6 @@ class transactionsCollection extends Mongo.Collection {
     }
   }
   request(id, fields, callback){
-    console.log(`inside request`, id)
     const trans = transactions.findOne(id);
 
     if (trans && trans.payRef && trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }
@@ -341,7 +375,6 @@ gmapsUrl = (tx) => {
   const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
   const originCoords = biz.geometry.coordinates;
 
-  // console.log(`${biz.company_address} to ${tx.deliveryAddress}`);
   const origin = `origin=${originCoords[1]},${originCoords[0]}`;
   const coords = deliveryAddressCoords(tx._id);
 

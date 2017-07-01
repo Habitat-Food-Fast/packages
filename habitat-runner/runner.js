@@ -15,7 +15,8 @@ runner = {
   updateDropoffInfo(t, callback) {
     const dropoffInMs = t.deliveredAtEst - Date.now();
     const dropoffInString = this.getTimeTillDropoff(t.deliveredAtEst);
-    return transactions.update(t._id, { $set: { dropoffInString, dropoffInMs }}, callback);
+    const pickupInString = this.getTimeTillDropoff(moment(t.pickupAtEst).add(4, 'hours').format());
+    return transactions.update(t._id, { $set: { pickupInString, dropoffInString, dropoffInMs }}, callback);
   },
   watchPendingOrders () {
     Habitats.find().forEach((h) => {
@@ -202,12 +203,13 @@ generateOrderInfo(tx, runner) {
 
   let msg;
   const pck = tx.prepTime ? moment((Date.now() + (tx.prepTime * 60000)) - 14400000).format('LT') : 'ASAP';
-
+  const deliverAt = moment(tx.deliverBy ? tx.deliverBy : tx.deliveredAtEst).format('h:mm a');
   if(tx.DaaS){
     customerName = tx.customerName || tx.customer.name|| 'unknown';
     customerPhone = tx.customerPhone || tx.customer.phone || 'unknown';
     msg = `Order #${tx.orderNumber} assigned.
 READY AT: ${pck}
+DELIVER BY: ${deliverAt}
 PAYMENT: ${(tx.DaaSType === 'online' || tx.DaaSType === 'credit_card') ? 'Conf drop w/ tip + pic' : tx.DaaSType}
 VENDOR: ${tx.company_name} ${bizProf.company_phone}
 ADDR: ${bizProf.company_address}
@@ -447,13 +449,22 @@ runner.payouts = {
     return runnerTxs.map(t => t.payRef.tip || 0).reduce((sum, num) => { return sum + num; }, 0);
   },
   _perTxKeep(runnerTxs){
-    return (runnerTxs.length * 1.5);
+    return runnerTxs
+    .filter(t => !t.catering)
+    .length * 1.5;
   },
   _onDemandOwed(runnerTxs){
     return runnerTxs
       .filter(t => t.runnerPayRef && t.runnerPayRef.onDemand)
       .map(t => t.runnerPayRef.onDemandRate)
       .reduce((sum, num) => { return sum + num; }, 0);
+  },
+  _catering(runnerTxs){
+    return runnerTxs
+      .filter(t => t.catering)
+      .map(t => t.vendorPayRef.totalPrice)
+      .reduce((sum, num) => { sum + num; }, 0)
+      * .4;
   },
   _totalOwed(runnerTxs, allShifts, staffJoyId){
     hourlyRate = (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4);
@@ -475,12 +486,14 @@ runner.payouts = {
       templeCount: runnerTxs.filter(t => t.habitat === 'g77XEv8LqxJKjTT8k').length,
       ucCount: runnerTxs.filter(t => t.habitat === 'zfY5SkgFSjXcjXbgW').length,
       daasCount: runnerTxs.filter(t => t.DaaS).length,
+      cateringCount: runnerTxs.finter(t => t.catering).length,
       onDemand: runnerTxs.filter(t => t.runnerPayRef && t.runnerPayRef.onDemand).length,
       runnerHourlyRate: accounting.formatMoney(4),
       owedOnDemandTotal: this._onDemandOwed(runnerTxs),
-      owedHourTotal: accounting.formatMoney(this._totalHoursWorked(runnerTxs, allShifts, worker.id) * 4),
+      owedHourTotal: accounting.formatMoney(this._totalHoursFWorked(runnerTxs, allShifts, worker.id) * 4),
       owedDeliveryFee: accounting.formatMoney(this._perTxKeep(runnerTxs)),
       owedTips: accounting.formatMoney(this._tips(runnerTxs)),
+      owedCatering: accounting.formatMoney(this._catering(runnerTxs)),
       runnerOwed: this._totalOwed(runnerTxs, allShifts, worker.id),
     });
     return query;
