@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "moment": "2.10.0",
+  "moment": "2.18.1",
 })
 
 Package.onUse(function (api) {
