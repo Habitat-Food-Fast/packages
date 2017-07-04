@@ -52,23 +52,24 @@ class APIKeyCollection extends Mongo.Collection {
   updateSession(owner, authBody, callback){
     key = APIKeys.findOne({owner});
     try {
-      const sessionToken = HTTP.post(key.auth.url, authBody);
-      console.log(sessionToken);
-      console.log(sessionToken.data);
+      const sessionToken = HTTP.post(key.auth.url, authBody); console.log(sessionToken);
       return APIKeys.update({owner}, { $set: {sessionToken: sessionToken}})
     } catch (e) {
       throwError({ reason: e.message})
     }
-
   }
 }
 APIKeys = new APIKeyCollection( 'api-keys' );
-APIRequests = new Meteor.Collection('api-requests')
+APIRequests = new Meteor.Collection('api-requests');
+
 Ontray =  {
   owner: 'Ontray',
   auth: {
     url: 'http://ontrayv2.sandbox02.jarv.us/login?format=json',
-    headers: { 'Cache-Control': 'no-cache' },
+    headers: {
+      'Cache-Control': 'no-cache',
+      'authorization': 'Bearer bed9d4ebbaeb1f9d71fa357d77030206',
+    },
     body: {
       formData: {
         '_LOGIN[username]': 'tyler+habitat@jarv.us',
@@ -80,9 +81,55 @@ Ontray =  {
   login(auth, callback){
     auth = auth || this.auth;
     return APIKeys.updateSession(this.owner, { headers: auth.headers, npmRequestOptions: auth.body})
+  },
+  //if method is Pickup, this should fire on ready for pickup text
+  //if delivery, it's after only when the first runner is assigned
+  //all others cases mean a refund
+  update(orderId){
+    key = APIKeys.findOne({owner: this.owner});
+    res = HTTP.post(`http://ontrayv2.sandbox02.jarv.us/${orderId}/1898/notify?format=json&center=101`, {
+      headers: {
+        'authorization': 'Token bed9d4ebbaeb1f9d71fa357d77030206',
+        'cache-control': 'no-cache'
+      }
+    });
+    console.log(res);
+  },
+  refund(owner, refundAmount, note){
+    key = APIKeys.findOne({owner: this.owner});
+    res = HTTP.post(`http://ontrayv2.sandbox02.jarv.us/${orderId}/1898/refund?format=json&center=101`, {
+      headers: {
+        'authorization': 'Token bed9d4ebbaeb1f9d71fa357d77030206',
+        'cache-control': 'no-cache'
+      },
+      npmRequestOptions:{
+        formData: {
+          RefundAmount: refundAmount,
+          Notes: note
+        }
+      }
+    });
+    console.log(res);
+  },
+  close(storeId, date, open, close){
+    key = APIKeys.findOne({owner: this.owner});
+    res = HTTP.post('http://ontrayv2.sandbox02.jarv.us/hours/create?format=json&include=validationErrors', {
+      headers: {
+        'authorization': 'Token bed9d4ebbaeb1f9d71fa357d77030206',
+        'cache-control': 'no-cache'
+      },
+      npmRequestOptions: {
+        formData: {
+          SpecialDate: date,
+          Open: open,
+          Close: close,
+          StoreID: 37,
+        }
+      }
+    });
+    console.log(res);
   }
 }
-
 APIKeys.schema = new SimpleSchema({
   _id: { type: String, regEx: SimpleSchema.RegEx.Id },
   createdAt: { type: Date, },
