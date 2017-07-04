@@ -160,3 +160,48 @@ APIKeys.schema = new SimpleSchema({
 });
 
 APIKeys.attachSchema(APIKeys.schema);
+
+Meteor.methods({
+  createApiKey(userId) {
+    if (APIKeys.findOne({owner: userId})) {
+      console.warn(`${userId} already has an API KEY, removing and replacing...`);
+      APIKeys.remove(APIKeys.findOne({owner: userId})._id);
+    }
+    const user = Meteor.users.findOne(userId);
+    let permissions;
+    let role;
+    if (user.roles.includes('admin')) {
+      permissions = {
+        accept: true,
+        decline: true,
+        menu: true,
+        order: true,
+        assign: true
+      };
+      role = 'admin';
+    } else if (user.roles.includes('vendor')) {
+      permissions = {
+        accept: true,
+        decline: true,
+        order: true
+      };
+      role = 'vendor';
+    } else if (user.roles.includes('runner')) {
+      permissions = {
+        assign: true,
+        order: true
+      };
+      role = 'runner'
+    } else {
+      permissions = {
+        order: true
+      };
+      role = 'user'
+    }
+    APIKeys.insert({owner: userId, permissions: permissions, role: role}, (err, res) => {
+      if (!err) {
+        Meteor.users.update(userId, {$set: {apiKey: APIKeys.findOne({owner: userId}).key}});
+      }
+    });
+  }
+});

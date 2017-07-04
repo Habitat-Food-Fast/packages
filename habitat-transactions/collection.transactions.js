@@ -237,6 +237,7 @@ class transactionsCollection extends Mongo.Collection {
       adminAssign: false,
       promoUsed: null,
       promoId: null,
+      declinedBy: [],
       // deliveredAtEst: false,
     };
   }
@@ -302,13 +303,6 @@ class transactionsCollection extends Mongo.Collection {
       textedRunner: true,
       runnerTextTime: Date(),
     }});
-  }
-  runnerDecline(txId, runnerId, callback) {
-    return super.update(txId, {$set: {
-      runnerDeclined: true,
-      runnerDeclinedTime: new Date(),
-      declinedBy: runnerId,
-    }}, callback);
   }
 
   creditsCoverFullOrder(id) {

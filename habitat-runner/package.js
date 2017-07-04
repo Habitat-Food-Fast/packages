@@ -4,6 +4,10 @@ Package.describe({
   version: "1.0.6"
 });
 
+Npm.depends({
+  "moment": "2.18.1",
+})
+
 Package.onUse(function (api) {
   api.versionsFrom('METEOR@1.4.4.2');
 

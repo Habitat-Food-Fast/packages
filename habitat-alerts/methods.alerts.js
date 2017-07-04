@@ -3,7 +3,7 @@ tx = id => { return transactions.findOne(id); }
 Meteor.methods({
   resolveAlert(id) {
     if (Meteor.user() && Meteor.user().roles.includes('admin')) {
-      Alerts.update(id, {$set: {resolved: true, resolvedAt: new Date, resolvedBy: `${Meteor.user().profile.fn} ${Meteor.userId()}`}});
+      Alerts.update(id, {$set: {resolved: true, resolvedAt: new Date(), resolvedBy: `${Meteor.user().profile.fn} ${Meteor.userId()}`}});
     }
   },
   vendorRequestCall(msg) {
@@ -22,7 +22,7 @@ Meteor.methods({
 
 Alerts.methods = {
   resolve(id) {
-    Alerts.update(id, {$set: {resolved: true, resolvedAt: new Date}});
+    Alerts.update(id, {$set: {resolved: true, resolvedAt: new Date()}});
   },
   dropoffNow(txId) {
     if (!Alerts.findOne({message: `Order ${tx.orderNumber} should be dropped`})) {
