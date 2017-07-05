@@ -117,5 +117,16 @@ Alerts.methods = {
       }
     };
     return Alerts.insert(obj);
+  },
+  alertParseError(err) {
+    const obj = {
+      type: 'danger',
+      opened: new Date(),
+      message: `Parsing Error`,
+      details: {
+        text: `${err.name} ${err.value} ${err.type}`
+      }
+    };
+    return Alerts.insert(obj);
   }
 }
