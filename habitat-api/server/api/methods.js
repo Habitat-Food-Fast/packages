@@ -231,16 +231,17 @@ API.methods = {
       if ( hasQuery || txId ) {
         console.log(connection.data);
         const apiObj = APIKeys.findOne({key: connection.data.api_key});
+        console.log(apiObj);
           const tx = transactions.findOne(txId);
           if (tx) {
             const url = context.route.handler.path;
-            if (url.includes === 'accept' && apiObj.permissions.accept) {
+            if (url.includes('accept') && apiObj.permissions.accept) {
               API.methods.acceptOrder(txId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully accepted order!', orderId: txId });
-            } else if (url.includes === 'assign' && apiObj.permissions.assign) {
+            } else if (url.includes('assign') && apiObj.permissions.assign) {
               API.methods.assignRunner(txId, connection.data.runnerId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
-            } else if (url.includes === 'decline' && apiObj.permissions.decline) {
+            } else if (url.includes('decline') && apiObj.permissions.decline) {
               API.methods.declineOrder(txId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully declined order.', orderId: txId });
             } else {
@@ -257,8 +258,8 @@ API.methods = {
   acceptOrder(txId, apiObj) {
     const tx = transactions.findOne(txId);
     transactions.update(txId, { $set: {
-      acceptedByVendor: apiObj.permissions.role === 'vendor',
-      acceptedByAdmin: apiObj.permissions.role === 'admin',
+      acceptedByVendor: apiObj.role === 'vendor',
+      acceptedByAdmin: apiObj.role === 'admin',
       acceptedAt: new Date(),
       acceptedBy: apiObj.owner,
     }}, (err, res) => {
@@ -273,11 +274,11 @@ API.methods = {
         });
       }
     });
-    const type = tx.method === 'Pickup' ? acceptPickup : acceptDelivery;
-    return transactions.methods.type.call({txId: id});
+    console.log(tx.method);
+    return tx.method === 'Delivery' ? transactions.methods.acceptDelivery.call({txId: txId}) : transactions.methods.acceptPickup.call({txId: txId});
   },
   declineOrder(txId, apiObj) {
-    let role = apiObj.permissions.role;
+    let role = apiObj.role;
     if (role === 'admin') { role = 'god'; }
     const tx = transactions.findOne(txId);
     if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
@@ -306,6 +307,7 @@ API.methods = {
     }
   },
   assignRunner(txId, runnerId, apiObj) {
+    const adminAssign = apiObj.role == 'admin'
     const tx = transactions.findOne(txId);
     const rnr = Meteor.users.findOne(runnerId);
     const runnerObj = transactions.grabRunnerObj(runnerId);
@@ -315,7 +317,7 @@ API.methods = {
     transactions.update(tx._id, { $set: {
       status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
     }}, (err, num) => {
-      DDPenv().call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
+      Meteor.call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
         if(err) { throwError(err.message); }
       });
     });

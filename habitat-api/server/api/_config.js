@@ -53,5 +53,24 @@ API = {
       context.response.statusCode = statusCode;
       context.response.end( JSON.stringify( data ) );
     },
+  },
+  //webhooks handles constructing the outgoing queries to third parties about status updates
+  webhooks: {
+    _header(token){
+      if(!token) { throwError({reason: 'No token passed to webhook header'})}
+      return {
+        'Cache-Control': `no-cache`,
+        'authorization': `Bearer ${token}`,
+      }
+    },
+    methods: {
+      //if they have expiring tokens, this will renew token and put on the api key
+      auth(){
+
+      }
+    },
+    send(key, method){
+      
+    }
   }
 };

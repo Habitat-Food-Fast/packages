@@ -49,15 +49,7 @@ updateRadius: new ValidatedMethod({
   }).validator(),
   run({id, radius}) {
     if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
-    Habitats.update(id, {$unset: {'bounds.data.geometry.coordinates': ''}}, (err, res) => {
-      if (!err) {
-        Habitats.update(id, {$set: {'bounds.data.geometry.coordinates': radius}}, (err, res) => {
-          if (err) {
-            throw new Meteor.Error('Failure to update');
-          }
-        });
-      }
-    });
+    Habitats.update(id, {$set: {'bounds.data.geometry.coordinates': radius}});
   }
 })
 };
