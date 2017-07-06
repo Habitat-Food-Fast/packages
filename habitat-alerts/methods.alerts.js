@@ -105,6 +105,7 @@ Alerts.methods = {
     obj.type = 'danger';
   },
   warnScheduled(tx, req) {
+    const del = new Date(tx.deliverBy);
     const obj = {
       type: 'danger',
       txId: tx._id,
@@ -112,7 +113,18 @@ Alerts.methods = {
       noOpen: true,
       message: `Scheduled order #${tx.orderNumber} ${req ? 'requested' : 'due soon'}  for ${tx.company_name}`,
       details: {
-        text: `DELIVERY TIME: ${req ? moment(tx.deliverBy).format('h:mm a, M[/]D') : moment(tx.deliverBy).format('h:mm A')}`
+        text: `DELIVERY TIME: ${req ? moment(del).tz('America/New_York').format('h:mm a, M[/]D') : moment(del).tz('America/New_York').format('h:mm A')}`
+      }
+    };
+    return Alerts.insert(obj);
+  },
+  alertParseError(err) {
+    const obj = {
+      type: 'danger',
+      opened: new Date(),
+      message: `Parsing Error`,
+      details: {
+        text: `${err.name} ${err.value} ${err.type}`
       }
     };
     return Alerts.insert(obj);
