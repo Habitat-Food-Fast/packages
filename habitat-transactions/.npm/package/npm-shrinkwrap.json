@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "dependencies": {
     "align-text": {
       "version": "0.1.4",
@@ -283,7 +282,4 @@
       "from": "yargs@~3.10.0"
     }
   }
-=======
-  "dependencies": {}
->>>>>>> 382b638f3da28d0c1ba36681282275c4afa6d2d1
 }
