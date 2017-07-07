@@ -1,7 +1,7 @@
 // import SimpleSchema from 'simpl-schema';
 class APIKeyCollection extends Mongo.Collection {
   insert(doc, callback){
-    key = doc.key || Random.hexString(32)
+    const key = doc.key || Random.hexString(32)
     _doc = _.extend(doc, {
       createdAt: new Date(),
       key: key,
@@ -17,7 +17,10 @@ class APIKeyCollection extends Mongo.Collection {
       },
       permissions: doc.permissions,
       production: !Meteor.settings.devMode
-    }); console.log(_doc);
+    });
+    if (Meteor.users.findOne(doc.owner)) {
+      Meteor.users.update(doc.owner, {$set: {apiKey: key}});
+    }
     return super.insert(_doc, callback);
   }
   addPartner(ownerName, key, baseUrl, sessionToken, callback){
