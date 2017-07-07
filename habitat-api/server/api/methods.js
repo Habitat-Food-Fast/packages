@@ -282,7 +282,7 @@ API.methods = {
     let role = apiObj.role;
     if (role === 'admin') { role = 'god'; }
     const tx = transactions.findOne(txId);
-    if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
+    if(!Meteor.settings.devMode && role === 'vendor' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
     if (!tx.DaaS) {
       Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
         console.log(JSON.stringify(err, null, 2));
