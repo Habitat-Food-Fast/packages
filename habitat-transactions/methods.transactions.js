@@ -843,15 +843,6 @@ Meteor.methods({
     },
 });
 
-getBizNumberArray = (bizId) => {
-  const bp = businessProfiles.findOne(bizId);
-  if(bp.employees){
-    return bp.employees.filter(e => e.text).map(e => e.phone).concat(bp.orderPhone);
-  } else {
-    return [bp.orderPhone];
-  }
-};
-
 Meteor.methods({
   getMasterWeek(weekId, weekNum, token) {
     if(Meteor.isServer && Meteor.user() && Meteor.user().roles.includes('admin')){
@@ -866,21 +857,20 @@ Meteor.methods({
   },
   sendReceiptText(txObj){
     var res;
-    getBizNumberArray(txObj.sellerId).forEach((n) => {
-      twilio.messages.create({
-        to: n, // Any number Twilio can deliver to
-        from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
-        body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
-      }, (err, responseData) => {
-          res = responseData;
-          if (!err) {
-            console.log(responseData.body);
-          } else {
-            console.log("twilio error" + err.message);
-          }
+    const bp = businessProfiles.findOne(txObj.sellerId);
+    twilio.messages.create({
+      to: bp.orderPhone, // Any number Twilio can deliver to
+      from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+      body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
+    }, (err, responseData) => {
+        res = responseData;
+        if (!err) {
+          console.log(responseData.body);
+        } else {
+          console.log("twilio error" + err.message);
         }
-      );
-    });
+      }
+    );
     return res;
   },
 
