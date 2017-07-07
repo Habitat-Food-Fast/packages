@@ -635,7 +635,7 @@ Meteor.methods({
     },
     confirmPickupTime(tx) {
       const item = transactions.findOne(tx);
-      if (item.runnerId === Meteor.userId()) {
+      if (item.runnerId === Meteor.userId() || Meteor.user().roles.includes('admin')) {
         transactions.update(tx, {$set: {pickedUpAt: Date.now()}});
       }
     },
