@@ -202,8 +202,8 @@ Meteor.methods({
       role = 'user'
     }
     APIKeys.insert({owner: userId, permissions: permissions, role: role}, (err, res) => {
-      if (!err) {
-        Meteor.users.update(userId, {$set: {apiKey: APIKeys.findOne({owner: userId}).key}});
+      if (err) {
+        throwError(err);
       }
     });
   }
