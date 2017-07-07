@@ -278,6 +278,7 @@ API.methods = {
     return tx.method === 'Delivery' ? transactions.methods.acceptDelivery.call({txId: txId}) : transactions.methods.acceptPickup.call({txId: txId});
   },
   declineOrder(txId, apiObj) {
+    Alerts.methods.orderDeclined(txId, apiObj.role);
     let role = apiObj.role;
     if (role === 'admin') { role = 'god'; }
     const tx = transactions.findOne(txId);

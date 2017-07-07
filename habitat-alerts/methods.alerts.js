@@ -128,5 +128,20 @@ Alerts.methods = {
       }
     };
     return Alerts.insert(obj);
+  },
+  orderDeclined(tx, role) {
+    const t = transactions.findOne(tx);
+    const bp = businessProfiles.findOne(t.sellerId).orderPhone;
+    const obj = {
+      type: 'danger',
+      txId: tx,
+      opened: new Date(),
+      message: `#${t.orderNumber} declined by ${role}`,
+      details: {
+        text: t.company_name,
+        contact: `Phone: ${bp}`
+      }
+    }
+    return Alerts.insert(obj);
   }
 }
