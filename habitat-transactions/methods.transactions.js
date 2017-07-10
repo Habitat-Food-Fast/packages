@@ -158,9 +158,9 @@ confirmDropoff: new ValidatedMethod({
     tip: { type: Number, decimal: true, optional: true}
   }).validator(),
   run({ txId, isAdmin, tip }) {
-    tx = transactions.findOne(txId);
+    const tx = transactions.findOne(txId);
     const now = Date.now();
-    update = {
+    const update = {
       status: 'completed',
       dropoffTime: now,
       dropoffVariationMin: calc._roundToTwo(

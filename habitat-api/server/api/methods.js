@@ -229,9 +229,7 @@ API.methods = {
       const hasQuery  = API.utility.hasData( connection.data );
       const txId = context.params.orderId;
       if ( hasQuery || txId ) {
-        console.log(connection.data);
         const apiObj = APIKeys.findOne({key: connection.data.api_key});
-        console.log(apiObj);
           const tx = transactions.findOne(txId);
           if (tx) {
             const url = context.route.handler.path;
@@ -255,6 +253,9 @@ API.methods = {
             } else if (url.includes('decline') && apiObj.permissions.decline) {
               API.methods.declineOrder(txId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully declined order.', orderId: txId });
+            } else if (url.includes('drop') && apiObj.permissions.drop) {
+              API.methods.dropoffOrder(txId, apiObj);
+              return API.utility.response( context, 200, { message: 'Successfully confirmed dropoff!', orderId: txId });
             } else {
               return API.utility.response( context, 403, { error: 401, message: "Your permissions don't allow for that PATCH." } );
             }
