@@ -100,6 +100,10 @@ Settings.schema = [
     "name" : "cateringPrice",
     "first" : 20,
     "additional" : 10
+  }, {
+    "_id" : "67b382a1a566cab93dd321t",
+    "name" : "runnerMaxOrders",
+    "count" : 2
   }
 
 ];

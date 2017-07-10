@@ -239,7 +239,13 @@ API.methods = {
               API.methods.acceptOrder(txId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully accepted order!', orderId: txId });
             } else if (url.includes('assign') && apiObj.permissions.assign) {
-              API.methods.assignRunner(txId, connection.data.runnerId, apiObj);
+              API.methods.assignRunner(txId, connection.data.runnerId, apiObj, (err, res) => {
+                if (err) {
+                  return API.utility.response( context, 403, { error : 401, message: 'You have too many orders already in progress.', orderId: txId });
+                } else {
+                  return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
+                }
+              });
               return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
             } else if (url.includes('decline') && apiObj.permissions.decline) {
               API.methods.declineOrder(txId, apiObj);
@@ -308,20 +314,35 @@ API.methods = {
     }
   },
   assignRunner(txId, runnerId, apiObj) {
-    const adminAssign = apiObj.role == 'admin'
+    const adminAssign = apiObj.role == 'admin';
     const tx = transactions.findOne(txId);
     const rnr = Meteor.users.findOne(runnerId);
     const runnerObj = transactions.grabRunnerObj(runnerId);
-    if(tx && tx.declinedBy && tx.declinedBy.includes(runnerId)){
+    if(tx && tx.declinedBy && tx.declinedBy.includes(runnerId)) {
       transactions.update(txId, {$pull: {declinedBy: runnerId}});
     }
-    transactions.update(tx._id, { $set: {
-      status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
-    }}, (err, num) => {
-      Meteor.call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
-        if(err) { throwError(err.message); }
+    if (apiObj.role === 'runner') {
+      const runCt = transactions.find({status: 'in_progress', runnerId: runnerId}).fetch.length >= Settings.findOne({name: 'runnerMaxOrders'}).count;
+      if (!runCt) {
+        throw new Meteor.Error('You have too many orders in progress to assign yourself to another.');
+      } else {
+        transactions.update(tx._id, { $set: {
+          status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
+        }}, (err, num) => {
+          Meteor.call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
+            if(err) { throwError(err.message); }
+          });
+        });
+      }
+    } else {
+      transactions.update(tx._id, { $set: {
+        status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
+      }}, (err, num) => {
+        Meteor.call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
+          if(err) { throwError(err.message); }
+        });
       });
-    });
+    }
   }
 };
 
