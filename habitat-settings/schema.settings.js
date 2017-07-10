@@ -100,8 +100,12 @@ Settings.schema = [
     "name" : "cateringPrice",
     "first" : 20,
     "additional" : 10
+  },
+  {
+    "_id" : "17b382a1a566cab93dd123r",
+    "name" : "runnerMaxOrders",
+    "count" : 2,
   }
-
 ];
 
 Meteor.startup(function(){

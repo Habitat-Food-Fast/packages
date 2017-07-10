@@ -127,7 +127,7 @@ Ontray =  {
         }
       }
     });
-    console.log(res);
+    console.log(res, 'ontray close results');
   }
 }
 APIKeys.schema = new SimpleSchema({
