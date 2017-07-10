@@ -70,7 +70,7 @@ API = {
       }
     },
     send(key, method){
-      
+
     }
   }
 };

@@ -229,9 +229,7 @@ API.methods = {
       const hasQuery  = API.utility.hasData( connection.data );
       const txId = context.params.orderId;
       if ( hasQuery || txId ) {
-        console.log(connection.data);
         const apiObj = APIKeys.findOne({key: connection.data.api_key});
-        console.log(apiObj);
           const tx = transactions.findOne(txId);
           if (tx) {
             const url = context.route.handler.path;
@@ -239,11 +237,25 @@ API.methods = {
               API.methods.acceptOrder(txId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully accepted order!', orderId: txId });
             } else if (url.includes('assign') && apiObj.permissions.assign) {
-              API.methods.assignRunner(txId, connection.data.runnerId, apiObj);
+              if(apiObj.role === 'runner') {
+                const runCt = transactions.find({status: 'in_progress', runnerId: connection.data.runnerId}).count() >= Settings.findOne({name: 'runnerMaxOrders'}).count;
+                if (runCt) {
+                  return API.utility.response( context, 403, { message: 'You have too many orders already in progress.' });
+                } else {
+                  API.methods.assignRunner(txId, connection.data.runnerId, apiObj);
+                  return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
+                }
+              } else {
+                API.methods.assignRunner(txId, connection.data.runnerId, apiObj);
+                return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
+              }
               return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
             } else if (url.includes('decline') && apiObj.permissions.decline) {
               API.methods.declineOrder(txId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully declined order.', orderId: txId });
+            } else if (url.includes('drop') && apiObj.permissions.drop) {
+              API.methods.dropoffOrder(txId, apiObj);
+              return API.utility.response( context, 200, { message: 'Successfully confirmed dropoff!', orderId: txId });
             } else {
               return API.utility.response( context, 403, { error: 401, message: "Your permissions don't allow for that PATCH." } );
             }
@@ -278,10 +290,11 @@ API.methods = {
     return tx.method === 'Delivery' ? transactions.methods.acceptDelivery.call({txId: txId}) : transactions.methods.acceptPickup.call({txId: txId});
   },
   declineOrder(txId, apiObj) {
+    Alerts.methods.orderDeclined(txId, apiObj.role);
     let role = apiObj.role;
     if (role === 'admin') { role = 'god'; }
     const tx = transactions.findOne(txId);
-    if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
+    if(!Meteor.settings.devMode && role === 'vendor' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
     if (!tx.DaaS) {
       Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
         console.log(JSON.stringify(err, null, 2));
@@ -307,11 +320,11 @@ API.methods = {
     }
   },
   assignRunner(txId, runnerId, apiObj) {
-    const adminAssign = apiObj.role == 'admin'
+    const adminAssign = apiObj.role == 'admin';
     const tx = transactions.findOne(txId);
     const rnr = Meteor.users.findOne(runnerId);
     const runnerObj = transactions.grabRunnerObj(runnerId);
-    if(tx && tx.declinedBy && tx.declinedBy.includes(runnerId)){
+    if(tx && tx.declinedBy && tx.declinedBy.includes(runnerId)) {
       transactions.update(txId, {$pull: {declinedBy: runnerId}});
     }
     transactions.update(tx._id, { $set: {
