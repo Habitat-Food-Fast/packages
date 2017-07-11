@@ -241,6 +241,8 @@ API.methods = {
                 const runCt = transactions.find({status: 'in_progress', runnerId: connection.data.runnerId}).count() >= Settings.findOne({name: 'runnerMaxOrders'}).count;
                 if (runCt) {
                   return API.utility.response( context, 403, { message: 'You have too many orders already in progress.' });
+                } else if (tx.runnerId && tx.runnerId !== apiObj.owner) {
+                  return API.utility.response( context, 403, { message: 'This order has already been assigned.' });
                 } else {
                   API.methods.assignRunner(txId, connection.data.runnerId, apiObj);
                   return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
