@@ -36,7 +36,7 @@ runner = {
     return { start, end };
   },
   _shifts(start, end, habitat, role){
-    params = {
+    const params = {
       auth: staffJoy._auth,
       params: {
         start: this.getHours(start, end, habitat).start,
@@ -44,14 +44,14 @@ runner = {
         include_summary: true,
       }
     };
-    res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`), params);
+    const res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`), params);
     return res.data.data;
   },
   create(habitatId, email, name, internal_id){
       const habitat = Habitats.findOne(habitatId);
       try {
           const url = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${habitat.staffJoyRunnerRole}/users/`);
-          params = { auth: staffJoy._auth, params: {
+          const params = { auth: staffJoy._auth, params: {
             min_hours_per_workweek: 0,
             max_hours_per_workweek: 60,
             name, email, internal_id,
@@ -65,8 +65,8 @@ runner = {
   getShifts(start, end, habitats, roleName) {
         habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
         let shifts = habitats.map((id) => {
-          habitat = Habitats.findOne(id);
-          role = this.getRole(roleName, habitat);
+          const habitat = Habitats.findOne(id);
+          const role = this.getRole(roleName, habitat);
           try {
             s = this._shifts(start, end, habitat, role);
             return s.map((shift) => {
@@ -400,7 +400,7 @@ runner.payouts = {
   },
   //again need to flatten out habitat arrays, but don't need uniq because all shifts are distinct
   getWeekShifts(week, staffJoyId, habitats=Habitats.find()){
-    return _.flatten(habitats.map(h =>
+    const weeks = _.flatten(habitats.map(h =>
       HTTP.call(`GET`, staffJoy._getUrl(`locations/${h.staffJoyId}/roles/${h.staffJoyRunnerRole}/shifts`), {
         auth: staffJoy._auth,
         params: {
@@ -409,7 +409,8 @@ runner.payouts = {
           include_summary: true,
           user_id: staffJoyId,
         }
-      }).data.data));
+      }).data.data)); console.log(weeks);
+    return weeks;
   },
   getShiftHours(week, staffJoyId) {
     weekHours = runner.payouts.getWeekShifts(week, staffJoyId).map(shift => ({
@@ -419,7 +420,7 @@ runner.payouts = {
         new Date(moment(shift.start).format()).getTime()) /
         (1000*60*60)%24
       ),
-    }));
+    })); console.log(weekHours);
     return weekHours;
   },
   runnerTransactions(week, runnerId){
@@ -463,8 +464,7 @@ runner.payouts = {
     return runnerTxs
       .filter(t => t.catering)
       .map(t => t.vendorPayRef.totalPrice)
-      .reduce((sum, num) => { sum + num; }, 0)
-      * .4;
+      .reduce((sum, num) => { return sum + num; }, 0) * 0.4;
   },
   _totalOwed(runnerTxs, allShifts, staffJoyId){
     hourlyRate = (this._totalHoursWorked(runnerTxs, allShifts, staffJoyId) * 4);
@@ -477,6 +477,7 @@ runner.payouts = {
   _progress(token, progress) { streamer.emit(token, progress); },
   payRef(worker, allShifts, runnerTxs, runnerId, week){
     wk = weeks.findOne({week: week});
+    console.log(worker.email);
     query = _.extend(worker, {
       week: wk.week,
       hoursWorked: this._totalHoursWorked(runnerTxs, allShifts, worker.id),
@@ -503,12 +504,16 @@ runner.payouts = {
     return workers.map((worker, index) => {
       progress = index / workers.length;
       this._progress(token, progress);
+      console.log(worker.email, 'staffjoy email')
       const runnerUser = Meteor.users.findOne({username: worker.email});
 
       if(runnerUser){
+        console.log(runnerUser.profile.email)
         const runnerTxs = runner.payouts.runnerTransactions(week, runnerUser._id);
         const allShifts = runner.payouts.getShiftHours(week, worker.id);
         return runner.payouts.payRef(worker, allShifts, runnerTxs, runnerUser._id, week.week);
+      } else {
+        console.warn(`no staffjoy email for`, worker.email);
       }
     }).filter(doc => doc && doc.transactionCount > 0 || doc &&  doc.daasCount > 0);
   }
