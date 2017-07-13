@@ -698,7 +698,7 @@ Meteor.methods({
 
     alertRunnerReady(txId) {
       const tx = transactions.findOne(txId);
-      if (tx.sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
+      if (tx && tx.sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
         const runnerPhone = Meteor.users.findOne(tx.runnerId).profile.phone;
         if (!runnerPhone) { return 'no runner'; }
         const msg = `Order #${tx.orderNumber} from ${tx.company_name} is ready for pickup`;
