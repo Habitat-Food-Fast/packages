@@ -258,8 +258,6 @@ class transactionsCollection extends Mongo.Collection {
 
     if (trans && trans.payRef && trans.payRef.mealInfo) { Meteor.users.update(trans.buyerId, {$set: {'profile.mealCount': trans.payRef.mealInfo.new}}); }
     const prep = trans.prepTime;
-    console.warn('inside of the request in the transactions collection');
-    handleInitialVendorContact(txId);
     //CAN'T USE SUPER HERE, WANT TO USE OVERRIDDEN METHOD TO TRACK LAST UPDATE
     return transactions.update(id, {$set: _.extend(fields, this.requestItems(id), {
       txType: trans.promoId ?
@@ -270,6 +268,8 @@ class transactionsCollection extends Mongo.Collection {
     })}, (err, res) => {
       if (err) {
         throwError(err);
+      } else {
+        handleInitialVendorContact(id);
       }
     });
   }

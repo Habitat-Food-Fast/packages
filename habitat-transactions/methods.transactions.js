@@ -879,7 +879,6 @@ Meteor.methods({
         } else {
           console.log("twilio error" + err.message);
         }
-      );
     });
     return res;
   },
