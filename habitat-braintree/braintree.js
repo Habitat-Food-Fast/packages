@@ -49,7 +49,6 @@ Meteor.methods({
         if(!result.success) {
           throwError(result);
         } else {
-          console.log(result);
           __request(txId, isFirstTransaction, result.transaction.id);
           return _.extend(result, {
             success: true,
@@ -304,7 +303,5 @@ function __request(txId, isFirstTransaction, braintreeId){
     braintreeId: braintreeId,
     firstOrder: isFirstTransaction,
     status: 'pending_vendor',
-  }, (err) => { if (err) { throwError(err.reason); } else {
-    handleInitialVendorContact(txId);
-  }});
+  }, (err) => { if (err) { throwError(err.reason); }});
 }
