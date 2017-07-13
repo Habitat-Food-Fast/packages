@@ -865,19 +865,19 @@ Meteor.methods({
     }
   },
   sendReceiptText(txObj){
-    var res;
-    getBizNumberArray(txObj.sellerId).forEach((n) => {
-      twilio.messages.create({
-        to: n, // Any number Twilio can deliver to
-        from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
-        body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
-      }, (err, responseData) => {
-          res = responseData;
-          if (!err) {
-            console.log(responseData.body);
-          } else {
-            console.log("twilio error" + err.message);
-          }
+    let res;
+    const bp = businessProfiles.findOne(txObj.sellerId);
+    console.warn(`about to send text to ${bp.company_name}`);
+    twilio.messages.create({
+      to: bp.orderPhone, // Any number Twilio can deliver to
+      from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
+      body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
+    }, (err, responseData) => {
+        res = responseData;
+        if (!err) {
+          console.log(responseData.body);
+        } else {
+          console.log("twilio error" + err.message);
         }
       );
     });
@@ -943,13 +943,16 @@ handleInitialVendorContact = (txId) => {
 	const bizProfile = businessProfiles.findOne(transactionToSend.sellerId); check(bizProfile._id, String);
 	const pendingVendorAcceptCount = transactions.find({sellerId: transactionToSend.sellerId, status: 'pending_vendor'}).count();
   const pref = bizProfile.notificationPreference; check(pref, String);
-
+  console.warn('inside vendor initial contact');
 	switch (pref) {
 		case 'sms':
 		// if theres more than one transaction dont send
 			if (pendingVendorAcceptCount === 1) {
+        console.log('sending receipt text');
 				Meteor.call('sendReceiptText', transactionToSend);
-			}
+			} else {
+        console.warn('MORE OR LESS THAN 1 TX WITH THE SAME SELLER ID, NOT SENDING TEXT');
+      }
 			break;
 		case 'fax':
       HTTP.call(`GET`, urls.vendor.single_receipt_fax(txId), (err, res) => {
