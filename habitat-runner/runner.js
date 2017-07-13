@@ -63,7 +63,7 @@ runner = {
 
   },
   getShifts(start, end, habitats, roleName) {
-        const habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
+        habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
         let shifts = habitats.map((id) => {
           const habitat = Habitats.findOne(id);
           const role = this.getRole(roleName, habitat);
@@ -93,7 +93,7 @@ runner = {
         return parsedShifts;
     },
   getShifted(start, end, habitats, roleName) {
-    const habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
+    habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
       return this.getShifts(start, end, habitats, roleName).filter((shift) => {
         return !shift || !shift.shift ? {} :
           moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').isBetween(
