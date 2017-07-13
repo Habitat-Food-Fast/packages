@@ -36,7 +36,7 @@ runner = {
     return { start, end };
   },
   _shifts(start, end, habitat, role){
-    params = {
+    const params = {
       auth: staffJoy._auth,
       params: {
         start: this.getHours(start, end, habitat).start,
@@ -44,14 +44,14 @@ runner = {
         include_summary: true,
       }
     };
-    res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`), params);
+    const res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/shifts`), params);
     return res.data.data;
   },
   create(habitatId, email, name, internal_id){
       const habitat = Habitats.findOne(habitatId);
       try {
           const url = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${habitat.staffJoyRunnerRole}/users/`);
-          params = { auth: staffJoy._auth, params: {
+          const params = { auth: staffJoy._auth, params: {
             min_hours_per_workweek: 0,
             max_hours_per_workweek: 60,
             name, email, internal_id,
@@ -63,10 +63,10 @@ runner = {
 
   },
   getShifts(start, end, habitats, roleName) {
-        habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
+        const habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
         let shifts = habitats.map((id) => {
-          habitat = Habitats.findOne(id);
-          role = this.getRole(roleName, habitat);
+          const habitat = Habitats.findOne(id);
+          const role = this.getRole(roleName, habitat);
           try {
             s = this._shifts(start, end, habitat, role);
             return s.map((shift) => {
@@ -93,7 +93,7 @@ runner = {
         return parsedShifts;
     },
   getShifted(start, end, habitats, roleName) {
-    habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
+    const habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
       return this.getShifts(start, end, habitats, roleName).filter((shift) => {
         return !shift || !shift.shift ? {} :
           moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').isBetween(
