@@ -268,6 +268,8 @@ class transactionsCollection extends Mongo.Collection {
     })}, (err, res) => {
       if (err) {
         throwError(err);
+      } else {
+        handleInitialVendorContact(id);
       }
     });
   }

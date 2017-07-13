@@ -241,6 +241,8 @@ API.methods = {
                 const runCt = transactions.find({status: 'in_progress', runnerId: connection.data.runnerId}).count() >= Settings.findOne({name: 'runnerMaxOrders'}).count;
                 if (runCt) {
                   return API.utility.response( context, 403, { message: 'You have too many orders already in progress.' });
+                } else if (tx.runnerId && tx.runnerId !== apiObj.owner) {
+                  return API.utility.response( context, 403, { message: 'This order has already been assigned.' });
                 } else {
                   API.methods.assignRunner(txId, connection.data.runnerId, apiObj);
                   return API.utility.response( context, 200, { message: 'Successfully assigned order!', orderId: txId });
@@ -254,8 +256,12 @@ API.methods = {
               API.methods.declineOrder(txId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully declined order.', orderId: txId });
             } else if (url.includes('drop') && apiObj.permissions.drop) {
+              if (apiObj.role === 'runner' && tx.runnerId !== apiObj.owner) {
+                return API.utility.response( context, 403, { message: 'You do not have permission to do that.' });
+              } else {
               API.methods.dropoffOrder(txId, apiObj);
               return API.utility.response( context, 200, { message: 'Successfully confirmed dropoff!', orderId: txId });
+            }
             } else {
               return API.utility.response( context, 403, { error: 401, message: "Your permissions don't allow for that PATCH." } );
             }
@@ -334,6 +340,30 @@ API.methods = {
         if(err) { throwError(err.message); }
       });
     });
+  },
+  dropoffOrder(txId, apiObj, tip) {
+    const tx = transactions.findOne(txId);
+    const now = Date.now();
+    const update = {
+      status: 'completed',
+      dropoffTime: now,
+      dropoffVariationMin: calc._roundToTwo(
+        (now - transactions.findOne(txId).deliveredAtEst) / 60000
+      ),
+      settledByAdmin: isAdmin,
+      cashTip: tx.DaaS && tx.DaaSType === 'cash'
+    };
+
+    transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
+      if(!tx.payRef.tip){
+        transactions.update(txId, { $set: {
+          'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
+        }});
+      }
+      businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
+        if(err) { console.warn(err.message); }
+      });
+    }});
   }
 };
 
