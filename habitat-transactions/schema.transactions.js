@@ -90,7 +90,7 @@ _deliverySchema = new SimpleSchema({
   'cross-street': { type: String, optional: true},
 })
 
-handleDelivery = (tx) =>{
+handleDelivery = (tx) => {
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${tx.deliveryAddress}.json`;
   const params = {
     params: {

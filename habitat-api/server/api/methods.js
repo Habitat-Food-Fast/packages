@@ -206,12 +206,14 @@ API.methods = {
             request.thirdParty && request.method === 'Delivery';
           request.externalId = request.externalId ? request.externalId.toString() : false;
           request.externalVendorId = request.externalVendorId ? request.externalVendorId.toString() : false;
-          console.warn(request.status, request.partnerName);
+          //ugly shims
+          if(!request.DaaSType && request.orderType){ request.DaaSType = request.orderType; }
+          if(!request.method && request.isDelivery !== null && request.isDelivery !== undefined) { request.method = request.isDelivery ? 'Delivery' : 'Pickup'; }
           if(!request.status){
             if(request.scheduled){
               request.status = 'queued';
             } else if (request.DaaS){
-              if(request.partnerName === 'grubhub' || request.partnerName === 'Ontray'){
+              if(request.partnerName === 'grubhub' || request.partnerName === 'Ontray' || request.partnerName === 'zuppler'){
                 request.status = 'pending_vendor';
               } else {
                 request.status = 'pending_runner';
