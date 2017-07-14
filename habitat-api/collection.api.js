@@ -54,9 +54,13 @@ class APIKeyCollection extends Mongo.Collection {
   }
   updateSession(owner, authBody, callback){
     key = APIKeys.findOne({owner});
+    console.log(authBody.headers);
     try {
       const sessionToken = HTTP.post(key.auth.url, authBody); console.log(sessionToken);
-      return APIKeys.update({owner}, { $set: {sessionToken: sessionToken}})
+      return APIKeys.update({owner}, { $set: {
+        sessionToken: sessionToken.data.data,
+        'auth.headers': authBody.headers,
+      }})
     } catch (e) {
       throwError({ reason: e.message})
     }
@@ -65,73 +69,6 @@ class APIKeyCollection extends Mongo.Collection {
 APIKeys = new APIKeyCollection( 'api-keys' );
 APIRequests = new Meteor.Collection('api-requests');
 
-Ontray =  {
-  owner: 'Ontray',
-  auth: {
-    headers: {
-      'Cache-Control': 'no-cache',
-      'authorization': 'Bearer bed9d4ebbaeb1f9d71fa357d77030206',
-    },
-    body: {
-      formData: {
-        '_LOGIN[username]': 'tyler+habitat@jarv.us',
-        '_LOGIN[password]': 'habitat' ,
-        '_LOGIN[returnMethod]': 'POST',
-      }
-    }
-  },
-  login(auth, callback){
-    auth = auth || this.auth;
-    return APIKeys.updateSession(this.owner, { headers: auth.headers, npmRequestOptions: auth.body})
-  },
-  //if method is Pickup, this should fire on ready for pickup text
-  //if delivery, it's occurs only after when the first runner is assigned
-  //all others cases mean a refund
-  update(orderId){
-    key = APIKeys.findOne({owner: this.owner});
-    res = HTTP.post(`http://ontrayv2.sandbox02.jarv.us/${orderId}/notify?format=json&center=101`, {
-      headers: {
-        'authorization': 'Token bed9d4ebbaeb1f9d71fa357d77030206',
-        'cache-control': 'no-cache'
-      }
-    });
-    console.log(res);
-  },
-  refund(owner, refundAmount, note){
-    key = APIKeys.findOne({owner: this.owner});
-    res = HTTP.post(`http://ontrayv2.sandbox02.jarv.us/${orderId}/refund?format=json&center=101`, {
-      headers: {
-        'authorization': 'Token bed9d4ebbaeb1f9d71fa357d77030206',
-        'cache-control': 'no-cache'
-      },
-      npmRequestOptions:{
-        formData: {
-          RefundAmount: refundAmount,
-          Notes: note
-        }
-      }
-    });
-    console.log(res);
-  },
-  close(storeId, date, open, close){
-    key = APIKeys.findOne({owner: this.owner});
-    res = HTTP.post('http://ontrayv2.sandbox02.jarv.us/hours/create?format=json&include=validationErrors', {
-      headers: {
-        'authorization': 'Token bed9d4ebbaeb1f9d71fa357d77030206',
-        'cache-control': 'no-cache'
-      },
-      npmRequestOptions: {
-        formData: {
-          SpecialDate: date,
-          Open: open,
-          Close: close,
-          StoreID: 37,
-        }
-      }
-    });
-    console.log(res, 'ontray close results');
-  }
-}
 APIKeys.schema = new SimpleSchema({
   _id: { type: String, regEx: SimpleSchema.RegEx.Id },
   createdAt: { type: Date, },

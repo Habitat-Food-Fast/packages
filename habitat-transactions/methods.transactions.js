@@ -858,6 +858,7 @@ Meteor.methods({
   sendReceiptText(txObj){
     let res;
     const bp = businessProfiles.findOne(txObj.sellerId);
+    console.log(`sending text to`, bp.company_name);
     twilio.messages.create({
       to: bp.orderPhone, // Any number Twilio can deliver to
       from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication

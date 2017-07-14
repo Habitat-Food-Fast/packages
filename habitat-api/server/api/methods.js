@@ -206,12 +206,16 @@ API.methods = {
             request.thirdParty && request.method === 'Delivery';
           request.externalId = request.externalId ? request.externalId.toString() : false;
           request.externalVendorId = request.externalVendorId ? request.externalVendorId.toString() : false;
-
+          console.warn(request.status, request.partnerName);
           if(!request.status){
             if(request.scheduled){
               request.status = 'queued';
-            } else if (request.DaaS && request.partnerName !== 'grubhub'){
-              request.status = 'pending_runner';
+            } else if (request.DaaS){
+              if(request.partnerName === 'grubhub' || request.partnerName === 'Ontray'){
+                request.status = 'pending_vendor';
+              } else {
+                request.status = 'pending_runner';
+              }
             } else {
               request.status = 'pending_vendor';
             }
