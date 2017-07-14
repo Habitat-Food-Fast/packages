@@ -814,9 +814,6 @@ Meteor.methods({
       }}, (err, res) => {
         if(err) { JSON.stringify(err, null, 2); } else {
           const tx = transactions.findOne(txId);
-          if(missed) {
-            Meteor.call('sendStatusUpdateText', null, 'to admin', `Order # ${tx.orderNumber} cancelled. ${tx.company_name} missed texts and calls`, true);
-          }
           const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
           var result = sendMessageSync({
             to: businessProfiles.findOne(tx.sellerId).orderPhone, // Any number Twilio can deliver to
@@ -873,14 +870,14 @@ Meteor.methods({
     });
     return res;
   },
-
+  //TODO: API key settings for contact and specific partners? Not sure how we want to handle this
   declineTransaction(tx, from, missed){
     if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
     if (!tx.DaaS) {
       Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
         console.log(JSON.stringify(err, null, 2));
         console.log(JSON.stringify(res, null, 2));
-          });
+      });
       Meteor.call('orderDeclinedBuyerText', tx.buyerId, tx.sellerId, (err, res) => {
         console.log('inside of the send buyer text');
         console.log(JSON.stringify(err, null, 2));
@@ -897,6 +894,12 @@ Meteor.methods({
     } else {
       Meteor.call('nullifyTransaction', tx._id, (err, res) => {
         if(err) { throw new Meteor.Error(err.message); }
+        if(tx.partnerName === 'Ontray'){
+          Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
+            console.log(JSON.stringify(err, null, 2));
+            console.log(JSON.stringify(res, null, 2));
+          });
+        }
       });
     }
   },
