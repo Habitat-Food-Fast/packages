@@ -86,7 +86,7 @@ Ontray =  {
     return APIKeys.updateSession(this.owner, { headers: auth.headers, npmRequestOptions: auth.body})
   },
   //if method is Pickup, this should fire on ready for pickup text
-  //if delivery, it's after only when the first runner is assigned
+  //if delivery, it's occurs only after when the first runner is assigned
   //all others cases mean a refund
   update(orderId){
     key = APIKeys.findOne({owner: this.owner});
