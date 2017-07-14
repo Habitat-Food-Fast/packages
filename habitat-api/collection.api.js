@@ -68,7 +68,6 @@ APIRequests = new Meteor.Collection('api-requests');
 Ontray =  {
   owner: 'Ontray',
   auth: {
-    url: 'http://ontrayv2.sandbox02.jarv.us/login?format=json',
     headers: {
       'Cache-Control': 'no-cache',
       'authorization': 'Bearer bed9d4ebbaeb1f9d71fa357d77030206',
@@ -90,7 +89,7 @@ Ontray =  {
   //all others cases mean a refund
   update(orderId){
     key = APIKeys.findOne({owner: this.owner});
-    res = HTTP.post(`http://ontrayv2.sandbox02.jarv.us/${orderId}/1898/notify?format=json&center=101`, {
+    res = HTTP.post(`http://ontrayv2.sandbox02.jarv.us/${orderId}/notify?format=json&center=101`, {
       headers: {
         'authorization': 'Token bed9d4ebbaeb1f9d71fa357d77030206',
         'cache-control': 'no-cache'
@@ -100,7 +99,7 @@ Ontray =  {
   },
   refund(owner, refundAmount, note){
     key = APIKeys.findOne({owner: this.owner});
-    res = HTTP.post(`http://ontrayv2.sandbox02.jarv.us/${orderId}/1898/refund?format=json&center=101`, {
+    res = HTTP.post(`http://ontrayv2.sandbox02.jarv.us/${orderId}/refund?format=json&center=101`, {
       headers: {
         'authorization': 'Token bed9d4ebbaeb1f9d71fa357d77030206',
         'cache-control': 'no-cache'
