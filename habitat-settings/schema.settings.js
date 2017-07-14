@@ -105,6 +105,12 @@ Settings.schema = [
     "_id" : "17b382a1a566cab93dd123r",
     "name" : "runnerMaxOrders",
     "count" : 2,
+  },
+  {
+    "_id" : "28b382a1a566cab93bb555k",
+    "name" : "vendorModeMessage",
+    "active" : false,
+    "message" : ""
   }
 ];
 
