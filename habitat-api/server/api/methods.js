@@ -288,6 +288,11 @@ API.methods = {
       acceptedBy: apiObj.owner,
     }}, (err, res) => {
       if (err) { throwError(err.message); }
+      console.log(tx.partnerName);
+      if(tx.partnerName === 'Ontray'){
+        Ontray.update(tx.externalId);
+      }
+
       if (!tx.DaaS) {
         Meteor.call('sendUserReceiptEmail', txId);
       }
