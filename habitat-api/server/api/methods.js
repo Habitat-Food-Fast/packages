@@ -313,7 +313,7 @@ API.methods = {
     const tx = transactions.findOne(txId);
     if(!Meteor.settings.devMode && role === 'vendor' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
     if (!tx.DaaS) {
-      Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
+      Meteor.call('orderDeclinedVendorText', tx._id, role, false, (err, res) => {
         console.log(JSON.stringify(err, null, 2));
         console.log(JSON.stringify(res, null, 2));
           });
