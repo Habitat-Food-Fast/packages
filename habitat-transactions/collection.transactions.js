@@ -356,7 +356,7 @@ class transactionsCollection extends Mongo.Collection {
     const rnr = Meteor.users.findOne(runnerId);
     return {
       phone: rnr.profile.phone,
-      pic: rnr.profile.profile_pic,
+      pic: `${rnr.profile.profile_pic}/-/autorotate/no`,
       name: rnr.profile.fn
     };
   }
