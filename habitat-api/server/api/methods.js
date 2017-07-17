@@ -355,6 +355,7 @@ API.methods = {
   dropoffOrder(txId, apiObj, tip) {
     const tx = transactions.findOne(txId);
     const now = Date.now();
+    const isAdmin = apiObj.role === 'admin';
     const update = {
       status: 'completed',
       dropoffTime: now,
