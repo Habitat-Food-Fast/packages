@@ -291,13 +291,8 @@ API.methods = {
     }}, (err, res) => {
       if (err) { throwError(err.message); }
       console.log(tx.partnerName);
-      if(tx.partnerName === 'Ontray'){
-        Ontray.update(tx.externalId);
-      }
-
-      if (!tx.DaaS) {
-        Meteor.call('sendUserReceiptEmail', txId);
-      }
+      if(tx.partnerName === 'Ontray'){ Ontray.update(tx.externalId); }
+      if (!tx.DaaS) { Meteor.call('sendUserReceiptEmail', txId); }
       if (tx.promoId) { Instances.redeem(tx.promoId, tx.buyerId, true); }
       if (!tx.DaaS && tx.payRef.platformRevenue > 0) {
         Meteor.call('submitForSettlement', tx.braintreeId, tx.payRef.platformRevenue, (err, res) => {
