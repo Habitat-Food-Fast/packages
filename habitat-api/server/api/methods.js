@@ -244,7 +244,9 @@ API.methods = {
               return API.utility.response( context, 200, { message: 'Successfully accepted order!', orderId: txId });
             } else if (url.includes('assign') && apiObj.permissions.assign) {
               if(apiObj.role === 'runner') {
-                const runCt = transactions.find({status: 'in_progress', runnerId: connection.data.runnerId}).count() >= Settings.findOne({name: 'runnerMaxOrders'}).count;
+                const usr = Meteor.users.findOne(connection.data.runnerId);
+                const maxCount = usr.profile.runnerMaxCount || Settings.findOne({name: 'runnerMaxOrders'}).count
+                const runCt = transactions.find({status: 'in_progress', runnerId: connection.data.runnerId}).count() >= maxCount;
                 if (runCt) {
                   return API.utility.response( context, 403, { message: 'You have too many orders already in progress.' });
                 } else if (tx.runnerId && tx.runnerId !== apiObj.owner) {
@@ -289,13 +291,8 @@ API.methods = {
     }}, (err, res) => {
       if (err) { throwError(err.message); }
       console.log(tx.partnerName);
-      if(tx.partnerName === 'Ontray'){
-        Ontray.update(tx.externalId);
-      }
-
-      if (!tx.DaaS) {
-        Meteor.call('sendUserReceiptEmail', txId);
-      }
+      if(tx.partnerName === 'Ontray'){ Ontray.update(tx.externalId); }
+      if (!tx.DaaS) { Meteor.call('sendUserReceiptEmail', txId); }
       if (tx.promoId) { Instances.redeem(tx.promoId, tx.buyerId, true); }
       if (!tx.DaaS && tx.payRef.platformRevenue > 0) {
         Meteor.call('submitForSettlement', tx.braintreeId, tx.payRef.platformRevenue, (err, res) => {
