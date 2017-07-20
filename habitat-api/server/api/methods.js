@@ -6,6 +6,7 @@ API.methods = {
       if (!API.utility.hasData(connection.data)) {
         return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on GET`, });
       } else{
+        console.log('ping');
         return API.utility.response( context, 200, _.omit(APIKeys.findOne({key: connection.data.api_key}), '_id'));
       }
     }
@@ -270,7 +271,7 @@ API.methods = {
                 API.methods.dropoffOrder(txId, apiObj);
                 return API.utility.response( context, 200, { message: 'Successfully confirmed dropoff!', orderId: txId });
               }
-            } else if (url.includes('receiptPicture') && (apiObj.permissions.assign)) {
+            } else if (url.includes('receiptPicture') && apiObj.permissions.assign) {
               API.methods.updateReceiptPicture(txId, connection.data.url);
               return API.utility.response( context, 200, { message: 'Successfully changed picture!', orderId: txId });
             } else {
@@ -378,6 +379,7 @@ API.methods = {
     }});
   },
   updateReceiptPicture(tx, url) {
+    console.log(tx, url);
     return transactions.update(tx, {$set: {receiptPicture: url}});
   }
 };
