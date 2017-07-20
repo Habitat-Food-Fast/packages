@@ -304,7 +304,6 @@ API.methods = {
         });
       }
     });
-    console.log(tx.method);
     return tx.method === 'Delivery' ? transactions.methods.acceptDelivery.call({txId: txId}) : transactions.methods.acceptPickup.call({txId: txId});
   },
   declineOrder(txId, apiObj) {
@@ -312,6 +311,8 @@ API.methods = {
     let role = apiObj.role;
     if (role === 'admin') { role = 'god'; }
     const tx = transactions.findOne(txId);
+    if(tx.partnerName === 'Ontray'){ Ontray.refund(tx.externalId, tx.payRef.total); }
+
     if(!Meteor.settings.devMode && role === 'vendor' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
     if (!tx.DaaS) {
       Meteor.call('orderDeclinedVendorText', tx._id, role, false, (err, res) => {
