@@ -295,7 +295,7 @@ API.methods = {
     }}, (err, res) => {
       if (err) { throwError(err.message); }
       console.log(tx.partnerName);
-      if(tx.partnerName === 'Ontray'){ Ontray.update(tx.externalId); }
+      if(tx.partnerName === 'Ontray' && tx.method === 'Pickup'){ Ontray.update(tx.externalId); }
       if (!tx.DaaS) { Meteor.call('sendUserReceiptEmail', txId); }
       if (tx.promoId) { Instances.redeem(tx.promoId, tx.buyerId, true); }
       if (!tx.DaaS && tx.payRef.platformRevenue > 0) {
@@ -345,6 +345,9 @@ API.methods = {
     const runnerObj = transactions.grabRunnerObj(runnerId);
     if(tx && tx.declinedBy && tx.declinedBy.includes(runnerId)) {
       transactions.update(txId, {$pull: {declinedBy: runnerId}});
+    }
+    if(tx && !tx.runnerId && tx.partnerName === 'Ontray'){
+      Ontray.update(tx.externalId);
     }
     transactions.update(tx._id, { $set: {
       status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
