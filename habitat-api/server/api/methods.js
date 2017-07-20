@@ -6,6 +6,7 @@ API.methods = {
       if (!API.utility.hasData(connection.data)) {
         return API.utility.response(context, 400, { error: 400, message: `Invalid request: No data passed on GET`, });
       } else{
+        console.log('ping');
         return API.utility.response( context, 200, _.omit(APIKeys.findOne({key: connection.data.api_key}), '_id'));
       }
     }
@@ -267,9 +268,12 @@ API.methods = {
               if (apiObj.role === 'runner' && tx.runnerId !== apiObj.owner) {
                 return API.utility.response( context, 403, { message: 'You do not have permission to do that.' });
               } else {
-              API.methods.dropoffOrder(txId, apiObj);
-              return API.utility.response( context, 200, { message: 'Successfully confirmed dropoff!', orderId: txId });
-            }
+                API.methods.dropoffOrder(txId, apiObj);
+                return API.utility.response( context, 200, { message: 'Successfully confirmed dropoff!', orderId: txId });
+              }
+            } else if (url.includes('receiptPicture') && apiObj.permissions.assign) {
+              API.methods.updateReceiptPicture(txId, connection.data.url);
+              return API.utility.response( context, 200, { message: 'Successfully changed picture!', orderId: txId });
             } else {
               return API.utility.response( context, 403, { error: 401, message: "Your permissions don't allow for that PATCH." } );
             }
@@ -374,6 +378,10 @@ API.methods = {
         if(err) { console.warn(err.message); }
       });
     }});
+  },
+  updateReceiptPicture(tx, url) {
+    console.log(tx, url);
+    return transactions.update(tx, {$set: {receiptPicture: url}});
   }
 };
 
