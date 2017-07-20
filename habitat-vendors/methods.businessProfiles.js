@@ -250,4 +250,10 @@ Meteor.methods({
     }
   },
 
+  changeVendorMethod(id, type) {
+    const biz = businessProfiles.findOne(id);
+    if (this.userId === biz.uid || Roles.userIsInRole(this.userId, ['admin'])) {
+      businessProfiles.update(id, {$set: {method: type}});
+    }
+  }
 });
