@@ -144,3 +144,109 @@ Meteor.methods({
     });
   }
 });
+
+Ontray =  {
+  owner: 'Ontray',
+  auth: {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'authorization': 'Bearer bed9d4ebbaeb1f9d71fa357d77030206',
+    },
+    body: {
+      formData: {
+        '_LOGIN[username]': 'mike@tryhabitat.com',
+        '_LOGIN[password]': 'Mpasz1992' ,
+        '_LOGIN[returnMethod]': 'POST',
+      }
+    }
+  },
+  login(auth, callback){
+    auth = auth || this.auth;
+    return APIKeys.updateSession(this.owner, {
+      headers: {
+        'cache-control': 'no-cache',
+        'authorization': `Token ${this._latestToken()}`,
+      },
+      npmRequestOptions: auth.body
+    })
+  },
+  _latestToken(){ return APIKeys.findOne({owner: this.owner}).sessionToken.Handle },
+  //if method is Pickup, this should fire on ready for pickup text
+  //if delivery, it's occurs only after when the first runner is assigned
+  //all others cases mean a refund
+  update(orderId){
+    const key = APIKeys.findOne({owner: this.owner});
+    const tx = transactions.findOne({externalId: orderId});
+    const url = `${this.baseUrl}/orders/${orderId}/notify?format=json&center=${tx.externalVendorId}`;
+    try {
+      console.log(key.auth.headers);
+      return HTTP.post(url, {
+        headers: {
+          'cache-control': 'no-cache',
+          'authorization': `Token ${this._latestToken()}`,
+        }
+      });
+    } catch (e) {
+      console.warn(e);
+      throwError({reason: e});
+    }
+  },
+  refund(owner, refundAmount, note){
+    const key = APIKeys.findOne({owner: this.owner});
+    const tx = transactions.findOne({externalId: orderId});
+    const url = `${this.baseUrl}/${orderId}/refund?format=json&center=${tx.externalVendorId}`
+    res = HTTP.post(url, {
+      headers: {
+        'cache-control': 'no-cache',
+        'authorization': `Token ${this._latestToken()}`,
+      },
+      npmRequestOptions:{
+        formData: {
+          RefundAmount: refundAmount,
+          Notes: note
+        }
+      }
+    });
+    console.log(res);
+  },
+  hours: {
+    close(storeId){
+      const key = APIKeys.findOne({owner: this.owner});
+      storeId = parseInt(transactions.findOne({partnerName: this.owner}).externalVendorId);
+      const res = HTTP.post(`${this.baseUrl}/hours/create?format=json&include=validationErrors`, {
+        headers: {
+          'cache-control': 'no-cache',
+          'authorization': `Token ${this._latestToken()}`,
+        },
+        npmRequestOptions: {
+          formData: {
+            SpecialDate: moment().format('YYYY-DD-MM'),
+            Open: '10:00:00',
+            Close: '10:00:00',
+            StoreID: storeId,
+          }
+        }
+      });
+      console.log(res, 'ontray close results');
+    },
+    change(storeId, open, close, date){
+      const key = APIKeys.findOne({owner: this.owner});
+      storeId = parseInt(transactions.findOne({partnerName: this.owner}).externalVendorId);
+      const res = HTTP.post('${this.baseUrl}/hours/create?format=json&include=validationErrors', {
+        headers: {
+          'cache-control': 'no-cache',
+          'authorization': `Token ${this._latestToken()}`,
+        },
+        npmRequestOptions: {
+          formData: {
+            SpecialDate: date, //YYYY-DD-MM
+            Open: open, //10:00:00
+            Close: close, //12:00:00 'Cant go past midnight'
+            StoreID: storeId,
+          }
+        }
+      });
+      console.log(res, 'ontray close results');
+    },
+  }
+}

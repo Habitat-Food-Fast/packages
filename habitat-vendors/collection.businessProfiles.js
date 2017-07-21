@@ -206,6 +206,13 @@ businessProfiles.initEasySearch( ['company_name', 'company_type'], {
   }
 });
 
+businessProfiles.find({}).observeChanges((id, fields) => {
+  if(fields.open && fields.open === false){
+    const extVendorId = transactions.findOne({partnerName: Ontray.owner}).externalVendorId;
+    Ontray.hours.close(extVendorId);
+  }
+});
+
 businessProfiles.escape = company_name => company_name.replace(/,/g , " ").replace('&', ' and ');
 if (Meteor.isServer) {
   businessProfiles._ensureIndex({ 'geometry.coordinates': '2d'});
