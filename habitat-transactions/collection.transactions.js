@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 tx = txId => transactions.findOne(txId);
 Deliveries = new Meteor.Collection("deliveries");
 longCall = Meteor.settings.devMode ? 40000 : 120000;

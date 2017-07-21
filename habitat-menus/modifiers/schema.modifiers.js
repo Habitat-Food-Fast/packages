@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema'
 Modifiers.schema = new SimpleSchema({
   _id: {
     type: String,
@@ -9,8 +10,6 @@ Modifiers.schema = new SimpleSchema({
   },
   price: {
     type: Number,
-    optional: false,
-    decimal: true
   },
   subcategory: {
     type: String,
@@ -21,9 +20,10 @@ Modifiers.schema = new SimpleSchema({
     regEx: SimpleSchema.RegEx.Id
   },
   itemId: {
-    type: [String],
+    type: Array,
     regEx: SimpleSchema.RegEx.Id
-  }
+  },
+  'itemId.$': { type: String },
 });
 
 modCategories.schema = new SimpleSchema({

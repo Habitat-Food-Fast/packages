@@ -1,3 +1,4 @@
+
 Settings.schema = [
   {
     "_id" : "7eGouYcmBiiwHampy",

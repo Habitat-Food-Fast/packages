@@ -12,8 +12,6 @@ Package.onUse(function(api) {
   api.use('ecmascript');
   api.use('check');
   api.use('random');
-  api.use('aldeed:collection2');
-  api.use(["aldeed:simple-schema@1.5.3", "underscore"]);
   api.use('mongo', ['client', 'server']);
   api.addFiles('collection.master.js');
   api.export('masterTransactions');

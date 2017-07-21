@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 Habitats.methods = {
   insert: new ValidatedMethod({
   name: 'Habitats.methods.insert',
@@ -6,7 +7,8 @@ Habitats.methods = {
     icon: { type: String },
     coords: { type: Array},
     'coords.$': { type: Array },
-    'coords.$.$': { type: [Number], decimal: true }
+    'coords.$.$': { type: Array },
+    'coords.$.$.$': { type: Number}
   }).validator(),
   run({ name, icon, coords }) {
     if(coords.length !== 1 || coords[0].length < 3) {
@@ -45,7 +47,8 @@ updateRadius: new ValidatedMethod({
   validate: new SimpleSchema({
     id: {type: String },
     radius: {type: Array},
-    'radius.$': {type: [Number], decimal: true }
+    'radius.$': {type: Array },
+    'radius.$.$': { type: Number },
   }).validator(),
   run({id, radius}) {
     if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
