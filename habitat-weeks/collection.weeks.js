@@ -1,5 +1,8 @@
+console.log(`inside collection.weeks`)
 class weeksCollection extends Mongo.Collection {
   insert(doc, callback) {
+    console.log(Random);
+    console.log(weeks);
     return super.insert({
       _id: Random.id(),
       week: weeks.find().count() + 1,
