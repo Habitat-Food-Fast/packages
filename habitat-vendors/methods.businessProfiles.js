@@ -1,9 +1,13 @@
+import { _ } from 'underscore';
+import SimpleSchema from 'simpl-schema';
+
 businessProfiles.methods = {
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',
     validate: new SimpleSchema({
       _id: {type: String, optional: true},
-      habitat: { type: [String] },
+      habitat: { type: Array },
+      'habitat.$': { type: String },
       company_name: { type: String },
       company_email: { type: String },
       company_phone: { type: String },
@@ -14,7 +18,8 @@ businessProfiles.methods = {
       method: { type: String },
       geometry: {type: Object },
       'geometry.type': { type: String },
-      'geometry.coordinates': { type: [ Number ], decimal: true },
+      'geometry.coordinates': { type: Array },
+      'geometry.coordinates$': { type: String },
       'geometry.interpolated': {type: Boolean, optional: true },
       notificationPreference: { type: String },
       prep_time: { type: Number },
@@ -60,7 +65,8 @@ businessProfiles.methods = {
     name: 'businessProfiles.methods.rearrangeCategories',
     validate: new SimpleSchema({
       bizId: { type: String },
-      newCatArray: { type: [String]  },
+      newCatArray: { type: Array  },
+      'newCatArray.$': { type: String  },
     }).validator(),
     run({ bizId, newCatArray }) {
       if (!this.isSimulation && Roles.userIsInRole(this.userId, ['vendor']) ||
@@ -82,8 +88,9 @@ businessProfiles.methods = {
       name: { type: String },
       description: { type: String },
       category: { type: String },
-      price: { type: Number, decimal: true},
-      modifiers: { type: [String] },
+      price: { type: Number },
+      modifiers: { type: Array },
+      'modifiers.$': { type: String },
     }).validator(),
     run({uid}) {
       if (Meteor.user() && Roles.userIsInRole(Meteor.userId(), ['admin', 'vendor'])) {
@@ -124,35 +131,6 @@ businessProfiles.methods = {
      }
    }
  }),
-
- // updateRadius: new ValidatedMethod({
- //   name: 'businessProfiles.methods.updateRadius',
- //   mixins: [PermissionsMixin],
- //   allow: [{
- //     group: true,
- //     roles: ['admin', 'vendor'],
- //   }],
- //   validate: new SimpleSchema({
- //     bizId: { type: String },
- //     radius: { type: Array },
- //     'radius.$' : {
- //       type: Array,
- //     },
- //     'radius.$.$' : {
- //       type: [Number], decimal: true,
- //     },
- //     'radius.$.$.$' : {
- //       type: Number, decimal: true,
- //     },
- //   }).validator(),
- //   run({bizId, radius}){
- //     console.log(`updateing ${bizId} with radius ${radius}`);
- //     console.log(typeof radius)
- //     return businessProfiles.update(bizId, {$set: {radius: radius}}, {validate: false}, (err) => {
- //       if(err) { throwError(err); }
- //     })
- //   }
- // })
 };
 
 Meteor.methods({

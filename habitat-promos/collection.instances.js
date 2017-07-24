@@ -1,3 +1,5 @@
+import { _ } from 'underscore';
+import SimpleSchema from 'simpl-schema';
 export default class instancesCollection extends Mongo.Collection {
   //easy methods for querying around deeply nested properties in Instances.types
   parentType(channelName){ return this.types.filter(obj => _.where(obj.channels, {name: channelName}).length > 0)[0]; }

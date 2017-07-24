@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 class invoicesCollection extends Mongo.Collection {
   insert(mealPlan, btRes, type, callback) {
     console.log('inside invoice', mealPlan);
@@ -48,9 +49,10 @@ Invoices.schema = new SimpleSchema({
     type: Number,
   },
   mealArray: {
-    type: [String],
+    type: Array,
     optional: true,
   },
+  'mealArray.$': { type: String },
   deliveries: {
     type: Number,
     optional: true

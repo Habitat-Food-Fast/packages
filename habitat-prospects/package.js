@@ -4,11 +4,15 @@ Package.describe({
   summary: 'Prospects collection stuff',
 });
 
+Npm.depends({
+  "simpl-schema": "0.3.1"
+});
 Package.onUse(function(api) {
   api.versionsFrom('METEOR@1.4.4.2');
 
   api.use('ecmascript');
-  api.use(["aldeed:simple-schema", "aldeed:collection2", "underscore"]);
+  api.use('underscore');
+  api.use('aldeed:collection2-core');
   api.use('mongo', ['client', 'server']);
   api.use('mdg:validated-method', ['client', 'server']);
   api.use('didericis:permissions-mixin');

@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 Meteor.users.schema = new SimpleSchema({
   _id: {
     type: String,
@@ -15,12 +16,12 @@ Meteor.users.schema = new SimpleSchema({
   'location.lng': {
     type: Number,
     optional: true,
-    decimal: true,
+
   },
   'location.lat': {
     type: Number,
     optional: true,
-    decimal: true,
+
   },
   'location.lastUpdated': {
     type: Date,
@@ -79,9 +80,12 @@ Meteor.users.schema = new SimpleSchema({
     optional: true
   },
   'profile.transactions': {
-    type: [String],
+    type: Array,
     regEx: SimpleSchema.RegEx.Id,
     optional: true
+  },
+  'profile.transactions.$': {
+    type: String,
   },
   'profile.mealUser': {
     type: Boolean
@@ -101,14 +105,16 @@ Meteor.users.schema = new SimpleSchema({
     type: Boolean
   },
   'profile.businesses': {
-    type: [String],
+    type: Array,
     optional: true,
     regEx: SimpleSchema.RegEx.Id
+  },
+  'profile.businesses.$': {
+    type: String,
   },
   'profile.avgRating': {
     type: Number,
     optional: true,
-    decimal: true
   },
   'profile.specialInstructions.$.sid': {
     type: String,
@@ -126,9 +132,12 @@ Meteor.users.schema = new SimpleSchema({
     optional: true
   },
   'profile.runHabitats': {
-    type: [String],
+    type: Array,
     regEx: SimpleSchema.RegEx.Id,
     optional: true
+  },
+  'profile.runHabitats.$': {
+    type: String,
   },
   'profile.runOrdersCompleted': {
     type: Number,
@@ -147,9 +156,12 @@ Meteor.users.schema = new SimpleSchema({
     optional: true
   },
   'profile.geometry.coordinates': {
-    type: [Number],
+    type: Array,
     optional: true,
-    decimal: true
+  },
+  'profile.geometry.coordinates.$': {
+    type: Number,
+    optional: true,
   },
   'profile.geometry.interpolated': {
     type: Boolean,
@@ -170,15 +182,17 @@ Meteor.users.schema = new SimpleSchema({
   'profile.mealCount': {
     type: Number,
     min: 0,
-    decimal: true,
     defaultValue: 0,
     optional: true,
   },
   roles: {
-    type: [String],
+    type: Array,
     trim: true,
     allowedValues: ['admin', 'student', 'vendor', 'runner', 'running', 'admin_text', 'scheduled'],
     optional: true
+  },
+  'roles.$': {
+    type: String,
   },
   createdAt: {
     type: Date

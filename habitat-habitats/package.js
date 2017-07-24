@@ -6,12 +6,11 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.versionsFrom('METEOR@1.4.4.2');
-
   api.use('underscore');
   api.use('ecmascript');
   api.use('mongo');
   api.use('check');
-  api.use('aldeed:collection2');
+  api.use('aldeed:collection2-core');
   api.use('aldeed:simple-schema');
   api.use('momentjs:moment');
   api.use('mdg:validated-method');
@@ -24,5 +23,4 @@ Package.onUse(function (api) {
   api.export('Habitats');
   api.export('insertFairmount');
   api.export('zones');
-
 });

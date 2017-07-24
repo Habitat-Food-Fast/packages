@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 Modifiers.methods = {
   updateOrderBeforeCheckout: new ValidatedMethod({
     name: 'modifiers.methods.updateOrderBeforeCheckout',
@@ -5,7 +6,8 @@ Modifiers.methods = {
       transId: { type: String, optional: false },
       orderId: { type: Number, optional: false },
       saleItemInstructions: { type: String, optional: true },
-      modsToUpdate: { type: [String], optional: true },
+      modsToUpdate: { type: Array, optional: true },
+      'modsToUpdate.$': { type: String },
     }).validator(),
     run({ transId, orderId, saleItemInstructions, modsToUpdate }) {
       transactions.update({_id: transId, 'order.orderId': orderId},

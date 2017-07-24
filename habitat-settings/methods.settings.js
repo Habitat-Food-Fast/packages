@@ -1,3 +1,5 @@
+import { _ } from 'underscore';
+import SimpleSchema from 'simpl-schema';
 Settings.methods = {
   updateFeedOrder: new ValidatedMethod({
     name: 'Settings.methods.updateFeedOrder',
@@ -119,7 +121,8 @@ Settings.methods = {
       title: { type: String },
       body: { type: String },
       buttonTxt: { type: String},
-      habitats: { type: [String], optional: true}
+      habitats: { type: Array, optional: true},
+      'habitats.$': { type: String },
     }).validator(),
     run({ title, body, buttonTxt, habitats }) {
       if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {

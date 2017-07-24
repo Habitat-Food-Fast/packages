@@ -1,3 +1,6 @@
+import { Random } from 'meteor/random';
+import { transactions } from 'meteor/habitat-transactions';
+
 class weeksCollection extends Mongo.Collection {
   insert(doc, callback) {
     return super.insert({
@@ -10,7 +13,7 @@ class weeksCollection extends Mongo.Collection {
   }
   forceInsert(weeks) {
     return super.insert(weeks, (err) => {
-      if (err) { console.warn('error inserting weeks'); }
+      if (err) { throwError({reason: err.message}); }
     });
   }
   getWeekCounts(){

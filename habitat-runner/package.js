@@ -6,6 +6,7 @@ Package.describe({
 
 Npm.depends({
   "moment": "2.18.1",
+  "simpl-schema": "0.3.1",
 })
 
 Package.onUse(function (api) {
@@ -15,8 +16,7 @@ Package.onUse(function (api) {
   api.use('ecmascript');
   api.use('mongo');
   api.use('check');
-  api.use('aldeed:collection2');
-  api.use('aldeed:simple-schema');
+  api.use('aldeed:collection2-core');
   api.use('momentjs:moment');
   api.use('mdg:validated-method');
   api.use('iron:router');

@@ -7,10 +7,15 @@ Package.describe({
   documentation: null
 });
 
+Npm.depends({
+  "simpl-schema": "0.3.1"
+});
+
 Package.onUse(function(api) {
   api.versionsFrom('1.3.3');
   api.use('ecmascript');
-  api.use(["aldeed:simple-schema@1.5.3", "underscore"]);
+  api.use('underscore');
+  api.use('aldeed:collection2-core');
   api.use('mongo', ['client', 'server']);
   api.use('tracker', 'server');
   api.mainModule('Meals.js');

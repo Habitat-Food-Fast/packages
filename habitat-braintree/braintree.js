@@ -1,3 +1,4 @@
+import { _ } from 'underscore';
 if (Meteor.isServer) {
 var gateway,
     finalBraintreePrice,
