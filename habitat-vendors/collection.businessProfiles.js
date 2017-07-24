@@ -1,3 +1,5 @@
+import { _ } from 'underscore';
+
 class businessProfilesCollection extends Mongo.Collection {
   insert(doc, callback) {
     transactions.methods.searchForAddress.call({address: doc.company_address}, (err, res) => {

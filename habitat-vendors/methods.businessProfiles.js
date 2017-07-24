@@ -1,4 +1,6 @@
+import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
+
 businessProfiles.methods = {
   create: new ValidatedMethod({
     name: 'businessProfiles.methods.create',

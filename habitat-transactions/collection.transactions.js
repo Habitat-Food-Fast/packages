@@ -1,3 +1,4 @@
+import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
 tx = txId => transactions.findOne(txId);
 Deliveries = new Meteor.Collection("deliveries");

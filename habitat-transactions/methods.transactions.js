@@ -1,3 +1,4 @@
+import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
 transactions.methods = {
   insert: new ValidatedMethod({

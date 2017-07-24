@@ -1,3 +1,5 @@
+
+import { _ } from 'underscore';
 // mongobq --host candidate.40.mongolayer.com --port 11053  -u habitat_mike -p Mpasz1992 -d habitat -c mastertransactions -P stitch-market-tryhabitat-com -B stitch-market-tryhabitat-com -D market -T mastertransactions --keyfile stitch-market-tryhabit
 class masterTransactionsCollection extends Mongo.Collection {
   _options(opts){ return _.extend({ getIncomplete: false }); }
