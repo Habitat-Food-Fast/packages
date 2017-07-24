@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 Prospects.schema = new SimpleSchema({
   _id: { type: String, regEx: SimpleSchema.RegEx.Id },
   habitat: { type: String, optional: true },
@@ -9,11 +10,12 @@ Prospects.schema = new SimpleSchema({
   priority: { type: String, trim: true, optional: true, allowedValues: ['very high', 'high', 'medium', 'low', 'nonexistent'] },
   platform_priority: { type: String, trim: true, optional: true, allowedValues: ['Both', 'DaaS', 'Consumer'] },
   hiring: { type: String, trim: true, optional: true, allowedValues: ['Outsourced', 'In-house'] },
-  categories: { type: [String], trim: true, optional: true },
+  categories: { type: Array, trim: true, optional: true },
+  'categories.$': { type: String },
   menu_difficulty: { type: String, trim: true, optional: true, allowedValues: ['Low (< 100 Combos)', 'Medium (100+ Combos)', 'High (300+ Combos)'] },
   eat24: { type: Boolean, optional: true },
   reviews: { type: String, trim: true, optional: true, allowedValues: ['50+', '100+', '300+'] },
-  yelp_rating: { type: Number, decimal: true, optional: true },
+  yelp_rating: { type: Number, optional: true },
   grubhub: { type: Boolean, optional: true },
   uberEats: { type: Boolean, optional: true },
   postmates: { type: Boolean, optional: true },

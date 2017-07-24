@@ -12,8 +12,8 @@ Package.onUse(function(api) {
   api.use('ecmascript');
   api.use('check');
   api.use('random');
-  api.use('aldeed:collection2');
-  api.use(["aldeed:simple-schema@1.5.3", "underscore"]);
+  api.use('aldeed:collection2-core');
+  api.use('underscore');
   api.use('mongo', ['client', 'server']);
   api.addFiles('collection.weeks.js');
   api.addFiles('startup.weeks.js');

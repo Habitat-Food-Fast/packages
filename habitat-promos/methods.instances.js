@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema'
 Instances.methods = {
   insert: new ValidatedMethod({
     name: 'Instances.methods.insert',
@@ -10,13 +11,13 @@ Instances.methods = {
       name: {type: String},
       ownerId: {type: String},
       acquisition: { type: Boolean },
-      dollarAmount: {type: Number, optional: true, decimal: true},
+      dollarAmount: {type: Number, optional: true },
       giveOwnerDiscountOnRedeem: {type: Boolean, optional: true},
       channel: { type: String, optional: true},
       subChannel: { type: String, optional: true},
       ownerRole: { type: String, optional: true },
       habitat: { type: String, optional: true },
-      adUnits: { type: Number, decimal: false},
+      adUnits: { type: SimpleSchema.Integer },
       notes: { type: String },
     }).validator(),
     run() {

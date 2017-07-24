@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 Meteor.methods({
   insertFeaturedMeal(mealObj) {
   if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) { throw new Meteor.Error('unauthorized'); }
@@ -42,7 +43,12 @@ FeaturedMeals.methods = {
       'saleItem': { type: String },
       'image': { type: String },
       'featured': { type: Boolean },
-      'deals': { type: [String] , optional: true, allowedValues: ['free delivery', 'free drink', 'free side']},
+      'deals': {
+        type: Array ,
+        optional: true,
+        allowedValues: ['free delivery', 'free drink', 'free side']
+      },
+      'deals.$': { type: String },
     }).validator(),
     run() {
       if(!this.isSimulation){
@@ -96,7 +102,8 @@ FeaturedMeals.methods = {
         'title': { type: String, optional: true, min: 4},
         'tag': { type: String, optional: true },
         'description': { type: String, optional: true, },
-        'deals': { type: [String], optional: true },
+        'deals': { type: Array, optional: true },
+        'deals.$': { type: String },
       }).validator(),
       run({_id}) {
         FeaturedMeals.update(_id, {$set: arguments[0]}, (err) => {

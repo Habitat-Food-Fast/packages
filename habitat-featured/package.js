@@ -6,12 +6,16 @@ Package.describe({
   // URL to the Git repository containing the source code for this package.
   documentation: null
 });
+Npm.depends({
+  "simpl-schema": "0.3.1"
+});
 
 Package.onUse(function(api) {
   api.versionsFrom('METEOR@1.4.4.2');
 
   api.use('ecmascript');
-  api.use(["aldeed:simple-schema", "aldeed:collection2", "underscore"]);
+  api.use('aldeed:collection2-core');
+  api.use('underscore');
   api.use('mongo', ['client', 'server']);
   api.use('matteodem:easy-search@=1.6.4');
   api.use('mdg:validated-method');

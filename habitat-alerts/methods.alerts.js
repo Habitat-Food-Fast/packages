@@ -129,6 +129,14 @@ Alerts.methods = {
     };
     return Alerts.insert(obj);
   },
+  vendorClose(name, err) {
+    const obj = {
+      type: 'danger',
+      opened: new Date(),
+      message: `Vendor Close from ${name}`,
+    };
+    return Alerts.insert(obj);
+  },
   orderDeclined(tx, role) {
     const t = transactions.findOne(tx);
     const bp = businessProfiles.findOne(t.sellerId).orderPhone;
