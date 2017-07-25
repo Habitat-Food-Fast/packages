@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 Prospects.methods = {
   onboard: new ValidatedMethod({
     name: 'Prospects.methods.onboardSubmerchant',
@@ -28,11 +29,12 @@ Prospects.methods = {
       priority: { type: String, optional: true },
       platform_priority: { type: String, optional: true },
       hiring: { type: String, optional: true },
-      categories: { type: [String], optional: true },
+      categories: { type: Array, optional: true },
+      'categories.$': { type: String },
       menu_difficulty: { type: String, optional: true },
       eat24: { type: Boolean, optional: true },
       reviews: { type: String, optional: true },
-      yelp_rating: { type: Number, optional: true, decimal: true },
+      yelp_rating: { type: Number, optional: true, },
       grubhub: { type: Boolean, optional: true },
       uberEats: { type: Boolean, optional: true },
       postmates: { type: Boolean, optional: true },

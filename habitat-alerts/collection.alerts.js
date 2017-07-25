@@ -1,7 +1,7 @@
-Alerts = new Mongo.Collection('alerts');
 import SimpleSchema from 'simpl-schema';
+Alerts = new Mongo.Collection('alerts');
 const Schemas = {};
-Schemas.Alerts = new SimpleSchema({
+Alerts.Schema = new SimpleSchema({
   _id: { type: String },
   txId: { type: String, optional: true },
   type: {
@@ -21,4 +21,4 @@ Schemas.Alerts = new SimpleSchema({
   resolvedBy: { type: String, optional: true }
 });
 
-Alerts.attachSchema(Schemas.Alerts);
+Alerts.attachSchema(Alerts.Schema);

@@ -1,3 +1,5 @@
+import SimpleSchema from 'simpl-schema'
+
 Instances.schema = new SimpleSchema({
   _id: { type: String },
   ownedBy: {
@@ -16,38 +18,18 @@ Instances.schema = new SimpleSchema({
     }
   },
   dateIssued: { type: Date },
-  dollarAmount: {
-    type: Number,
-    decimal: true
-  },
-  owners: {
-    type: [String],
-  }, //who has added the promo to thier 'bank'
-  redeemedBy: {
-    type: [String],
-  }, //who has used the promo added to their 'bank'
-  redeemedByCount: {
-    type: Number,
-    optional: true,
-  },
-  ownersCount: {
-    type: Number,
-    optional: true,
-  },
-  habitat: {
-    type: String,
-  },
-  ownerRole: {
-    type: String,
-  },
-  adUnits: {
-    type: Number,
-    decimal: false
-  },
+  dollarAmount: { type: Number, },
+  owners: { type: Array, },
+    'owners.$': { 'type': String },
+  redeemedBy: { type: Array, },
+    'redeemedBy.$': { type: String },
+  redeemedByCount: { type: Number, optional: true, },
+  ownersCount: { type: Number, optional: true, },
+  habitat: { type: String, },
+  ownerRole: { type: String, },
+  adUnits: { type: SimpleSchema.Integer, },
   notes: {type: String},
-  acquisition: {
-    type: Boolean,
-  },
+  acquisition: { type: Boolean, },
   giveOwnerDiscountOnRedeem: {
     type: Boolean,
     custom(){ if(this.isUpdate){ throwError(`Can't change promo freeDelivery behavior`); } }

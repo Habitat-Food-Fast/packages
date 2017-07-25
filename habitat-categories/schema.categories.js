@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 Categories.schema = new SimpleSchema({
   _id: {
     type: String,
@@ -10,6 +11,9 @@ Categories.schema = new SimpleSchema({
     type: Number
   },
   businesses: {
-    type: [String]
-  }
+    type: Array,
+  },
+  'businesses.$': {
+    type: String,
+  },
 });

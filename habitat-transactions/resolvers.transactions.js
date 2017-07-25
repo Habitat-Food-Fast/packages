@@ -1,3 +1,4 @@
+import { _ } from 'underscore';
 let convertSync;
 if(module.dynamicImport){
   import('json-2-csv').then((convert) => {

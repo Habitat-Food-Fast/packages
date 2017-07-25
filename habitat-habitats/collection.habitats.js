@@ -1,3 +1,4 @@
+import { _ } from 'underscore';
 class habitatsCollection extends Mongo.Collection {
   setHours () {
     hoursArray = [];
@@ -25,7 +26,6 @@ class habitatsCollection extends Mongo.Collection {
     const weeklyHours = Habitats.findOne(habId).weeklyHours; check(weeklyHours, [Object]);
     return _.findWhere( weeklyHours, { day: moment().day() } );
   }
-
 
   openedAtToday (habId)  {
       openHr = this.parseTo24Hour(this.getToday(habId).openHr);
@@ -62,7 +62,10 @@ class habitatsCollection extends Mongo.Collection {
         defaultValue: 20
       },
       weeklyHours: {
-        type: [Object],
+        type: Array,
+      },
+      'weeklyHours.$': {
+        type: Object,
       },
       'weeklyHours.$.day': {
         type: Number,
@@ -112,7 +115,7 @@ class habitatsCollection extends Mongo.Collection {
         type: Object
       },
       'bounds.data.geometry.coordinates': {
-        type: [],
+        type: Array,
         blackbox: true
       },
     };
@@ -127,5 +130,5 @@ Habitats.before.insert(function(userId, doc) {
 });
 
 if (Meteor.isServer) {
-  Habitats._ensureIndex({ 'bounds.data.geometry': '2dsphere'});  
+  Habitats._ensureIndex({ 'bounds.data.geometry': '2dsphere'});
 }

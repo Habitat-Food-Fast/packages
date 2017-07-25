@@ -1,3 +1,4 @@
+import SimpleSchema from 'simpl-schema';
 weeks.schema = new SimpleSchema({
   _id: {
     type: String,
@@ -17,7 +18,10 @@ weeks.schema = new SimpleSchema({
     type: Date,
   },
   runnerPayouts: {
-    type: [Object],
+    type: Array,
+  },
+  'runnerPayouts.$': {
+    type: Object,
     blackbox: true,
     optional: true,
   }

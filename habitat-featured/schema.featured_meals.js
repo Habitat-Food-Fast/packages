@@ -1,4 +1,4 @@
-
+import SimpleSchema from 'simpl-schema';
 FeaturedMeals.schema = new SimpleSchema({
   _id: {
     type: String,
@@ -47,10 +47,11 @@ FeaturedMeals.schema = new SimpleSchema({
     regEx: SimpleSchema.RegEx.Id
   },
   deals: {
-    type: [String],
+    type: Array,
     optional: true,
     allowedValues: ['free drink', 'free delivery', 'free side'],
   },
+  'deals.$': { type: String },
   tag: {
     type: String,
     optional: true

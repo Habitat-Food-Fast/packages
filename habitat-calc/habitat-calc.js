@@ -1,4 +1,4 @@
-
+import { _ } from 'underscore';
 //init submodule
 calc = {
   _checkDecimalPlace (num) {

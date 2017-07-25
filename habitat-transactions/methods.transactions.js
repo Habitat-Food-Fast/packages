@@ -1,12 +1,16 @@
+import { _ } from 'underscore';
+import SimpleSchema from 'simpl-schema';
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
     validate: new SimpleSchema({
-      'order': { type: [Object]},
+      'order': { type: Array},
+      'order.$': { type: Object },
       'order.$.fromFeatured': { type: Boolean, optional: true, },
       'order.$.saleItemId': { type: String },
       'order.$.itemInstructions': { type: String, optional: true },
-      'order.$.modifiers': { type: [String], optional: true },
+      'order.$.modifiers': { type: Array, optional: true },
+      'order.$.modifiers.$': { type: String },
       'sellerId': { type: String },
       'buyerId': { type: String },
       'habitat': { type: String },
@@ -26,11 +30,13 @@ transactions.methods = {
   handleOrder: new ValidatedMethod({
     name: 'transactions.methods.handleOrder',
     validate: new SimpleSchema({
-      'order': { type: [Object]},
+      'order': { type: Array},
+      'order.$': { type: String },
       'order.$.fromFeatured': { type: Boolean, optional: true, },
       'order.$.saleItemId': { type: String },
       'order.$.itemInstructions': { type: String, optional: true },
-      'order.$.modifiers': { type: [String], optional: true },
+      'order.$.modifiers': { type: Array, optional: true },
+      'order.$.modifiers.$': { type: String },
       'sellerId': { type: String },
       'buyerId': { type: String },
       'habitat': { type: String },
@@ -155,7 +161,7 @@ confirmDropoff: new ValidatedMethod({
   validate: new SimpleSchema({
     txId: { type: String },
     isAdmin: { type: Boolean },
-    tip: { type: Number, decimal: true, optional: true}
+    tip: { type: Number, optional: true}
   }).validator(),
   run({ txId, isAdmin, tip }) {
     const tx = transactions.findOne(txId);
@@ -189,7 +195,7 @@ sendReceiptImage: new ValidatedMethod({
   name: 'transactions.methods.sendReceiptImage',
   validate: new SimpleSchema({
     txId: { type: String, },
-    tip: { type: Number, decimal: true, },
+    tip: { type: Number , },
     image: { type: String, },
     runnerId: { type: String, },
   }).validator(),
@@ -361,8 +367,8 @@ sendReceiptImage: new ValidatedMethod({
   getAddrFromCoords: new ValidatedMethod({
     name: 'transactions.methods.getAddrFromCoords',
     validate: new SimpleSchema({
-      lng: { type: Number, decimal: true },
-      lat: { type: Number, decimal: true }
+      lng: { type: Number },
+      lat: { type: Number }
     }).validator(),
     run({lng, lat}) {
       if(!this.isSimulation){
@@ -395,8 +401,8 @@ sendReceiptImage: new ValidatedMethod({
   reverseAddrSearch: new ValidatedMethod({
     name: 'transactions.methods.reverseAddrSearch',
     validate: new SimpleSchema({
-      lng: { type: Number, decimal: true },
-      lat: { type: Number, decimal: true }
+      lng: { type: Number  },
+      lat: { type: Number }
     }).validator(),
     run({lng, lat}) {
       if(!this.isSimulation){
@@ -453,7 +459,7 @@ sendReceiptImage: new ValidatedMethod({
     name: 'transactions.methods.setTip',
     validate: new SimpleSchema({
       txId: { type: String },
-      tip: { type: Number, decimal: true, min: 0, max: 50 }
+      tip: { type: Number, min: 0, max: 50 }
     }).validator(),
     run({ txId, tip }) {
       const tx = transactions.findOne(txId); check(tx, Object);
@@ -565,7 +571,7 @@ sendReceiptImage: new ValidatedMethod({
     name: 'transactions.methods.emergencyRunnerPing',
     validate: new SimpleSchema({
       txId: { type: String },
-      amount: { type: Number, decimal: true, }
+      amount: { type: Number, }
     }).validator(),
     run({ txId, amount }) {
       tx = transactions.findOne(txId);
