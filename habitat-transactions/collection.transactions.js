@@ -14,6 +14,7 @@ class transactionsCollection extends Mongo.Collection {
       doc.sellerId
     );
     const usr = Meteor.users.findOne(doc.buyerId) || false;
+    console.log(doc);
     return super.insert(_.extend(this.resetItems(), {
       status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
@@ -25,7 +26,7 @@ class transactionsCollection extends Mongo.Collection {
       DaaSType: doc.orderType || doc.DaaSType,
       vendorPayRef: {},
       runnerPayRef: {},
-      prepTime: doc.prepTime || bizProf.prep_time,
+      prepTime: doc.prepTime || doc.prep_time || bizProf.prep_time,
       order: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       plainOrder: doc.plainOrder,
       orderNumber: doc.orderNumber || this.pin(),

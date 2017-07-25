@@ -27,7 +27,6 @@ class habitatsCollection extends Mongo.Collection {
     return _.findWhere( weeklyHours, { day: moment().day() } );
   }
 
-
   openedAtToday (habId)  {
       openHr = this.parseTo24Hour(this.getToday(habId).openHr);
       hr = moment((openHr), ["h:mm"]).format("HH");
