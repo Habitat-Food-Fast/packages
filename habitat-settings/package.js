@@ -6,7 +6,7 @@ Package.describe({
 
 Npm.depends({
   'simpl-schema': '0.3.1',
-})
+});
 Package.onUse(function (api) {
   api.versionsFrom('METEOR@1.4.4.2');
 

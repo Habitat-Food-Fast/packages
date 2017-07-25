@@ -6,9 +6,13 @@ Package.describe({
   documentation: null
 });
 
+Npm.depends({
+  "simpl-schema": "0.3.0"
+});
+
+
 Package.onUse(function(api) {
   api.versionsFrom('METEOR@1.4.4.2');
-
   api.use('ecmascript');
   api.use('check');
   api.use('random');
