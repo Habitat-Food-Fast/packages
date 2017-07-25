@@ -1,4 +1,5 @@
 Alerts = new Mongo.Collection('alerts');
+import SimpleSchema from 'simpl-schema';
 const Schemas = {};
 Schemas.Alerts = new SimpleSchema({
   _id: { type: String },
