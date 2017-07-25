@@ -1,3 +1,4 @@
+import { _ } from 'underscore';
 class habitatsCollection extends Mongo.Collection {
   setHours () {
     hoursArray = [];
@@ -25,7 +26,6 @@ class habitatsCollection extends Mongo.Collection {
     const weeklyHours = Habitats.findOne(habId).weeklyHours; check(weeklyHours, [Object]);
     return _.findWhere( weeklyHours, { day: moment().day() } );
   }
-
 
   openedAtToday (habId)  {
       openHr = this.parseTo24Hour(this.getToday(habId).openHr);

@@ -1,3 +1,4 @@
+import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
 tx = txId => transactions.findOne(txId);
 Deliveries = new Meteor.Collection("deliveries");
@@ -13,6 +14,7 @@ class transactionsCollection extends Mongo.Collection {
       doc.sellerId
     );
     const usr = Meteor.users.findOne(doc.buyerId) || false;
+    console.log(doc);
     return super.insert(_.extend(this.resetItems(), {
       status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
@@ -24,7 +26,7 @@ class transactionsCollection extends Mongo.Collection {
       DaaSType: doc.orderType || doc.DaaSType,
       vendorPayRef: {},
       runnerPayRef: {},
-      prepTime: doc.prepTime || bizProf.prep_time,
+      prepTime: doc.prepTime || doc.prep_time || bizProf.prep_time,
       order: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
       plainOrder: doc.plainOrder,
       orderNumber: doc.orderNumber || this.pin(),
@@ -75,12 +77,13 @@ class transactionsCollection extends Mongo.Collection {
     });
   }
   validate(order){
-    let schema = _baseSchema.extend(_customerSchema).extend(_timingSchema).extend(_deliverySchema);
-    if (order.plainOrder && order.plainOrder.length) { schema.extend(_orderSchema); schema.extend(_payRefSchema); }
+    let schema = _baseSchema.extend(_customerSchema).extend(_timingSchema).extend(_deliverySchema).extend(_payRefSchema);
+    if (order.plainOrder && order.plainOrder.length) { schema.extend(_orderSchema);}
     if(order.method === 'Delivery' || order.isDelivery){ order = _.extend(order, handleDelivery(order)); }
 
     const cleanDoc = schema.clean(order);
     schema.validate(cleanDoc);
+    console.log(cleanDoc);
     return cleanDoc;
   }
   forceInsertSingle(doc){ if(!transactions.findOne(doc._id)){ return super.insert(doc); } }

@@ -1,3 +1,5 @@
+import { _ } from 'underscore';
+
 class saleItemsCollection extends Mongo.Collection {
   insert(doc, callback) {
     return super.insert(_.extend(doc, {
@@ -11,7 +13,7 @@ class saleItemsCollection extends Mongo.Collection {
           { $push: { itemId: saleItemId } },
           { multi: true },
         (err, count) => {
-          if(err) { throwError(err.message); } else {
+          if(err) { throwError({ reason: err.message}); } else {
           }
         });
       }
@@ -22,7 +24,7 @@ class saleItemsCollection extends Mongo.Collection {
   }
   remove(id, callback){
     return super.remove(id, (err, res) => {
-      if(err) { throw new Meteor.Error(err.message); }
+      if(err) { throwError({reason: err.message}); }
       Modifiers.remove({uid: id}, {multi: true});
     });
   }
