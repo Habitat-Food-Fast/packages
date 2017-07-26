@@ -1,3 +1,5 @@
+import SimpleSchema from 'simpl-schema';
+
 import { _ } from 'underscore';
 class habitatsCollection extends Mongo.Collection {
   setHours () {
