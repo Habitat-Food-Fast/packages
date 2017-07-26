@@ -37,6 +37,7 @@ Meteor.users.schema = new SimpleSchema({
     allowedValues: [ 'male', 'female', 'none'],
     defaultValue: 'none'
   },
+  'emails': { type: Object },
   'emails.$.address': {
     type: String,
     trim: true,
@@ -45,6 +46,7 @@ Meteor.users.schema = new SimpleSchema({
   'emails.$.verified': {
     type: Boolean
   },
+  'profile': { type: Object },
   'profile.phone': {
     type: String,
     min: 10,
@@ -150,6 +152,9 @@ Meteor.users.schema = new SimpleSchema({
   'profile.runnerTransport': {
     type: String,
     optional: true,
+  },
+  'profile.geometry': {
+    type: Object,
   },
   'profile.geometry.type': {
     type: String,
