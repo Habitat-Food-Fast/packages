@@ -8,11 +8,11 @@ finalDelay = Meteor.settings.devMode ? 40000 : 90000;
 
 class transactionsCollection extends Mongo.Collection {
   insert(doc) {
-    console.warn(`got to insert`)
     const bizProf = businessProfiles.findOne(doc.company_name ?
       { company_name: doc.company_name} :
       doc.sellerId
     );
+    const txWeek = (doc.deliverBy > moment().day(7).hour(23).minute(59).valueOf()) ? weeks.find().count() + 1 : weeks.find().count();
     const usr = Meteor.users.findOne(doc.buyerId) || false;
     console.log(doc);
     return super.insert(_.extend(this.resetItems(), {
@@ -53,7 +53,7 @@ class transactionsCollection extends Mongo.Collection {
       rating: null,
       message: null,
       rating_vendor: null,
-      week: weeks.find().count(),
+      week: txWeek,
       scheduled: doc.scheduled,
       deliverBy: doc.deliverBy,
       catering: doc.catering ? doc.catering : false,
