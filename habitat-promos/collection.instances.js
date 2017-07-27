@@ -27,14 +27,12 @@ export default class instancesCollection extends Mongo.Collection {
     };
   }
   insertAcquisitionCode(name, args){
-    console.log(args);
     inter = this.interface(name, args);
-    console.log(`interface`, inter);
     query = _.extend(inter, {
       dollarAmount: 5, // TODO: add back a habitat.deliveryFee to customise
       acquisition: true,
       giveOwnerDiscountOnRedeem: args.giveOwnerDiscountOnRedeem,
-    }); console.log('query', query);
+    });
     return super.insert(query, { validate: false }, (err) => {
       if(err) { throwError(err); }});
   }
