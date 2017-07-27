@@ -163,33 +163,37 @@ calc = {
   },
   //All .weeks private methods are DaaS/Food Fast agnostic
   weeks: {
-    _weekQuery(bizId, weekNum){
-      const query = {
+    _completed(bizId, weekNum){
+      txs = transactions.find({
        week: parseInt(weekNum),
-       sellerId: bizId ,
+       sellerId: bizId,
+       status: { $in: ['completed', 'archived']},
+    }, {sort: { timeRequested: 1 }}).fetch()
+      return txs;
+    },
+    _missed(bizId, weekNum){
+      transactions.find({
+       week: parseInt(weekNum),
+       sellerId: bizId,
+       $or: [
+        { missedByVendor: true },
+        { cancelledByVendor: true },
+        { cancelledByAdmin: true },
+       ]
+     }, {sort: { timeRequested: 1 }}).fetch()
+    },
+    _all(bizId, weekNum) {
+      return transactions.find({
+       week: parseInt(weekNum),
+       sellerId: bizId,
        $or: [
         { missedByVendor: true },
         { cancelledByVendor: true },
         { cancelledByAdmin: true },
         { status: { $in: [ 'completed', 'archived' ] }},
        ]
-     };
-       return query;
+     }, {sort: { timeRequested: -1 }}).fetch();
     },
-    _completed(bizId, weekNum){
-      txs = transactions.find(this._weekQuery(bizId, weekNum), {sort: { timeRequested: 1 }}).fetch()
-        .filter(tx => !tx.missedByVendor)
-        .filter(tx => !tx.cancelledByVendor)
-        .filter(tx => !tx.cancelledByAdmin);
-      return txs;
-    },
-    _missed(bizId, weekNum){
-      transactions.find(this._weekQuery(bizId, weekNum), {sort: { timeRequested: 1 }}).fetch()
-        .filter(tx => tx.missedByVendor)
-        .filter(tx => tx.cancelledByVendor)
-        .filter(tx => tx.cancelledByAdmin);
-    },
-    _all(bizId, weekNum) { return transactions.find(this._weekQuery(bizId, weekNum), {sort: { timeRequested: -1 }}).fetch(); },
     _getAllWeeks(bizId) { return weeks.find({}, {sort: {week: 1}}).map(week => this.getWeek(bizId, week, counts=true)); },
     getWeek(bizId, weekNum, counts){
       //always filter what vendor sees by these
@@ -256,9 +260,9 @@ calc = {
   //parsing down different payouts from getWeek into what vendor needs
   //we are abstracting this 4 levels up, i don't think there's further need for refactoring
   payouts: {
-    delivery(request, query) {
+    delivery(request, query, fullWeek) {
       calc._checkQuery(query);
-      week = calc.weeks.getWeek(request.bizId, request.week);
+      week = request.fullWeek;
       subtotal = week.subtotal.deliveryOrders;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Delivery') .filter(tx => !tx.DaaS).length;
@@ -270,7 +274,7 @@ calc = {
     },
     pickup(request, query) {
       calc._checkQuery(query);
-      week = calc.weeks.getWeek(request.bizId, request.week);
+      week = request.fullWeek;
       subtotal = week.subtotal.pickupOrders;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Pickup').filter(tx => !tx.DaaS).length;
@@ -282,7 +286,7 @@ calc = {
     },
     total(request, query){
       calc._checkQuery(query);
-      week = calc.weeks.getWeek(request.bizId, request.week);
+      week = request.fullWeek;
       subtotal = week.subtotal.orders;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => !tx.DaaS).length;
@@ -294,7 +298,7 @@ calc = {
     },
     DaaS(request, query){
       calc._checkQuery(query);
-      week = calc.weeks.getWeek(request.bizId, request.week);
+      week = request.fullWeek;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived' ).filter(tx => tx.DaaS).length;
         case 'pretip': return Math.abs(week.payout.DaaSPreTip);

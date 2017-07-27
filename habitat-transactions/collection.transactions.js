@@ -367,6 +367,9 @@ class transactionsCollection extends Mongo.Collection {
 }
 
 transactions = new transactionsCollection("transactions");
+if(Meteor.isServer){
+  transactions._ensureIndex({ week: 1, sellerId: 1});  
+}
 
 const apiKey = 'AIzaSyCyFtEt80IOFCQ_mgvXDwAFKNNCewjeEWo';
 
