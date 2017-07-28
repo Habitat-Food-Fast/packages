@@ -77,12 +77,11 @@ runner = {
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
                   const usr = Meteor.users.findOne(workerId ? workerId : {username: userShift.data.data.email});
-                  console.log(usr.location);
                   return {
                     shift: shift,
                     staffJoyUser: userShift.data.data,
                     user: usr,
-                    location: usr.location,
+                    location: usr && usr.location ? usr.location : '',
                   };
                 }
               } catch (e) {
