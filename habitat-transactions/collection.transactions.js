@@ -154,8 +154,8 @@ class transactionsCollection extends Mongo.Collection {
     if(Meteor.isClient){
       console.warn("cant add route info on client");
     } else {
-      tx = transactions.findOne(txId);
-      HTTP.call('GET', gmapsUrl(tx), (err, result) => {
+      tx = transactions.findOne({_id: txId});
+      HTTP.call('GET', gmapsUrl(txId), (err, result) => {
         if(err){ console.warn(err.message); } else {
           if(!result.data.routes.length){
               console.warn(`no routes found for ${txId}`);
@@ -368,7 +368,7 @@ class transactionsCollection extends Mongo.Collection {
 
 transactions = new transactionsCollection("transactions");
 if(Meteor.isServer){
-  transactions._ensureIndex({ week: 1, sellerId: 1});  
+  transactions._ensureIndex({ week: 1, sellerId: 1});
 }
 
 const apiKey = 'AIzaSyCyFtEt80IOFCQ_mgvXDwAFKNNCewjeEWo';
@@ -382,17 +382,19 @@ deliveryAddressCoords = (txId) => {
 
 import geolib from 'geolib';
 
-gmapsUrl = (tx) => {
+gmapsUrl = (txId) => {
+  check(txId, String);
+  const tx = transactions.findOne(txId);
   const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
   const originCoords = biz.geometry.coordinates;
 
   const origin = `origin=${originCoords[1]},${originCoords[0]}`;
-  const coords = deliveryAddressCoords(tx._id);
+  const coords = deliveryAddressCoords(txId);
 
   const destination = `destination=${coords.lng},${coords.lat}`;
 
   compass = geolib.getCompassDirection( {latitude: 52.518611, longitude: 13.408056}, {latitude: 51.519475, longitude: 7.46694444} );
-  transactions.update(tx._id, {$set: { compassDirection: compass }});
+  transactions.update(txId, {$set: { compassDirection: compass }});
 
   const stopsAlongTheWay = false;
   const wayPoints = !stopsAlongTheWay ? '' : `&waypoints=optimize:true|${stopsAlongTheWay}`;
