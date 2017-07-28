@@ -18,7 +18,7 @@ runner = {
     const dropoffInString = this.getTimeTillDropoff(t.deliveredAtEst);
     const pickupInString = this.getTimeTillDropoff(moment(t.pickupAtEst).add(4, 'hours').format());
 
-    const update = { $set: { pickupInString, dropoffInString, dropoffInMs }}; console.log(update)
+    const update = { $set: { pickupInString, dropoffInString, dropoffInMs }};
     return transactions.update(t._id, update, callback);
   },
   watchPendingOrders () {
