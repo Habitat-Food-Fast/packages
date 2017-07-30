@@ -31,7 +31,7 @@ transactions.methods = {
     name: 'transactions.methods.handleOrder',
     validate: new SimpleSchema({
       'order': { type: Array},
-      'order.$': { type: String },
+      'order.$': { type: Object },
       'order.$.fromFeatured': { type: Boolean, optional: true, },
       'order.$.saleItemId': { type: String },
       'order.$.itemInstructions': { type: String, optional: true },
