@@ -17,7 +17,9 @@ runner = {
     const dropoffInMs = t.deliveredAtEst - Date.now();
     const dropoffInString = this.getTimeTillDropoff(t.deliveredAtEst);
     const pickupInString = this.getTimeTillDropoff(moment(t.pickupAtEst).add(4, 'hours').format());
-    return transactions.update(t._id, { $set: { pickupInString, dropoffInString, dropoffInMs }}, callback);
+
+    const update = { $set: { pickupInString, dropoffInString, dropoffInMs }};
+    return transactions.update(t._id, update, callback);
   },
   watchPendingOrders () {
     Habitats.find().forEach((h) => {
@@ -77,12 +79,11 @@ runner = {
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
                   const usr = Meteor.users.findOne(workerId ? workerId : {username: userShift.data.data.email});
-                  console.log(usr.location);
                   return {
                     shift: shift,
                     staffJoyUser: userShift.data.data,
                     user: usr,
-                    location: usr.location,
+                    location: usr && usr.location ? usr.location : '',
                   };
                 }
               } catch (e) {

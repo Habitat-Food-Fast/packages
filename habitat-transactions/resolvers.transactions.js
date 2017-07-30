@@ -142,7 +142,10 @@ transactions.csv = {
       },
     },
     payout: {
-      _progress(token, progress) { streamer.emit(token, progress); },
+      _progress(token, progress) {
+        console.log(`payout progress`, progress)
+        streamer.emit(token, progress);
+      },
       DaaS(bizId, weekNum, token, send=true){
         const bp = businessProfiles.findOne(bizId);
         const week = weeks.findOne({week: weekNum});
