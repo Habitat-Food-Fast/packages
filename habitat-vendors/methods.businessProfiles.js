@@ -16,15 +16,17 @@ businessProfiles.methods = {
       company_type: { type: String },
       company_picture: { type: String },
       method: { type: String },
-      geometry: {type: Object },
+      geometry: {type: Object, optional: true },
       'geometry.type': { type: String },
       'geometry.coordinates': { type: Array },
-      'geometry.coordinates$': { type: String },
+      'geometry.coordinates.$': { type: Number },
       'geometry.interpolated': {type: Boolean, optional: true },
       notificationPreference: { type: String },
       prep_time: { type: Number },
     }).validator(),
     run() {
+      console.log(arguments[0]);
+
       if (!Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         throw new Meteor.Error('501', 'Please sign in as an admin');
       } else {
@@ -46,10 +48,14 @@ businessProfiles.methods = {
           businesses: bizArr,
           vendor: true
         };
-        Accounts.createUser(obj);
+        console.warn(`creatingUser`);
+        const id = Accounts.createUser(obj); console.log(`new userid`, id);
+        console.warn(`about to insert bizProf`)
         return businessProfiles.insert(bizObj, (err, res) => {
+          console.warn(`after insert`)
           if (err) {
-            throwError(err);
+            console.warn(`err`);
+            throwError({reason: err.message});
           } else {
             console.warn(`result of insert ${res}`);
             const bp = businessProfiles.findOne(res);

@@ -31,7 +31,7 @@ businessProfiles.schema = new SimpleSchema({
   'categories.$': { type: String },
   transactionCount: { type: Number },
   order: { type: Number, optional: true, min: 0 },
-  geometry: { type: Object, blackbox: true, },
+  geometry: { type: Object, blackbox: true, optional: true, },
   direct_deposit: { type: Boolean, optional: true},
   catering: { type: Boolean, optional: true},
   habitat_exclusive: { type: Boolean, optional: true},

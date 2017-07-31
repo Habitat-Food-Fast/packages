@@ -2,9 +2,14 @@ import { _ } from 'underscore';
 
 class businessProfilesCollection extends Mongo.Collection {
   insert(doc, callback) {
+    console.warn(`inside bizProf insert`)
     transactions.methods.searchForAddress.call({address: doc.company_address}, (err, res) => {
-      if(err) { throwError(err.message); } else if(res && res.features.length){
-        return super.insert(_.extend(doc, {
+      console.warn(`finished searchforaddress`)
+      if(err) { throwError({reason: err.message}); } else if(res && res.features.length){
+        console.warn(`found a location..., super insert`)
+        const geom = res.features[0].geometry;
+        console.log(geom);
+        doc = _.extend(doc, {
           prep_time: parseInt(doc.prep_time),
           open: false,
           featured: false,
@@ -16,18 +21,29 @@ class businessProfilesCollection extends Mongo.Collection {
           transactionCount: 0,
           employees: [],
           weeklyHours: this.setHours(),
-          geometry: res.features[0].geometry,
+          geometry: geom,
           backend_habitat: Habitats.findOne(doc.habitat[0]).name,
           grubhubId: doc.grubhubId
-        }), (err, newBizId) => {
-          if(err) { throwError(err.message); }
-          const bp = businessProfiles.findOne(newBizId);
-            Meteor.call('createApiKey', bp.uid, (err, res) => {
-              if (err) {
-                console.log(err);
-              }
-            });
-        }, callback);
+        }); console.log(doc);
+        try {
+          super.insert(doc, (err, newBizId) => {
+            console.warn(`finishedbpinsert`, newBizId);
+            if(err) { console.log('inside error'); throwError({reason: err.message}); }
+            const bp = businessProfiles.findOne(newBizId);
+              console.warn(`creating apikey for ${bp.uid}`);
+              Meteor.call('createApiKey', bp.uid, (err, res) => {
+                if (err) {
+                  console.log(err);
+                }
+              });
+          }, callback);
+        } catch (e) {
+          console.log('catch')
+          console.log(e);
+          throwError({reason: e.message})
+        }
+      } else {
+        console.warn(`an unexpected error has occured`)
       }
     });
   }
