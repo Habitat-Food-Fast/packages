@@ -701,34 +701,6 @@ Meteor.methods({
         }
       }
     },
-
-    alertRunnerReady(txId) {
-      const tx = transactions.findOne(txId);
-      if (tx && tx.sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
-        const runnerPhone = Meteor.users.findOne(tx.runnerId).profile.phone;
-        if (!runnerPhone) { return 'no runner'; }
-        const msg = `Order #${tx.orderNumber} from ${tx.company_name} is ready for pickup`;
-        transactions.update(txId, {$set: {readyTextSent: true}});
-        twilio.messages.create({
-          to: runnerPhone, // Any number Twilio can deliver to
-          from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
-          body: msg,
-        }, (err, responseData) => {
-            if (!err) {
-              console.log(responseData.body);
-            } else {
-              //invalid number
-              if(err.code === 21211) {
-                const parsedWrongNum = err.message.match(/[0-9]+/)[0];
-                console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
-              } else {
-                console.log(err);
-              }
-            }
-          }
-        );
-      }
-    },
     sendStatusUpdateText(phone, firstName, msg, isAdmin){
       if(isAdmin){
         const result = HTTP.post(
