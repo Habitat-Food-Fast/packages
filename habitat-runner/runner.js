@@ -282,20 +282,14 @@ staffJoy = {
 runnerPayout = {
   _perOrderRate: 1.5,
   _hourlyRate: 4,
+
+  //given a runner and timespan, return all transactions within that period
   getOrders(runnerId, timespan, status=transactions.completedAndArchived()) {
-    query = {
-      method: 'Delivery', status: {$in: status }, runnerId: runnerId,
-    };
-    const txs = transactions.find(query).fetch();
-
-    start = timespan.startTime || timespan.start;
-    end = timespan.endTime || timespan.end;
-    after = txs.filter(t =>
-      t.timeRequested > new Date(start).getTime() &&
-      t.timeRequested < new Date(end).getTime()
+    check(runnerId, String); check(timespan, Object);
+    return transactions.find({ method: 'Delivery', status: {$in: status }, runnerId: runnerId }).fetch().filter(t =>
+      t.timeRequested > new Date(timespan.startTime || timespan.start).getTime() &&
+      t.timeRequested < new Date(timespan.endTime || timespan.end).getTime()
     );
-
-    return after;
   },
   //maps through all shifts in a timespan, summing hours for each userId
   getAllShifts(shifts){
