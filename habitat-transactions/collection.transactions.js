@@ -5,7 +5,7 @@ Deliveries = new Meteor.Collection("deliveries");
 longCall = Meteor.settings.devMode ? 40000 : 120000;
 shortCall = Meteor.settings.devMode ? 40000 : 90000;
 finalDelay = Meteor.settings.devMode ? 40000 : 90000;
-import { Alerts } from '/imports/api/alerts/collection.alerts.js';
+import {Alerts} from '/imports/api/alerts/collection.alerts.js';
 
 class transactionsCollection extends Mongo.Collection {
   insert(doc) {
