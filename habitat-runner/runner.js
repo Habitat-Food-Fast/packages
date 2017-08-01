@@ -387,9 +387,6 @@ runnerPayout = {
   // }
 };
 
-
-
-
 runner.payouts = {
   //staffjoy doens't have a query for ALL users,
   //so have to query per habitat,
@@ -510,7 +507,10 @@ runner.payouts = {
       progress = index / workers.length;
       this._progress(token, progress);
       console.log(worker.email, 'staffjoy email')
-      const runnerUser = Meteor.users.findOne({username: worker.email});
+      const runnerUser = Meteor.users.findOne({ $or: [
+        {username: worker.email},
+        {_id: worker.internal_id},
+      ]});
 
       if(runnerUser){
         console.log(runnerUser.profile.email)
@@ -518,7 +518,7 @@ runner.payouts = {
         const allShifts = runner.payouts.getShiftHours(week, worker.id);
         return runner.payouts.payRef(worker, allShifts, runnerTxs, runnerUser._id, week.week);
       } else {
-        console.warn(`no staffjoy email for`, worker.email);
+        console.warn(`not found for`, worker.email, worker.internal_id);
       }
     }).filter(doc => doc && doc.transactionCount > 0 || doc &&  doc.daasCount > 0);
   }
