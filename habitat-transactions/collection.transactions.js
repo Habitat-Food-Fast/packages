@@ -154,8 +154,10 @@ class transactionsCollection extends Mongo.Collection {
     if(Meteor.isClient){
       console.warn("cant add route info on client");
     } else {
-      tx = transactions.findOne({_id: txId});
-      HTTP.call('GET', gmapsUrl(txId), (err, result) => {
+      check(txId, String);
+      const tx = transactions.findOne(txId);
+      const url = gmapsUrl(txId); console.warn(`gmaps ${url}`);
+      HTTP.call('GET', url, (err, result) => {
         if(err){ console.warn(err.message); } else {
           if(!result.data.routes.length){
               console.warn(`no routes found for ${txId}`);
@@ -385,7 +387,7 @@ import geolib from 'geolib';
 gmapsUrl = (txId) => {
   check(txId, String);
   const tx = transactions.findOne(txId);
-  const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
+  const biz = businessProfiles.findOne(tx.sellerId);
   const originCoords = biz.geometry.coordinates;
 
   const origin = `origin=${originCoords[1]},${originCoords[0]}`;
