@@ -13,7 +13,8 @@ runner = {
   getAvailableOrders(hab){ return transactions.find({habitat: hab, status: 'pending_runner'}).fetch(); },
   runnerText(txId) { return `Open orders on Habitat: \n ${this.generateOrderList(txId)}` + '\n To accept, text back the order number. To dropoff, text back the order number again'; },
   getTimeTillDropoff(time){ return moment(time).from(moment(Date.now())); },
-  updateDropoffInfo(t, callback) {
+  updateDropoffInfo(txId, callback) {
+    const t = transactions.findOne(txId);
     const dropoffInMs = t.deliveredAtEst - Date.now();
     const dropoffInString = this.getTimeTillDropoff(t.deliveredAtEst);
     const pickupInString = this.getTimeTillDropoff(moment(t.pickupAtEst).add(4, 'hours').format());
@@ -28,7 +29,7 @@ runner = {
         habitat: h._id}, {sort: {deliveredAtEst: -1}
       }).forEach((t) => {
         if(typeof t.deliveredAtEst !== 'number') { console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); }
-          this.updateDropoffInfo(t, (err) => { if(err) { console.warn(err.message); }});
+          this.updateDropoffInfo(t._id, (err) => { if(err) { console.warn(err.message); }});
       });
     });
   },
