@@ -148,9 +148,6 @@ transactions.methods = {
           if(err) { throwError(err.message); }
         });
       }
-      DDPenv().call('sendRunnerPing', tx._id, runnerId=false, initialPing=true, (err) => {
-        if(err) { console.warn(err.message); }
-      });
       }
     });
   }
@@ -242,7 +239,7 @@ sendReceiptImage: new ValidatedMethod({
       transactions.update(tx._id, { $set: {
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
-        DDPenv().call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
+        DDPenv().call('sendRunnerPing', tx._id, runnerId, (err, res) => {
           if(err) { throwError(err.message); }
         });
       });
@@ -276,7 +273,7 @@ sendReceiptImage: new ValidatedMethod({
                 from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
                 body: `${tx.orderNumber} reassigned`,
               }, (err, responseData) => { } );
-              DDPenv().call('sendRunnerPing', txId, runId, false);
+              DDPenv().call('sendRunnerPing', txId, runId);
             }
           }
         });

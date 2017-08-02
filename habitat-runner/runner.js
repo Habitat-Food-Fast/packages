@@ -108,22 +108,6 @@ runner = {
         );
       });
   },
-  alertShifted(txId, habId){
-    runner.getShifted(false, false, [habId], 'runner').filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
-      twilio.messages.create({
-        to: runner.user.profile.phone,
-        from: Meteor.settings.twilio.twilioPhone,
-        body: this.runnerText(txId),
-      }, (err, responseData) => {
-          if (!err) {
-            return responseData.success;
-          } else {
-            console.log(err.message);
-          }
-        }
-      );
-    });
-  },
   generateOrderList(txId) {
     const hab = transactions.findOne(txId).habitat;
     return this.getAvailableOrders(hab).reduce((sum, tx) => { return sum + `${tx.company_name} ${tx.orderNumber}: to ${tx.deliveryAddress} ${moment(tx.deliveredAtEst).fromNow(true)}` + '\n'; }, '');
@@ -155,7 +139,6 @@ runner = {
         txId: tx._id,
         isAdmin: false,
       }, (err) => { if(err) {console.warn(err.message);} else {
-        if(transactions.find({status: 'pending_runner'}).count()){ this.alertShifted(tx._id, tx.habitat); }
         if(req.response){
           xml = `<Response><Sms>Order #${tx.orderNumber} dropped off. </Sms></Response>`;
           req.response.writeHead(200, {'Content-Type': 'text/xml'});
@@ -239,11 +222,10 @@ VENDOR RECEIPT: ${tx.textMessage}`;
 };
 
 Meteor.methods({
-sendRunnerPing(txId, runnerId, initialPing){
+sendRunnerPing(txId, runnerId){
   if (Meteor.isServer) {
     const tx = transactions.findOne(txId);
-    return initialPing ? runner.alertShifted(txId, tx.habitat) :
-      twilio.messages.create({
+    return twilio.messages.create({
         to: Meteor.users.findOne(runnerId).profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
         body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
