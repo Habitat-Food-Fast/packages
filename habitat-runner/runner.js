@@ -11,7 +11,7 @@ if (Meteor.isServer) {
 
 runner = {
   getAvailableOrders(hab){ return transactions.find({habitat: hab, status: 'pending_runner'}).fetch(); },
-  runnerText(txId) { return `Open orders on Habitat: \n ${this.generateOrderList(txId)}` + '\n To accept, text back the order number. To dropoff, text back the order number again'; },
+  runnerText(txId) { return `Open at ${moment().subtract({hours: 4}).format('hh:mm:ss a')}: \n ${this.generateOrderList(txId)}` + '\n To accept, text back the order number. To dropoff, text back the order number again'; },
   getTimeTillDropoff(time){ return moment(time).from(moment(Date.now())); },
   updateDropoffInfo(txId, callback) {
     const t = transactions.findOne(txId);
@@ -126,7 +126,7 @@ runner = {
   },
   generateOrderList(txId) {
     const hab = transactions.findOne(txId).habitat;
-    return this.getAvailableOrders(hab).reduce((sum, tx) => { return sum + `${tx.company_name} ${tx.orderNumber}: due ${moment(tx.deliveredAtEst).fromNow(true)}` + '\n'; }, '');
+    return this.getAvailableOrders(hab).reduce((sum, tx) => { return sum + `${tx.company_name} ${tx.orderNumber}: to ${tx.deliveryAddress} ${moment(tx.deliveredAtEst).fromNow(true)}` + '\n'; }, '');
   },
   parseable(tx, orderNumber) {
     return tx && runner.getAvailableOrders(tx.habitat).map(t => t.orderNumber).includes(orderNumber) ||
@@ -202,7 +202,7 @@ runner = {
     return req.response.end(xml);
   },
 
-generateOrderInfo(tx, runner) {
+generateOrderInfo(tx) {
   const bizProf = businessProfiles.findOne(tx.DaaS ? tx.buyerId : tx.sellerId);
   const userProf = Meteor.users.findOne(tx.buyerId);
   deliveryInstructions = tx.deliveryInstructions ? `(${tx.deliveryInstructions})` : '';
