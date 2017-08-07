@@ -637,10 +637,14 @@ Meteor.methods({
         transactions.update(tx, {$set: {prepTime: time, readyAt: new Date(Date.now() + (time * 60000))}});
       }
     },
-    confirmPickupTime(tx) {
+    confirmPickupTime(tx, unset) {
       const item = transactions.findOne(tx);
       if (item.runnerId === Meteor.userId() || Meteor.user().roles.includes('admin')) {
-        transactions.update(tx, {$set: {pickedUpAt: Date.now()}});
+        if (unset) {
+          transactions.update(tx, {$set: {pickedUpAt: null}});
+        } else {
+          transactions.update(tx, {$set: {pickedUpAt: Date.now()}});
+        }
       }
     },
     editDaaSInfo(id, state) {
