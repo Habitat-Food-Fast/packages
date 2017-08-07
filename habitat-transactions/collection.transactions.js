@@ -37,11 +37,11 @@ class transactionsCollection extends Mongo.Collection {
       deliveryInstructions: doc.deliveryInstructions,
       geometry: doc.loc, //where the order is getting delivered to
       company_address: bizProf.company_address,
+      company_name: bizProf.company_name,
       company_geometry: bizProf.geometry,
       buyerId: !doc.DaaS ? doc.buyerId : doc.sellerId,
       customer: this.customerItems(usr, doc),
       sellerId: bizProf._id,
-      company_name: bizProf.company_name,
       createdAt: Date.now(),
       createdAtHuman: Date(),
       timeRequested: 0,
@@ -62,7 +62,9 @@ class transactionsCollection extends Mongo.Collection {
     }), (err, txId) => {
       tx = transactions.findOne(txId);
       if(err) { throwError(err.message); } else {
-        if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
+        if(tx.method === 'Delivery') {
+          this.addRouteInfo(txId)
+        }
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
           transactions.request(txId, {});
         }
@@ -80,10 +82,8 @@ class transactionsCollection extends Mongo.Collection {
     let schema = _baseSchema.extend(_customerSchema).extend(_timingSchema).extend(_deliverySchema).extend(_payRefSchema);
     if (order.plainOrder && order.plainOrder.length) { schema.extend(_orderSchema);}
     if(order.method === 'Delivery' || order.isDelivery){ order = _.extend(order, handleDelivery(order)); }
-
     const cleanDoc = schema.clean(order);
     schema.validate(cleanDoc);
-    console.log(cleanDoc);
     return cleanDoc;
   }
   forceInsertSingle(doc){ if(!transactions.findOne(doc._id)){ return super.insert(doc); } }
@@ -196,7 +196,7 @@ class transactionsCollection extends Mongo.Collection {
     tx = transactions.findOne(txId);
     const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
-    req = {
+    const req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),
       humanTimeRequested: Date(),
@@ -209,11 +209,11 @@ class transactionsCollection extends Mongo.Collection {
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
-    };
+    }; console.log(req, 'requesting');
     return req;
   }
   scheduledRequestItems(txId) {
-    req = {
+    const req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),
       humanTimeRequested: Date(),
@@ -273,11 +273,10 @@ class transactionsCollection extends Mongo.Collection {
         : '',
     })}, (err, res) => {
       if (err) {
-        throwError(err);
+        throwError({reason: err.message});
       } else {
-        if (!trans.DaaS) {
-          handleInitialVendorContact(id);
-        }
+        if(trans.method === 'Delivery'){ runner.updateDropoffInfo(id); }
+        if (!trans.DaaS) { handleInitialVendorContact(id); }
       }
     });
   }
