@@ -37,11 +37,11 @@ class transactionsCollection extends Mongo.Collection {
       deliveryInstructions: doc.deliveryInstructions,
       geometry: doc.loc, //where the order is getting delivered to
       company_address: bizProf.company_address,
+      company_name: bizProf.company_name,
       company_geometry: bizProf.geometry,
       buyerId: !doc.DaaS ? doc.buyerId : doc.sellerId,
       customer: this.customerItems(usr, doc),
       sellerId: bizProf._id,
-      company_name: bizProf.company_name,
       createdAt: Date.now(),
       createdAtHuman: Date(),
       timeRequested: 0,
@@ -62,7 +62,9 @@ class transactionsCollection extends Mongo.Collection {
     }), (err, txId) => {
       tx = transactions.findOne(txId);
       if(err) { throwError(err.message); } else {
-        if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
+        if(tx.method === 'Delivery') {
+          this.addRouteInfo(txId)
+        }
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
           transactions.request(txId, {});
         }
@@ -275,9 +277,8 @@ class transactionsCollection extends Mongo.Collection {
       if (err) {
         throwError(err);
       } else {
-        if (!trans.DaaS) {
-          handleInitialVendorContact(id);
-        }
+        if(trans.method === 'Delivery'){ runner.updateDropoffInfo(id); }
+        if (!trans.DaaS) { handleInitialVendorContact(id); }
       }
     });
   }

@@ -174,8 +174,19 @@ class businessProfilesCollection extends Mongo.Collection {
     } : _.extend(rates,  {
       totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
       totalWithTax: totalWithTax,
-      vendorPayout: tx.DaaS ? - DaaSTotal : txPayout,
+      vendorPayout: getPayout(tx, txPayout),
     });
+  }
+  getPayout(tx, txPayout){
+    if(tx.DaaS){
+      if(tx.method === 'Pickup'){
+        return 0;
+      } else {
+        return - DaaSTotal;
+      }
+    } else {
+      return txPayout;
+    }
   }
   cateringPrice(bags) {
     const cat = Settings.findOne({name: 'cateringPrice'});
@@ -215,15 +226,6 @@ businessProfiles.allow({
   update(){ return Roles.userIsInRole(Meteor.userId(), ['admin']); }
 });
 
-businessProfiles.initEasySearch( ['company_name', 'company_type'], {
-  'limit': 5,
-  'use': 'mongo-db',
-  'convertNumbers': false,
-  'sort': function() {
-    return {open: -1}
-  }
-});
-
 businessProfiles.find({}).observeChanges((id, fields) => {
   if(fields.open && fields.open === false){
     const extVendorId = transactions.findOne({partnerName: Ontray.owner}).externalVendorId;
@@ -242,3 +244,9 @@ generateBizPass = function (company_name) {
           ("0" + Math.floor(Math.random() * (9999 - 0 + 1)))
           .substr(-4);
 };
+
+businessProfiles.initEasySearch(['company_name', 'company_email', 'company_address'], {
+  'limit': 20,
+  'use': 'mongo-db',
+  'convertNumbers': false
+});

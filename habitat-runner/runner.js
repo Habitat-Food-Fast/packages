@@ -11,9 +11,10 @@ if (Meteor.isServer) {
 
 runner = {
   getAvailableOrders(hab){ return transactions.find({habitat: hab, status: 'pending_runner'}).fetch(); },
-  runnerText(txId) { return `Open orders on Habitat: \n ${this.generateOrderList(txId)}` + '\n To accept, text back the order number. To dropoff, text back the order number again'; },
+  runnerText(txId) { return `Open at ${moment().subtract({hours: 4}).format('hh:mm:ss a')}: \n ${this.generateOrderList(txId)}` + '\n To accept, text back the order number. To dropoff, text back the order number again'; },
   getTimeTillDropoff(time){ return moment(time).from(moment(Date.now())); },
-  updateDropoffInfo(t, callback) {
+  updateDropoffInfo(txId, callback) {
+    const t = transactions.findOne(txId);
     const dropoffInMs = t.deliveredAtEst - Date.now();
     const dropoffInString = this.getTimeTillDropoff(t.deliveredAtEst);
     const pickupInString = this.getTimeTillDropoff(moment(t.pickupAtEst).add(4, 'hours').format());
@@ -28,7 +29,7 @@ runner = {
         habitat: h._id}, {sort: {deliveredAtEst: -1}
       }).forEach((t) => {
         if(typeof t.deliveredAtEst !== 'number') { console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); }
-          this.updateDropoffInfo(t, (err) => { if(err) { console.warn(err.message); }});
+          this.updateDropoffInfo(t._id, (err) => { if(err) { console.warn(err.message); }});
       });
     });
   },
@@ -107,25 +108,9 @@ runner = {
         );
       });
   },
-  alertShifted(txId, habId){
-    runner.getShifted(false, false, [habId], 'runner').filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
-      twilio.messages.create({
-        to: runner.user.profile.phone,
-        from: Meteor.settings.twilio.twilioPhone,
-        body: this.runnerText(txId),
-      }, (err, responseData) => {
-          if (!err) {
-            return responseData.success;
-          } else {
-            console.log(err.message);
-          }
-        }
-      );
-    });
-  },
   generateOrderList(txId) {
     const hab = transactions.findOne(txId).habitat;
-    return this.getAvailableOrders(hab).reduce((sum, tx) => { return sum + `${tx.company_name} ${tx.orderNumber}: due ${moment(tx.deliveredAtEst).fromNow(true)}` + '\n'; }, '');
+    return this.getAvailableOrders(hab).reduce((sum, tx) => { return sum + `${tx.company_name} ${tx.orderNumber}: to ${tx.deliveryAddress} ${moment(tx.deliveredAtEst).fromNow(true)}` + '\n'; }, '');
   },
   parseable(tx, orderNumber) {
     return tx && runner.getAvailableOrders(tx.habitat).map(t => t.orderNumber).includes(orderNumber) ||
@@ -154,7 +139,6 @@ runner = {
         txId: tx._id,
         isAdmin: false,
       }, (err) => { if(err) {console.warn(err.message);} else {
-        if(transactions.find({status: 'pending_runner'}).count()){ this.alertShifted(tx._id, tx.habitat); }
         if(req.response){
           xml = `<Response><Sms>Order #${tx.orderNumber} dropped off. </Sms></Response>`;
           req.response.writeHead(200, {'Content-Type': 'text/xml'});
@@ -201,7 +185,7 @@ runner = {
     return req.response.end(xml);
   },
 
-generateOrderInfo(tx, runner) {
+generateOrderInfo(tx) {
   const bizProf = businessProfiles.findOne(tx.DaaS ? tx.buyerId : tx.sellerId);
   const userProf = Meteor.users.findOne(tx.buyerId);
   deliveryInstructions = tx.deliveryInstructions ? `(${tx.deliveryInstructions})` : '';
@@ -238,11 +222,10 @@ VENDOR RECEIPT: ${tx.textMessage}`;
 };
 
 Meteor.methods({
-sendRunnerPing(txId, runnerId, initialPing){
+sendRunnerPing(txId, runnerId){
   if (Meteor.isServer) {
     const tx = transactions.findOne(txId);
-    return initialPing ? runner.alertShifted(txId, tx.habitat) :
-      twilio.messages.create({
+    return twilio.messages.create({
         to: Meteor.users.findOne(runnerId).profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
         body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
