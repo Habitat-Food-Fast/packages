@@ -174,10 +174,10 @@ class businessProfilesCollection extends Mongo.Collection {
     } : _.extend(rates,  {
       totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
       totalWithTax: totalWithTax,
-      vendorPayout: this.getPayout(tx, txPayout),
+      vendorPayout: this.getPayout(tx, txPayout, DaaSTotal),
     });
   }
-  getPayout(tx, txPayout){
+  getPayout(tx, txPayout, DaaSTotal){
     if(tx.DaaS){
       if(tx.method === 'Pickup'){
         return 0;
