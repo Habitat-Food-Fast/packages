@@ -174,8 +174,19 @@ class businessProfilesCollection extends Mongo.Collection {
     } : _.extend(rates,  {
       totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
       totalWithTax: totalWithTax,
-      vendorPayout: tx.DaaS ? - DaaSTotal : txPayout,
+      vendorPayout: getPayout(tx, txPayou),
     });
+  }
+  getPayout(tx, txPayout){
+    if(tx.DaaS){
+      if(tx.method === 'Pickup'){
+        return 0;
+      } else {
+        return - DaaSTotal;
+      }
+    } else {
+      return txPayout;
+    }
   }
   cateringPrice(bags) {
     const cat = Settings.findOne({name: 'cateringPrice'});
