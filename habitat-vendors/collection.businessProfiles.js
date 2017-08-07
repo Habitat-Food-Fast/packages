@@ -174,7 +174,7 @@ class businessProfilesCollection extends Mongo.Collection {
     } : _.extend(rates,  {
       totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
       totalWithTax: totalWithTax,
-      vendorPayout: getPayout(tx, txPayou),
+      vendorPayout: getPayout(tx, txPayout),
     });
   }
   getPayout(tx, txPayout){
