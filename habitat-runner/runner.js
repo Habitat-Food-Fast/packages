@@ -59,7 +59,10 @@ runner = {
             max_hours_per_workweek: 60,
             name, email, internal_id,
           }};
-          const worker = HTTP.call(`POST`, url, params);
+          const data = HTTP.call(`POST`, url, params);
+          console.log(data.data);
+          Meteor.users.update(internal_id, {$set: {'profile.staffjoyId': data.data.id}})
+          return data.data;
       } catch (e) {
         console.warn(`error CREATING data ${e}`);
       }
@@ -258,6 +261,22 @@ sendRunnerPing(txId, runnerId, initialPing){
         }
       );
   }
+},
+  retireRunner(runnerId){
+    const usr = Meteor.users.findOne(runnerId);
+    if(usr && usr.roles.includes('admin')){
+      tx = transactions.findOne({runnerId}, {sort: {timeRequested: -1}});
+      Meteor.users.update(runnerId, {$set: {
+        retired: {
+          at: new Date(),
+          lastOrder: tx ? tx.humanTimeRequested : false,
+          reason: '',
+        },
+        'profile.staffjoyId': false,
+      }}, (err) => {
+        if(err) { console.warn(err.message); }
+      });
+    }
   }
 });
 
@@ -277,6 +296,31 @@ staffJoy = {
     // .filter(w => Meteor.users.findOne({username: w.email}) ? true : false);
     return res;
   },
+  all(){
+    habs =  Habitats.find().map((h) => {
+      try {
+        const res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${h.staffJoyId}/roles/${h.staffJoyRunnerRole}/users`), {
+          auth: this._auth,
+        });
+        const data = res.data.data;
+        return data;
+      } catch (err) {
+        console.warn(err);
+        throwError(err)
+      }
+    });
+
+    return _.compact(_.uniq(_.flatten(habs), usr => usr.internal_id).map((u) => {
+      if(!u.internal_id){ console.warn(`no internal id for ${u.email}`); return; } else {
+        if(!Meteor.users.findOne(u.internal_id)){
+          console.warn(`no METEOR user for ${u.name}`);
+          return u.id;
+        } else {
+          return u;
+        }
+      }
+    }))
+  }
 };
 
 runnerPayout = {
