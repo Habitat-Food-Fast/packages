@@ -163,7 +163,7 @@ confirmDropoff: new ValidatedMethod({
   run({ txId, isAdmin, tip }) {
     const tx = transactions.findOne(txId);
     const now = Date.now();
-    const tip = tip || tx.payRef.tip || 0;
+    tip = tip || tx.payRef.tip || 0;
     console.warn("API.dropoffOrder, tip:", tip, 'payRef.tip', tx.payRef.tip);
     transactions.update(txId, {$set: {
       status: 'completed',
