@@ -66,7 +66,6 @@ businessProfiles.methods = {
       }
   }
   }),
-
   rearrangeCategories: new ValidatedMethod({
     name: 'businessProfiles.methods.rearrangeCategories',
     validate: new SimpleSchema({
