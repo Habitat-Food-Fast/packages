@@ -163,27 +163,19 @@ confirmDropoff: new ValidatedMethod({
   run({ txId, isAdmin, tip }) {
     const tx = transactions.findOne(txId);
     const now = Date.now();
-    const update = {
+    tip = tip || tx.payRef.tip || 0;
+    console.warn("API.dropoffOrder, tip:", tip, 'payRef.tip', tx.payRef.tip);
+    transactions.update(txId, {$set: {
       status: 'completed',
       dropoffTime: now,
       dropoffVariationMin: calc._roundToTwo(
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
       settledByAdmin: isAdmin,
-      cashTip: tx.DaaS && tx.DaaSType === 'cash'
-
-    };
-
-    transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
-      if(!tx.payRef.tip){
-        transactions.update(txId, { $set: {
-          'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
-        }});
-      }
-      businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
-        if(err) { console.warn(err.message); }
-      });
-    }});
+      cashTip: tx.DaaS && tx.DaaSType === 'cash',
+      'payRef.tip': tip,
+    }}, (err) => {if (err) { throw new Meteor.Error(err.message); } });
+    console.warn("API.dropoffOrder, tip has been set to", tip)
 
   }
 }),
