@@ -350,9 +350,7 @@ sendReceiptImage: new ValidatedMethod({
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
-            res = JSON.parse(result.content);
-            console.log(res);
-            return res;
+            return JSON.parse(result.content);
           }
         } catch (e) {
           JSON.stringify(e, null, 2);
