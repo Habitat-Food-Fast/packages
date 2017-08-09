@@ -1,17 +1,9 @@
 
 Settings.schema = [
   {
-    "_id" : "7eGouYcmBiiwHampy",
-    "name" : "feedRender",
-    "vendor" : false
-  }, {
     "_id" : "8DhQd3A2m4giadsfcWX",
     "name" : "orderTypeRestriction",
     "type" : "pickup"
-  }, {
-    "_id" : "AREGkctb783x3vtTi",
-    "name" : "deliveryFee",
-    "fee" : 2.99
   }, {
     "_id" : "bQdCEGig6tnKDD3ja",
     "name" : "mealsOpen",
@@ -37,10 +29,6 @@ Settings.schema = [
     "name" : "globalTipAmount",
     "amount" : 1
   }, {
-    "_id" : "56b382a1a826caa93dd9986e",
-    "name" : "threeFeedsVisible",
-    "allVisible" : false
-  }, {
     "_id" : "HwQC39gjnn9PtpbQc",
     "name" : "sortMealsFeed",
     "by" : "order"
@@ -48,10 +36,6 @@ Settings.schema = [
     "_id" : "7eFpuYcmBiiwHghit",
     "name" : "weeklyMilliCount",
     "count" : 479580881
-  }, {
-    "_id" : "56d8838c924807212c656521",
-    "name" : "parentDiscountProp",
-    "prop" : ""
   }, {
     "_id" : "zSg3hHA5nDAFMan35",
     "name" : "parentPromos",
