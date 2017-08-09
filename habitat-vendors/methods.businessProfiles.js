@@ -54,7 +54,7 @@ businessProfiles.methods = {
         return businessProfiles.insert(bizObj, (err, res) => {
           console.warn(`after insert`)
           if (err) {
-            console.warn(`err`);
+            console.warn(err);
             throwError({reason: err.message});
           } else {
             console.warn(`result of insert ${res}`);
