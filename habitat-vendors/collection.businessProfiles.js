@@ -2,50 +2,31 @@ import { _ } from 'underscore';
 
 class businessProfilesCollection extends Mongo.Collection {
   insert(doc, callback) {
-    console.warn(`inside bizProf insert`)
-    transactions.methods.searchForAddress.call({address: doc.company_address}, (err, res) => {
-      console.warn(`finished searchforaddress`)
-      if(err) { throwError({reason: err.message}); } else if(res && res.features.length){
-        console.warn(`found a location..., super insert`)
-        const geom = res.features[0].geometry;
-        console.log(geom);
-        doc = _.extend(doc, {
-          prep_time: parseInt(doc.prep_time),
-          open: false,
-          featured: false,
-          clicks: 0,
-          DaaS: true,
-          backend_name: doc.company_name,
-          order: businessProfiles.find().count() + 1,
-          categories: [ 'none' ], //need to start w/ this or reassigning category won't work
-          transactionCount: 0,
-          employees: [],
-          weeklyHours: this.setHours(),
-          geometry: geom,
-          backend_habitat: Habitats.findOne(doc.habitat[0]).name,
-          grubhubId: doc.grubhubId
-        }); console.log(doc);
-        try {
-          super.insert(doc, (err, newBizId) => {
-            console.warn(`finishedbpinsert`, newBizId);
-            if(err) { console.log('inside error'); throwError({reason: err.message}); }
-            const bp = businessProfiles.findOne(newBizId);
-              console.warn(`creating apikey for ${bp.uid}`);
-              Meteor.call('createApiKey', bp.uid, (err, res) => {
-                if (err) {
-                  console.log(err);
-                }
-              });
-          }, callback);
-        } catch (e) {
-          console.log('catch')
-          console.log(e);
-          throwError({reason: e.message})
-        }
-      } else {
-        console.warn(`an unexpected error has occured`)
-      }
-    });
+    const _doc = _.extend(doc, {
+      prep_time: parseInt(doc.prep_time),
+      open: false,
+      featured: false,
+      clicks: 0,
+      DaaS: true,
+      backend_name: doc.company_name,
+      order: businessProfiles.find().count() + 1,
+      categories: [ 'none' ], //need to start w/ this or reassigning category won't work
+      transactionCount: 0,
+      employees: [],
+      weeklyHours: this.setHours(),
+      backend_habitat: Habitats.findOne(doc.habitat[0]).name,
+      grubhubId: doc.grubhubId
+    }); console.log(_doc);
+    super.insert(_doc, (err, newBizId) => {
+      if(err) { console.log('inside error'); throwError({reason: err.message}); }
+      const bp = businessProfiles.findOne(newBizId);
+        console.warn(`creating apikey for ${bp.uid}`);
+        Meteor.call('createApiKey', bp.uid, (err, res) => {
+          if (err) {
+            console.log(err);
+          }
+        });
+    }, callback);
   }
   remove(id, callback){
     return super.remove(id, (err, res) => {
@@ -174,10 +155,10 @@ class businessProfilesCollection extends Mongo.Collection {
     } : _.extend(rates,  {
       totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
       totalWithTax: totalWithTax,
-      vendorPayout: getPayout(tx, txPayou),
+      vendorPayout: this.getPayout(tx, txPayout, DaaSTotal),
     });
   }
-  getPayout(tx, txPayout){
+  getPayout(tx, txPayout, DaaSTotal){
     if(tx.DaaS){
       if(tx.method === 'Pickup'){
         return 0;
