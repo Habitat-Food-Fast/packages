@@ -208,45 +208,51 @@ calc = {
           deliveryOrders: allComplete
             .filter(t => !t.DaaS)
             .filter(t => t.method === 'Delivery')
-            .reduce((total, tx) => { return total + tx.vendorPayRef.totalPrice; }, 0),
+            .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.totalPrice); }, 0),
           pickupOrders: allComplete
             .filter(t => !t.DaaS)
             .filter(t => t.method === 'Pickup')
-            .reduce((total, tx) => { return total + tx.vendorPayRef.totalPrice; }, 0),
+            .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.totalPrice); }, 0),
           orders: allComplete
             .filter(t => !t.DaaS)
-            .reduce((total, tx) => { return total + tx.vendorPayRef.totalPrice; }, 0),
+            .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.totalPrice); }, 0),
           DaaS: allComplete
             .filter(t => t.DaaS)
-            .reduce((total, tx) => { return total + tx.vendorPayRef.totalPrice; }, 0),
+            .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.totalPrice); }, 0),
         },
         payout: {
           deliveryOrders: allComplete
             .filter(t => !t.DaaS)
             .filter(t => t.method === 'Delivery')
-            .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
+            .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.vendorPayout); }, 0),
           pickupOrders: allComplete
             .filter(t => !t.DaaS)
             .filter(t => t.method === 'Pickup')
-            .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
+            .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.vendorPayout); }, 0),
           orders: allComplete
             .filter(t => !t.DaaS)
-            .reduce((total, tx) => { return total + tx.vendorPayRef.vendorPayout; }, 0),
+            .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.vendorPayout); }, 0),
           DaaSPreTip: allComplete
             .filter(t => t.DaaS)
             .reduce((total, tx) => {
-              return total + tx.vendorPayRef.vendorPayout;
+              preTip = tx.vendorPayRef.vendorPayout
+              if(typeof preTip !== 'number'){
+                console.warn(preTip, tx.orderNumber);
+              } else {
+                console.warn(`tip is good`, preTip)
+              }
+              return total + parseFloat(preTip);
             }, 0),
           DaaSTips: allComplete
             .filter(t => t.DaaS)
             .reduce((total, tx) => {
-              tip = tx.payRef.tip || tx.tip || 0;
+              tip = parseFloat(tx.payRef.tip) || parseFloat(tx.tip) || 0;
               return total + tip;
             }, 0),
           DaaS: allComplete
             .filter(t => t.DaaS)
             .reduce((total, tx) => {
-              tips = tx.payRef.tip || tx.tip || 0;
+              tips = parseFloat(tx.payRef.tip) || 0;
               return total + tx.vendorPayRef.vendorPayout - tips;
             }, 0),
         },
@@ -265,7 +271,8 @@ calc = {
       week = request.fullWeek;
       subtotal = week.subtotal.deliveryOrders;
       switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Delivery') .filter(tx => !tx.DaaS).length;
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived')
+          .filter(tx => tx.method === 'Delivery') .filter(tx => !tx.DaaS).length;
         case 'pretax': return subtotal;
         case 'tax': return subtotal * calc.taxRate;
         case 'total': return subtotal * calc.taxRate + subtotal;
@@ -277,7 +284,8 @@ calc = {
       week = request.fullWeek;
       subtotal = week.subtotal.pickupOrders;
       switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => tx.method === 'Pickup').filter(tx => !tx.DaaS).length;
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived')
+          .filter(tx => tx.method === 'Pickup').filter(tx => !tx.DaaS).length;
         case 'pretax': return subtotal;
         case 'tax': return subtotal * calc.taxRate;
         case 'total': return subtotal * calc.taxRate + subtotal;
@@ -289,7 +297,8 @@ calc = {
       week = request.fullWeek;
       subtotal = week.subtotal.orders;
       switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived').filter(tx => !tx.DaaS).length;
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived')
+          .filter(tx => !tx.DaaS).length;
         case 'pretax': return subtotal;
         case 'tax': return subtotal * calc.taxRate;
         case 'total': return subtotal + subtotal * calc.taxRate;
@@ -300,7 +309,8 @@ calc = {
       calc._checkQuery(query);
       week = request.fullWeek;
       switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived' ).filter(tx => tx.DaaS).length;
+        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived' )
+          .filter(tx => tx.DaaS).length;
         case 'pretip': return Math.abs(week.payout.DaaSPreTip);
         case 'rate': return businessProfiles.getToday(request.bizId).vendorRates.DaaS.flat;
         case 'tips': return week.payout.DaaSTips;
