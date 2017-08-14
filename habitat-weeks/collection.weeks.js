@@ -7,8 +7,9 @@ class weeksCollection extends Mongo.Collection {
       _id: Random.id(),
       week: weeks.find().count() + 1,
       lock: false,
-      startTime: new Date(),
-      endTime: new Date(Date.now() + 604800000) // now +1 week's time
+      startTime: doc.startTime || new Date(),
+      endTime: doc.endTime || new Date(Date.now() + 604800000), // now +1 week's time
+      runnerPayouts: [],
     }, callback);
   }
   forceInsert(weeks) {

@@ -141,7 +141,13 @@ transactions.methods = {
   }).validator(),
   run({ txId }) {
     const tx = transactions.findOne(txId);
-    transactions.update(txId, {$set: {status: 'pending_runner'}}, (err) => {
+    let query = {status: 'pending_runner'};
+    if (tx.DaaS) {
+      query.timeRequested = Date.now();
+      query.humanTimeRequested = new Date();
+    }
+    console.log(query);
+    transactions.update(txId, {$set: query}, (err) => {
     if(err) { throwError(err.message); } else if(!this.isSimulation){
       if (!tx.DaaS) {
         DDPenv().call('orderAcceptedBuyerText', tx._id, (err) => {
@@ -163,27 +169,19 @@ confirmDropoff: new ValidatedMethod({
   run({ txId, isAdmin, tip }) {
     const tx = transactions.findOne(txId);
     const now = Date.now();
-    const update = {
+    tip = tip || tx.payRef.tip || 0;
+    console.warn("API.dropoffOrder, tip:", tip, 'payRef.tip', tx.payRef.tip);
+    transactions.update(txId, {$set: {
       status: 'completed',
       dropoffTime: now,
       dropoffVariationMin: calc._roundToTwo(
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
       settledByAdmin: isAdmin,
-      cashTip: tx.DaaS && tx.DaaSType === 'cash'
-
-    };
-
-    transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
-      if(!tx.payRef.tip){
-        transactions.update(txId, { $set: {
-          'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
-        }});
-      }
-      businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
-        if(err) { console.warn(err.message); }
-      });
-    }});
+      cashTip: tx.DaaS && tx.DaaSType === 'cash',
+      'payRef.tip': tip,
+    }}, (err) => {if (err) { throw new Meteor.Error(err.message); } });
+    console.warn("API.dropoffOrder, tip has been set to", tip)
 
   }
 }),
@@ -350,9 +348,7 @@ sendReceiptImage: new ValidatedMethod({
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
-            res = JSON.parse(result.content);
-            console.log(res);
-            return res;
+            return JSON.parse(result.content);
           }
         } catch (e) {
           JSON.stringify(e, null, 2);
@@ -667,10 +663,8 @@ Meteor.methods({
     getRouteInfo(origin,destination,wayPoints,apiKey){
       if(Meteor.isServer){
         url = `https://maps.googleapis.com/maps/api/directions/json?${origin}&${destination}${wayPoints}&key=${apiKey}`;
-        console.log(url);
         try {
           res = HTTP.get(url);
-          console.log(res.data);
           if(!res.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
@@ -938,28 +932,24 @@ handleInitialVendorContact = (txId) => {
             headers: "",
           });
         } else {
-          if(module.dynamicImport){
-            import('phaxio').then((Phaxio) => {
-              phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+          console.log('beyond the import');
+          import('phaxio').then((Phaxio) => {
+            console.log('inside of phaxio import');
+            phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+            console.log(phaxio);
+            try {
               phaxio.sendFax({
                 to: Meteor.settings.devMode ?
                 '+18884732963' :
                 `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
                 string_data: res.content,
                 string_data_type: 'html'
-              }, (error, data) => {
-                if(error) {
-                  Email.send({
-                    from: "fax@tryhabitat.com",
-                    to: Meteor.settings.devMode ? 'mike@tryhabitat.com' : 'info@tryhabitat.com',
-                    subject: "Fax Failure",
-                    text: JSON.stringify(error, null, 2),
-                  });
-                }
               });
-            })
+            } catch(e) {
+              console.log(e);
+            }
+          });
           }
-        }
       });
 			break;
 		case 'email':

@@ -81,10 +81,8 @@ class transactionsCollection extends Mongo.Collection {
     let schema = _baseSchema.extend(_customerSchema).extend(_timingSchema).extend(_deliverySchema).extend(_payRefSchema);
     if (order.plainOrder && order.plainOrder.length) { schema.extend(_orderSchema);}
     if(order.method === 'Delivery' || order.isDelivery){ order = _.extend(order, handleDelivery(order)); }
-
     const cleanDoc = schema.clean(order);
     schema.validate(cleanDoc);
-    console.log(cleanDoc);
     return cleanDoc;
   }
   forceInsertSingle(doc){ if(!transactions.findOne(doc._id)){ return super.insert(doc); } }
@@ -197,7 +195,7 @@ class transactionsCollection extends Mongo.Collection {
     tx = transactions.findOne(txId);
     const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
-    req = {
+    const req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),
       humanTimeRequested: Date(),
@@ -210,11 +208,11 @@ class transactionsCollection extends Mongo.Collection {
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
-    };
+    }; console.log(req, 'requesting');
     return req;
   }
   scheduledRequestItems(txId) {
-    req = {
+    const req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),
       humanTimeRequested: Date(),
@@ -274,7 +272,7 @@ class transactionsCollection extends Mongo.Collection {
         : '',
     })}, (err, res) => {
       if (err) {
-        throwError(err);
+        throwError({reason: err.message});
       } else {
         if(trans.method === 'Delivery'){ runner.updateDropoffInfo(id); }
         if (!trans.DaaS) { handleInitialVendorContact(id); }
