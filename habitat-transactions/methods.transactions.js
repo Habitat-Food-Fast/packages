@@ -141,7 +141,13 @@ transactions.methods = {
   }).validator(),
   run({ txId }) {
     const tx = transactions.findOne(txId);
-    transactions.update(txId, {$set: {status: 'pending_runner'}}, (err) => {
+    let query = {status: 'pending_runner'};
+    if (tx.DaaS) {
+      query.timeRequested = Date.now();
+      query.humanTimeRequested = new Date();
+    }
+    console.log(query);
+    transactions.update(txId, {$set: query}, (err) => {
     if(err) { throwError(err.message); } else if(!this.isSimulation){
       if (!tx.DaaS) {
         DDPenv().call('orderAcceptedBuyerText', tx._id, (err) => {
