@@ -302,7 +302,7 @@ calc = {
       week = request.fullWeek;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived' )
-          .filter(tx => tx.DaaS).length;
+          .filter(tx => tx.DaaS && tx.method === 'Delivery').length;
         case 'pretip': return Math.abs(week.payout.DaaSPreTip);
         case 'rate': return businessProfiles.getToday(request.bizId).vendorRates.DaaS.flat;
         case 'tips': return week.payout.DaaSTips;
