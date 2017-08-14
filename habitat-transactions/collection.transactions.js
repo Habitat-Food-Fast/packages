@@ -14,7 +14,6 @@ class transactionsCollection extends Mongo.Collection {
     );
     const txWeek = (doc.deliverBy > moment().day(7).hour(23).minute(59).valueOf()) ? weeks.find().count() + 1 : weeks.find().count();
     const usr = Meteor.users.findOne(doc.buyerId) || false;
-    console.log(doc);
     return super.insert(_.extend(this.resetItems(), {
       status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
@@ -369,7 +368,16 @@ class transactionsCollection extends Mongo.Collection {
 
 transactions = new transactionsCollection("transactions");
 if(Meteor.isServer){
-  transactions._ensureIndex({ week: 1, sellerId: 1});
+  transactions._ensureIndex({
+    week: 1,
+    sellerId: 1,
+    runnerId: 1,
+    timeRequested: 1,
+    buyerId: 1,
+    status: 1,
+    habitat: 1,
+    company_name: 1,
+  });
 }
 
 const apiKey = 'AIzaSyCyFtEt80IOFCQ_mgvXDwAFKNNCewjeEWo';
