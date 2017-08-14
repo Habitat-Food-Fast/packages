@@ -217,7 +217,7 @@ calc = {
             .filter(t => !t.DaaS)
             .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.totalPrice); }, 0),
           DaaS: allComplete
-            .filter(t => t.DaaS)
+            .filter(t => t.DaaS && t.method === 'Delivery')
             .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.totalPrice); }, 0),
         },
         payout: {
@@ -233,24 +233,16 @@ calc = {
             .filter(t => !t.DaaS)
             .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.vendorPayout); }, 0),
           DaaSPreTip: allComplete
-            .filter(t => t.DaaS)
-            .reduce((total, tx) => {
-              preTip = tx.vendorPayRef.vendorPayout
-              if(typeof preTip !== 'number'){
-                console.warn(preTip, tx.orderNumber);
-              } else {
-                console.warn(`tip is good`, preTip)
-              }
-              return total + parseFloat(preTip);
-            }, 0),
+            .filter(t => t.DaaS && t.method === 'Delivery')
+            .reduce((total, tx) => { return total + parseFloat(tx.vendorPayRef.vendorPayout); }, 0),
           DaaSTips: allComplete
-            .filter(t => t.DaaS)
+            .filter(t => t.DaaS && t.method === 'Delivery')
             .reduce((total, tx) => {
               tip = parseFloat(tx.payRef.tip) || parseFloat(tx.tip) || 0;
               return total + tip;
             }, 0),
           DaaS: allComplete
-            .filter(t => t.DaaS)
+            .filter(t => t.DaaS && t.method === 'Delivery')
             .reduce((total, tx) => {
               tips = parseFloat(tx.payRef.tip) || 0;
               return total + tx.vendorPayRef.vendorPayout - tips;
