@@ -663,10 +663,8 @@ Meteor.methods({
     getRouteInfo(origin,destination,wayPoints,apiKey){
       if(Meteor.isServer){
         url = `https://maps.googleapis.com/maps/api/directions/json?${origin}&${destination}${wayPoints}&key=${apiKey}`;
-        console.log(url);
         try {
           res = HTTP.get(url);
-          console.log(res.data);
           if(!res.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
