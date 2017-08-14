@@ -246,9 +246,8 @@ sendRunnerPing(txId, runnerId){
   }
 },
   retireRunner(runnerId){
-    const usr = Meteor.users.findOne(runnerId);
-    if(usr && usr.roles.includes('admin')){
-      tx = transactions.findOne({runnerId}, {sort: {timeRequested: -1}});
+    if(Meteor.user().roles.includes('admin')){
+      const tx = transactions.findOne({runnerId}, {sort: {timeRequested: -1}});
       Meteor.users.update(runnerId, {$set: {
         retired: {
           at: new Date(),
@@ -256,7 +255,7 @@ sendRunnerPing(txId, runnerId){
           reason: '',
         },
         'profile.staffjoyId': false,
-      }}, (err) => {
+      }, $pull: {roles: {$in: ['runner', 'running']}}}, (err) => {
         if(err) { console.warn(err.message); }
       });
     }
