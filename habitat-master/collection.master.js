@@ -21,9 +21,7 @@ class masterTransactionsCollection extends Mongo.Collection {
           transactions.update(txId, {$set: {archived: true}}, (err) => {
             if(err){
               console.warn(err.message);
-            } else {
-              console.log(`${txId} peration complete`);
-            }
+            } 
           });
         }
       });
