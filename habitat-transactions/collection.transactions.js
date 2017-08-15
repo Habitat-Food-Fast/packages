@@ -155,7 +155,7 @@ class transactionsCollection extends Mongo.Collection {
     } else {
       check(txId, String);
       const tx = transactions.findOne(txId);
-      const url = gmapsUrl(txId); console.warn(`gmaps ${url}`);
+      const url = gmapsUrl(txId);
       HTTP.call('GET', url, (err, result) => {
         if(err){ console.warn(err.message); } else {
           if(!result.data.routes.length){

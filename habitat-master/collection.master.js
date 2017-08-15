@@ -14,9 +14,7 @@ class masterTransactionsCollection extends Mongo.Collection {
     return tx;
   }
   insert(txId){
-    console.log(`hit mt insert for ${txId}`);
     doc = _.extend(this._denormalize(txId));
-    console.log(doc);
     if(doc && !masterTransactions.findOne(txId)){
       return super.insert(doc, (err) => {
         if(err) {console.warn(err.message);} else {

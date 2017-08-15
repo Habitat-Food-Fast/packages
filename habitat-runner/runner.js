@@ -233,7 +233,7 @@ sendRunnerPing(txId, runnerId){
         from: Meteor.settings.twilio.twilioPhone,
         body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
       }, (err, responseData) => {
-          if (!err) { console.log(responseData.body); } else {
+          if (err) {
             if(err.code === 21211) {
               const parsedWrongNum = err.message.match(/[0-9]+/)[0];
               console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
@@ -413,11 +413,19 @@ runner.payouts = {
   //concatenate the the habitat runner arrays,
   //and parse out duplicates (i.e runners who work in multiple habitats)
   getWorkers(habitats=Habitats.find()) {
-    return _.uniq(_.flatten(habitats.map(h =>
+    return _.flatten(habitats.forEach(h =>
       HTTP.call(`GET`,
         staffJoy._getUrl(`locations/${h.staffJoyId}/roles/${h.staffJoyRunnerRole}/users`),
         { auth: staffJoy._auth }
-      ).data.data)), w => w.id);
+      ).data.data))
+      .map(w => ({name: w.name, internal_id: w.internal_id, id: w.id}))
+      .filter(w => w.internal_id === null || w.internal_id === 'undefined')
+      // .forEach((u) => {
+      //   HTTP.call(`DELETE`,
+      //     staffJoy._getUrl(`locations/${h.staffJoyId}/roles/${h.staffJoyRunnerRole}/users/${u.id}`),
+      //     { auth: staffJoy._auth }
+      //   )
+      // })
       // .filter(w => !w.archived);
   },
   //again need to flatten out habitat arrays, but don't need uniq because all shifts are distinct
