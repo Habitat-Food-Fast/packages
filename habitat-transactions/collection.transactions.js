@@ -208,7 +208,7 @@ class transactionsCollection extends Mongo.Collection {
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
-    }; console.log(req, 'requesting');
+    };
     return req;
   }
   scheduledRequestItems(txId) {
