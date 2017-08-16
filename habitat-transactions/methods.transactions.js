@@ -642,7 +642,7 @@ Meteor.methods({
         deliveryInstructions: state.deliveryInstructions
       };
       if (transactions.findOne(id).sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
-        return transactions.update(id, {$set: obj});
+        transactions.update(id, {$set: obj});
       }
     },
     setTransactionClosed(id) {
