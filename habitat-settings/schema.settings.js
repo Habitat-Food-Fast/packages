@@ -96,6 +96,11 @@ Settings.schema = [
     "name" : "vendorModeMessage",
     "active" : false,
     "message" : ""
+  },
+  {
+    "_id" : "28b382a1a566cab93bc678o",
+    "name" : "pendingDispatch",
+    "is" : false
   }
 ];
 
