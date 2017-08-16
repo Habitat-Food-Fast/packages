@@ -128,7 +128,7 @@ class businessProfilesCollection extends Mongo.Collection {
     return transactions.findOne(doc._id).timeRequested + (60000 * bp.prep_time);
   }
   rates(txId){
-    if(!txId) { throwError('No txId passed in'); }
+    if(!txId) { throwError({reason: 'No txId passed in'}); }
     const tx = transactions.findOne(txId); if(!tx) { throwError('No transaction found'); }
     const bp = businessProfiles.findOne(tx.sellerId);
     const today = this.getToday(tx.sellerId);
