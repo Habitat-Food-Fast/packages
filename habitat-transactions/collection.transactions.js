@@ -198,7 +198,7 @@ class transactionsCollection extends Mongo.Collection {
     const req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),
-      humanTimeRequested: Date(),
+      humanTimeRequested: new Date(),
       vendorPayRef: businessProfiles.rates(txId),
       vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
@@ -215,7 +215,7 @@ class transactionsCollection extends Mongo.Collection {
     const req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),
-      humanTimeRequested: Date(),
+      humanTimeRequested: new Date(),
       vendorPayRef: businessProfiles.rates(txId),
       deliveredAtEst: transactions.findOne(txId).deliverBy,
       cancelledByAdmin: false,
