@@ -16,12 +16,13 @@ class masterTransactionsCollection extends Mongo.Collection {
   insert(txId){
     doc = _.extend(this._denormalize(txId));
     if(doc && !masterTransactions.findOne(txId)){
-      return super.insert(doc, (err) => {
+      return super.insert(doc, (err, id) => {
+        console.log(`inserted ${id} into masterTransactions`)
         if(err) {console.warn(err.message);} else {
           transactions.update(txId, {$set: {archived: true}}, (err) => {
-            if(err){
-              console.warn(err.message);
-            } 
+            if(err){ console.warn(err.message); } else {
+              console.log(`archived ${txId} transaction`)
+            }
           });
         }
       });
