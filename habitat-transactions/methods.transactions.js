@@ -935,20 +935,18 @@ handleInitialVendorContact = (txId) => {
           });
         } else {
           console.log(`dynamic import ${module.dynamicImport}`);
-          if(module.dynamicImport){
-            phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
-            phaxio.sendFax({
-              to: Meteor.settings.devMode ?
-              '+18884732963' :
-              `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
-              string_data: res.content,
-              string_data_type: 'html'
-            }, (error, data) => {
-              if(error) { console.warn(`fax error`, error.message); } else {
-                console.log(`fax success`);
-              }
-            });
-          }
+          phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+          phaxio.sendFax({
+            to: Meteor.settings.devMode ?
+            '+18884732963' :
+            `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
+            string_data: res.content,
+            string_data_type: 'html'
+          }, (error, data) => {
+            if(error) { console.warn(`fax error`, error.message); } else {
+              console.log(`fax success`);
+            }
+          });
         }
       });
 			break;
