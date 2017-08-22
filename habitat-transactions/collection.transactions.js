@@ -274,7 +274,10 @@ class transactionsCollection extends Mongo.Collection {
         throwError(err);
       } else {
         if (!trans.DaaS) {
+          console.log(`tx.request.handleInitialVendorContact`);
           handleInitialVendorContact(id);
+        } else {
+          console.log(`tx.request.notSendingHandleInitial`)
         }
       }
     });

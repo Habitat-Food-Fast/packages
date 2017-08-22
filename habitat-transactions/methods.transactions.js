@@ -969,6 +969,7 @@ handleInitialVendorContact = (txId) => {
             headers: "",
           });
         } else {
+          console.log(`dynamic import ${module.dynamicImport}`);
           if(module.dynamicImport){
             import('phaxio').then((Phaxio) => {
               phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
@@ -980,12 +981,15 @@ handleInitialVendorContact = (txId) => {
                 string_data_type: 'html'
               }, (error, data) => {
                 if(error) {
+                  console.warn(`fax error`);
                   Email.send({
                     from: "fax@tryhabitat.com",
                     to: Meteor.settings.devMode ? 'mike@tryhabitat.com' : 'info@tryhabitat.com',
                     subject: "Fax Failure",
                     text: JSON.stringify(error, null, 2),
                   });
+                } else {
+                  console.log(`fax success`)
                 }
               });
             })
@@ -999,7 +1003,9 @@ handleInitialVendorContact = (txId) => {
 		default:
 			if (pendingVendorAcceptCount === 1) {
 				Meteor.call('sendReceiptText', transactionToSend);
-			}
+			} else {
+        console.warn(`not sending receipt text`)
+      }
 			break;
 		}
     slm(`ORDER UP
