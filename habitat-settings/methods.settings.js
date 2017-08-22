@@ -209,4 +209,8 @@ Meteor.methods({
     if (!Roles.userIsInRole(this.userId, ['admin'])) { throw new Meteor.Error('unauthorized'); }
     Settings.update({name: 'orderTypeRestriction'}, {$set: {type: orderType}});
   },
+  pendingDispatch() {
+    const set = Settings.findOne({name: 'pendingDispatch'}).is;
+    Settings.update({name: 'pendingDispatch'}, {$set: {is: !set}});
+  }
 });

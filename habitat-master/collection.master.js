@@ -14,17 +14,14 @@ class masterTransactionsCollection extends Mongo.Collection {
     return tx;
   }
   insert(txId){
-    console.log(`hit mt insert for ${txId}`);
     doc = _.extend(this._denormalize(txId));
-    console.log(doc);
     if(doc && !masterTransactions.findOne(txId)){
-      return super.insert(doc, (err) => {
+      return super.insert(doc, (err, id) => {
+        console.log(`inserted ${id} into masterTransactions`)
         if(err) {console.warn(err.message);} else {
           transactions.update(txId, {$set: {archived: true}}, (err) => {
-            if(err){
-              console.warn(err.message);
-            } else {
-              console.log(`${txId} peration complete`);
+            if(err){ console.warn(err.message); } else {
+              console.log(`archived ${txId} transaction`)
             }
           });
         }

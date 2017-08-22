@@ -11,9 +11,10 @@ if (Meteor.isServer) {
 
 runner = {
   getAvailableOrders(hab){ return transactions.find({habitat: hab, status: 'pending_runner'}).fetch(); },
-  runnerText(txId) { return `Open orders on Habitat: \n ${this.generateOrderList(txId)}` + '\n To accept, text back the order number. To dropoff, text back the order number again'; },
+  runnerText(txId) { return `Open at ${moment().subtract({hours: 4}).format('hh:mm:ss a')}: \n ${this.generateOrderList(txId)}` + '\n To accept, text back the order number. To dropoff, text back the order number again'; },
   getTimeTillDropoff(time){ return moment(time).from(moment(Date.now())); },
-  updateDropoffInfo(t, callback) {
+  updateDropoffInfo(txId, callback) {
+    const t = transactions.findOne(txId);
     const dropoffInMs = t.deliveredAtEst - Date.now();
     const dropoffInString = this.getTimeTillDropoff(t.deliveredAtEst);
     const pickupInString = this.getTimeTillDropoff(moment(t.pickupAtEst).add(4, 'hours').format());
@@ -27,8 +28,10 @@ runner = {
         status: {$in: ['pending_vendor', 'pending_runner', 'in_progress']},
         habitat: h._id}, {sort: {deliveredAtEst: -1}
       }).forEach((t) => {
-        if(typeof t.deliveredAtEst !== 'number') { console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); }
-          this.updateDropoffInfo(t, (err) => { if(err) { console.warn(err.message); }});
+        if(typeof t.deliveredAtEst !== 'number') {
+          // console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); 
+        }
+          this.updateDropoffInfo(t._id, (err) => { if(err) { console.warn(err.message); }});
       });
     });
   },
@@ -59,7 +62,10 @@ runner = {
             max_hours_per_workweek: 60,
             name, email, internal_id,
           }};
-          const worker = HTTP.call(`POST`, url, params);
+          const data = HTTP.call(`POST`, url, params);
+          console.log(data.data);
+          Meteor.users.update(internal_id, {$set: {'profile.staffjoyId': data.data.id}})
+          return data.data;
       } catch (e) {
         console.warn(`error CREATING data ${e}`);
       }
@@ -107,25 +113,9 @@ runner = {
         );
       });
   },
-  alertShifted(txId, habId){
-    runner.getShifted(false, false, [habId], 'runner').filter(runner => runner.user.profile.runHabitats.includes(habId)).forEach((runner) => {
-      twilio.messages.create({
-        to: runner.user.profile.phone,
-        from: Meteor.settings.twilio.twilioPhone,
-        body: this.runnerText(txId),
-      }, (err, responseData) => {
-          if (!err) {
-            return responseData.success;
-          } else {
-            console.log(err.message);
-          }
-        }
-      );
-    });
-  },
   generateOrderList(txId) {
     const hab = transactions.findOne(txId).habitat;
-    return this.getAvailableOrders(hab).reduce((sum, tx) => { return sum + `${tx.company_name} ${tx.orderNumber}: due ${moment(tx.deliveredAtEst).fromNow(true)}` + '\n'; }, '');
+    return this.getAvailableOrders(hab).reduce((sum, tx) => { return sum + `${tx.company_name} ${tx.orderNumber}: to ${tx.deliveryAddress} ${moment(tx.deliveredAtEst).fromNow(true)}` + '\n'; }, '');
   },
   parseable(tx, orderNumber) {
     return tx && runner.getAvailableOrders(tx.habitat).map(t => t.orderNumber).includes(orderNumber) ||
@@ -154,7 +144,6 @@ runner = {
         txId: tx._id,
         isAdmin: false,
       }, (err) => { if(err) {console.warn(err.message);} else {
-        if(transactions.find({status: 'pending_runner'}).count()){ this.alertShifted(tx._id, tx.habitat); }
         if(req.response){
           xml = `<Response><Sms>Order #${tx.orderNumber} dropped off. </Sms></Response>`;
           req.response.writeHead(200, {'Content-Type': 'text/xml'});
@@ -201,7 +190,7 @@ runner = {
     return req.response.end(xml);
   },
 
-generateOrderInfo(tx, runner) {
+generateOrderInfo(tx) {
   const bizProf = businessProfiles.findOne(tx.DaaS ? tx.buyerId : tx.sellerId);
   const userProf = Meteor.users.findOne(tx.buyerId);
   deliveryInstructions = tx.deliveryInstructions ? `(${tx.deliveryInstructions})` : '';
@@ -238,16 +227,15 @@ VENDOR RECEIPT: ${tx.textMessage}`;
 };
 
 Meteor.methods({
-sendRunnerPing(txId, runnerId, initialPing){
+sendRunnerPing(txId, runnerId){
   if (Meteor.isServer) {
     const tx = transactions.findOne(txId);
-    return initialPing ? runner.alertShifted(txId, tx.habitat) :
-      twilio.messages.create({
+    return twilio.messages.create({
         to: Meteor.users.findOne(runnerId).profile.phone,
         from: Meteor.settings.twilio.twilioPhone,
         body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
       }, (err, responseData) => {
-          if (!err) { console.log(responseData.body); } else {
+          if (err) {
             if(err.code === 21211) {
               const parsedWrongNum = err.message.match(/[0-9]+/)[0];
               console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
@@ -258,6 +246,21 @@ sendRunnerPing(txId, runnerId, initialPing){
         }
       );
   }
+},
+  retireRunner(runnerId){
+    if(Meteor.user().roles.includes('admin')){
+      const tx = transactions.findOne({runnerId}, {sort: {timeRequested: -1}});
+      Meteor.users.update(runnerId, {$set: {
+        retired: {
+          at: new Date(),
+          lastOrder: tx ? tx.humanTimeRequested : false,
+          reason: '',
+        },
+        'profile.staffjoyId': false,
+      }, $pull: {roles: {$in: ['runner', 'running']}}}, (err) => {
+        if(err) { console.warn(err.message); }
+      });
+    }
   }
 });
 
@@ -277,25 +280,44 @@ staffJoy = {
     // .filter(w => Meteor.users.findOne({username: w.email}) ? true : false);
     return res;
   },
+  all(){
+    habs =  Habitats.find().map((h) => {
+      try {
+        const res = HTTP.call(`GET`, staffJoy._getUrl(`locations/${h.staffJoyId}/roles/${h.staffJoyRunnerRole}/users`), {
+          auth: this._auth,
+        });
+        const data = res.data.data;
+        return data;
+      } catch (err) {
+        console.warn(err);
+        throwError(err)
+      }
+    });
+
+    return _.compact(_.uniq(_.flatten(habs), usr => usr.internal_id).map((u) => {
+      if(!u.internal_id){ console.warn(`no internal id for ${u.email}`); return; } else {
+        if(!Meteor.users.findOne(u.internal_id)){
+          console.warn(`no METEOR user for ${u.name}`);
+          return u.id;
+        } else {
+          return u;
+        }
+      }
+    }))
+  }
 };
 
 runnerPayout = {
   _perOrderRate: 1.5,
   _hourlyRate: 4,
+
+  //given a runner and timespan, return all transactions within that period
   getOrders(runnerId, timespan, status=transactions.completedAndArchived()) {
-    query = {
-      method: 'Delivery', status: {$in: status }, runnerId: runnerId,
-    };
-    const txs = transactions.find(query).fetch();
-
-    start = timespan.startTime || timespan.start;
-    end = timespan.endTime || timespan.end;
-    after = txs.filter(t =>
-      t.timeRequested > new Date(start).getTime() &&
-      t.timeRequested < new Date(end).getTime()
+    check(runnerId, String); check(timespan, Object);
+    return transactions.find({ method: 'Delivery', status: {$in: status }, runnerId: runnerId }).fetch().filter(t =>
+      t.timeRequested > new Date(timespan.startTime || timespan.start).getTime() &&
+      t.timeRequested < new Date(timespan.endTime || timespan.end).getTime()
     );
-
-    return after;
   },
   //maps through all shifts in a timespan, summing hours for each userId
   getAllShifts(shifts){
@@ -387,20 +409,25 @@ runnerPayout = {
   // }
 };
 
-
-
-
 runner.payouts = {
   //staffjoy doens't have a query for ALL users,
   //so have to query per habitat,
   //concatenate the the habitat runner arrays,
   //and parse out duplicates (i.e runners who work in multiple habitats)
   getWorkers(habitats=Habitats.find()) {
-    return _.uniq(_.flatten(habitats.map(h =>
+    return _.flatten(habitats.forEach(h =>
       HTTP.call(`GET`,
         staffJoy._getUrl(`locations/${h.staffJoyId}/roles/${h.staffJoyRunnerRole}/users`),
         { auth: staffJoy._auth }
-      ).data.data)), w => w.id);
+      ).data.data))
+      .map(w => ({name: w.name, internal_id: w.internal_id, id: w.id}))
+      .filter(w => w.internal_id === null || w.internal_id === 'undefined')
+      // .forEach((u) => {
+      //   HTTP.call(`DELETE`,
+      //     staffJoy._getUrl(`locations/${h.staffJoyId}/roles/${h.staffJoyRunnerRole}/users/${u.id}`),
+      //     { auth: staffJoy._auth }
+      //   )
+      // })
       // .filter(w => !w.archived);
   },
   //again need to flatten out habitat arrays, but don't need uniq because all shifts are distinct
@@ -510,7 +537,10 @@ runner.payouts = {
       progress = index / workers.length;
       this._progress(token, progress);
       console.log(worker.email, 'staffjoy email')
-      const runnerUser = Meteor.users.findOne({username: worker.email});
+      const runnerUser = Meteor.users.findOne({ $or: [
+        {username: worker.email},
+        {_id: worker.internal_id},
+      ]});
 
       if(runnerUser){
         console.log(runnerUser.profile.email)
@@ -518,7 +548,7 @@ runner.payouts = {
         const allShifts = runner.payouts.getShiftHours(week, worker.id);
         return runner.payouts.payRef(worker, allShifts, runnerTxs, runnerUser._id, week.week);
       } else {
-        console.warn(`no staffjoy email for`, worker.email);
+        console.warn(`not found for`, worker.email, worker.internal_id);
       }
     }).filter(doc => doc && doc.transactionCount > 0 || doc &&  doc.daasCount > 0);
   }

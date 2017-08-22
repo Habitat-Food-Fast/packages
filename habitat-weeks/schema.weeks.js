@@ -19,11 +19,11 @@ weeks.schema = new SimpleSchema({
   },
   runnerPayouts: {
     type: Array,
+    optional: true,
   },
   'runnerPayouts.$': {
     type: Object,
     blackbox: true,
-    optional: true,
   }
 });
 

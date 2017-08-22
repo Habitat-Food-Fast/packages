@@ -141,16 +141,19 @@ transactions.methods = {
   }).validator(),
   run({ txId }) {
     const tx = transactions.findOne(txId);
-    transactions.update(txId, {$set: {status: 'pending_runner'}}, (err) => {
+    let query = {status: 'pending_runner'};
+    if (tx.DaaS) {
+      query.timeRequested = Date.now();
+      query.humanTimeRequested = new Date();
+    }
+    console.log(query);
+    transactions.update(txId, {$set: query}, (err) => {
     if(err) { throwError(err.message); } else if(!this.isSimulation){
       if (!tx.DaaS) {
         DDPenv().call('orderAcceptedBuyerText', tx._id, (err) => {
           if(err) { throwError(err.message); }
         });
       }
-      DDPenv().call('sendRunnerPing', tx._id, runnerId=false, initialPing=true, (err) => {
-        if(err) { console.warn(err.message); }
-      });
       }
     });
   }
@@ -166,27 +169,19 @@ confirmDropoff: new ValidatedMethod({
   run({ txId, isAdmin, tip }) {
     const tx = transactions.findOne(txId);
     const now = Date.now();
-    const update = {
+    tip = tip || tx.payRef.tip || 0;
+    console.warn("API.dropoffOrder, tip:", tip, 'payRef.tip', tx.payRef.tip);
+    transactions.update(txId, {$set: {
       status: 'completed',
       dropoffTime: now,
       dropoffVariationMin: calc._roundToTwo(
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
       settledByAdmin: isAdmin,
-      cashTip: tx.DaaS && tx.DaaSType === 'cash'
-
-    };
-
-    transactions.update(txId, {$set: update}, (err) => {if (err) { throw new Meteor.Error(err.message); } else {
-      if(!tx.payRef.tip){
-        transactions.update(txId, { $set: {
-          'payRef.tip': tx.DaaS && tx.DaaSType === 'cash' ? 0 : tip,
-        }});
-      }
-      businessProfiles.update(tx.sellerId, {$inc: { transactionCount: 1}}, (err) => {
-        if(err) { console.warn(err.message); }
-      });
-    }});
+      cashTip: tx.DaaS && tx.DaaSType === 'cash',
+      'payRef.tip': tip,
+    }}, (err) => {if (err) { throw new Meteor.Error(err.message); } });
+    console.warn("API.dropoffOrder, tip has been set to", tip)
 
   }
 }),
@@ -242,7 +237,7 @@ sendReceiptImage: new ValidatedMethod({
       transactions.update(tx._id, { $set: {
         status: 'in_progress', runnerAssignedAt: new Date(), runnerId, adminAssign, runnerObj
       }}, (err, num) => {
-        DDPenv().call('sendRunnerPing', tx._id, runnerId, initialPing=false, (err, res) => {
+        DDPenv().call('sendRunnerPing', tx._id, runnerId, (err, res) => {
           if(err) { throwError(err.message); }
         });
       });
@@ -276,7 +271,7 @@ sendReceiptImage: new ValidatedMethod({
                 from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
                 body: `${tx.orderNumber} reassigned`,
               }, (err, responseData) => { } );
-              DDPenv().call('sendRunnerPing', txId, runId, false);
+              DDPenv().call('sendRunnerPing', txId, runId);
             }
           }
         });
@@ -353,8 +348,7 @@ sendReceiptImage: new ValidatedMethod({
         try {
           const result = HTTP.get(url, params);
           if(result.statusCode === 200){
-            res = JSON.parse(result.content);
-            return res;
+            return JSON.parse(result.content);
           }
         } catch (e) {
           JSON.stringify(e, null, 2);
@@ -654,7 +648,7 @@ Meteor.methods({
         deliveryInstructions: state.deliveryInstructions
       };
       if (transactions.findOne(id).sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
-        return transactions.update(id, {$set: obj});
+        transactions.update(id, {$set: obj});
       }
     },
     setTransactionClosed(id) {
@@ -669,10 +663,8 @@ Meteor.methods({
     getRouteInfo(origin,destination,wayPoints,apiKey){
       if(Meteor.isServer){
         url = `https://maps.googleapis.com/maps/api/directions/json?${origin}&${destination}${wayPoints}&key=${apiKey}`;
-        console.log(url);
         try {
           res = HTTP.get(url);
-          console.log(res.data);
           if(!res.data.routes.length){
               console.warn(`no routes found for ${txId}`);
           } else {
@@ -699,34 +691,6 @@ Meteor.methods({
         } catch (err) {
           console.warn(err);
         }
-      }
-    },
-
-    alertRunnerReady(txId) {
-      const tx = transactions.findOne(txId);
-      if (tx && tx.sellerId === Meteor.users.findOne(this.userId).profile.businesses[0]) {
-        const runnerPhone = Meteor.users.findOne(tx.runnerId).profile.phone;
-        if (!runnerPhone) { return 'no runner'; }
-        const msg = `Order #${tx.orderNumber} from ${tx.company_name} is ready for pickup`;
-        transactions.update(txId, {$set: {readyTextSent: true}});
-        twilio.messages.create({
-          to: runnerPhone, // Any number Twilio can deliver to
-          from: Meteor.settings.twilio.twilioPhone, // A number you bought from Twilio and can use for outbound communication
-          body: msg,
-        }, (err, responseData) => {
-            if (!err) {
-              console.log(responseData.body);
-            } else {
-              //invalid number
-              if(err.code === 21211) {
-                const parsedWrongNum = err.message.match(/[0-9]+/)[0];
-                console.log(`Message 'sent to invalid number - ${parsedWrongNum}'`);
-              } else {
-                console.log(err);
-              }
-            }
-          }
-        );
       }
     },
     sendStatusUpdateText(phone, firstName, msg, isAdmin){
@@ -969,6 +933,7 @@ handleInitialVendorContact = (txId) => {
             headers: "",
           });
         } else {
+
           console.log(`dynamic import ${module.dynamicImport}`);
           if(module.dynamicImport){
             import('phaxio').then((Phaxio) => {
@@ -979,6 +944,7 @@ handleInitialVendorContact = (txId) => {
                 `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
                 string_data: res.content,
                 string_data_type: 'html'
+
               }, (error, data) => {
                 if(error) {
                   console.warn(`fax error`);
@@ -992,9 +958,11 @@ handleInitialVendorContact = (txId) => {
                   console.log(`fax success`)
                 }
               });
-            })
+            } catch(e) {
+              console.log(e);
+            }
+          });
           }
-        }
       });
 			break;
 		case 'email':

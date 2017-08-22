@@ -27,7 +27,7 @@ _baseSchema = new SimpleSchema({
       }
     }
   },
-  status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner', 'queued'] },
+  status: { type: String, allowedValues: ['created', 'pending_vendor', 'pending_runner', 'pending_dispatch', 'queued'] },
   DaaSType: { type: String, allowedValues: ['credit_card', 'prepaid', 'cash', 'online', 'catering'] },
   method: { type: String, allowedValues: ['Pickup', 'Delivery']},
   orderSize: { type: Number, optional: true },

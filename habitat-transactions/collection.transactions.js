@@ -14,7 +14,6 @@ class transactionsCollection extends Mongo.Collection {
     );
     const txWeek = (doc.deliverBy > moment().day(7).hour(23).minute(59).valueOf()) ? weeks.find().count() + 1 : weeks.find().count();
     const usr = Meteor.users.findOne(doc.buyerId) || false;
-    console.log(doc);
     return super.insert(_.extend(this.resetItems(), {
       status: doc.status || 'created',
       DaaS: doc.DaaS ? true : false,
@@ -37,11 +36,11 @@ class transactionsCollection extends Mongo.Collection {
       deliveryInstructions: doc.deliveryInstructions,
       geometry: doc.loc, //where the order is getting delivered to
       company_address: bizProf.company_address,
+      company_name: bizProf.company_name,
       company_geometry: bizProf.geometry,
       buyerId: !doc.DaaS ? doc.buyerId : doc.sellerId,
       customer: this.customerItems(usr, doc),
       sellerId: bizProf._id,
-      company_name: bizProf.company_name,
       createdAt: Date.now(),
       createdAtHuman: Date(),
       timeRequested: 0,
@@ -62,9 +61,14 @@ class transactionsCollection extends Mongo.Collection {
     }), (err, txId) => {
       tx = transactions.findOne(txId);
       if(err) { throwError(err.message); } else {
-        if(tx.method === 'Delivery') {this.addRouteInfo(txId)}
+        if(tx.method === 'Delivery') {
+          this.addRouteInfo(txId)
+        }
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
           transactions.request(txId, {});
+          if (tx.status === 'pending_runner' && Settings.findOne({name: 'pendingDispatch'}).is) {
+            transactions.update(txId, {$set: {status: 'pending_dispatch'}});
+          }
         }
         if (tx.scheduled && tx.status === 'queued') {
           transactions.update(tx._id, {$set: {deliveredAtEst: tx.deliverBy, vendorPayRef: businessProfiles.rates(tx._id)}});
@@ -80,10 +84,8 @@ class transactionsCollection extends Mongo.Collection {
     let schema = _baseSchema.extend(_customerSchema).extend(_timingSchema).extend(_deliverySchema).extend(_payRefSchema);
     if (order.plainOrder && order.plainOrder.length) { schema.extend(_orderSchema);}
     if(order.method === 'Delivery' || order.isDelivery){ order = _.extend(order, handleDelivery(order)); }
-
     const cleanDoc = schema.clean(order);
     schema.validate(cleanDoc);
-    console.log(cleanDoc);
     return cleanDoc;
   }
   forceInsertSingle(doc){ if(!transactions.findOne(doc._id)){ return super.insert(doc); } }
@@ -154,8 +156,10 @@ class transactionsCollection extends Mongo.Collection {
     if(Meteor.isClient){
       console.warn("cant add route info on client");
     } else {
-      tx = transactions.findOne({_id: txId});
-      HTTP.call('GET', gmapsUrl(txId), (err, result) => {
+      check(txId, String);
+      const tx = transactions.findOne(txId);
+      const url = gmapsUrl(txId);
+      HTTP.call('GET', url, (err, result) => {
         if(err){ console.warn(err.message); } else {
           if(!result.data.routes.length){
               console.warn(`no routes found for ${txId}`);
@@ -194,10 +198,10 @@ class transactionsCollection extends Mongo.Collection {
     tx = transactions.findOne(txId);
     const isDaaS = daas || transactions.findOne(txId).DaaS;
     const timeReq = Date.now();
-    req = {
+    const req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),
-      humanTimeRequested: Date(),
+      humanTimeRequested: new Date(),
       vendorPayRef: businessProfiles.rates(txId),
       vendorOrderNumber: isDaaS ? null : goodcomOrders.find().count() + 1,
       cronCancelTime: isDaaS ? false : timeReq + longCall + shortCall + shortCall + finalDelay,
@@ -211,17 +215,17 @@ class transactionsCollection extends Mongo.Collection {
     return req;
   }
   scheduledRequestItems(txId) {
-    req = {
+    const req = {
       week: weeks.find().count(),
       timeRequested: Date.now(),
-      humanTimeRequested: Date(),
+      humanTimeRequested: new Date(),
       vendorPayRef: businessProfiles.rates(txId),
       deliveredAtEst: transactions.findOne(txId).deliverBy,
       cancelledByAdmin: false,
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
-      status: 'pending_runner'
+      status: Settings.findOne({name: 'pendingDispatch'}).is ? 'pending_dispatch' : 'pending_runner'
     };
     return req;
   }
@@ -271,14 +275,15 @@ class transactionsCollection extends Mongo.Collection {
         : '',
     })}, (err, res) => {
       if (err) {
-        throwError(err);
+        throwError({reason: err.message});
       } else {
         if (!trans.DaaS) {
           console.log(`tx.request.handleInitialVendorContact`);
           handleInitialVendorContact(id);
         } else {
-          console.log(`tx.request.notSendingHandleInitial`)
+          console.log(`tx.request.notSendingHandleInitial`);
         }
+        if(trans.method === 'Delivery'){ runner.updateDropoffInfo(id); }
       }
     });
   }
@@ -354,7 +359,7 @@ class transactionsCollection extends Mongo.Collection {
     return this.getComplete(habId, range).length + this.getIncomplete(habId, range).length;
   }
   completedAndArchived(){ return [ 'completed', 'archived' ]; }
-  active(){ return [ 'pending_vendor', 'pending_runner', 'in_progress' ]; }
+  active(){ return [ 'pending_vendor', 'pending_runner', 'in_progress', 'pending_dispatch' ]; }
   userVisible() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress', 'completed']; }
   userCart() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress']; }
   closedAndDiscarded() { return ['completed', 'archived', 'discarded', 'cancelled']; }
@@ -371,7 +376,16 @@ class transactionsCollection extends Mongo.Collection {
 
 transactions = new transactionsCollection("transactions");
 if(Meteor.isServer){
-  transactions._ensureIndex({ week: 1, sellerId: 1});
+  transactions._ensureIndex({
+    week: 1,
+    sellerId: 1,
+    runnerId: 1,
+    timeRequested: 1,
+    buyerId: 1,
+    status: 1,
+    habitat: 1,
+    company_name: 1,
+  });
 }
 
 const apiKey = 'AIzaSyCyFtEt80IOFCQ_mgvXDwAFKNNCewjeEWo';
@@ -388,7 +402,7 @@ import geolib from 'geolib';
 gmapsUrl = (txId) => {
   check(txId, String);
   const tx = transactions.findOne(txId);
-  const biz = businessProfiles.findOne({_id: tx.sellerId, geometry: {$exists: true}});
+  const biz = businessProfiles.findOne(tx.sellerId);
   const originCoords = biz.geometry.coordinates;
 
   const origin = `origin=${originCoords[1]},${originCoords[0]}`;

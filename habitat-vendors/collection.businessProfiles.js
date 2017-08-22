@@ -2,34 +2,31 @@ import { _ } from 'underscore';
 
 class businessProfilesCollection extends Mongo.Collection {
   insert(doc, callback) {
-    transactions.methods.searchForAddress.call({address: doc.company_address}, (err, res) => {
-      if(err) { throwError(err.message); } else if(res && res.features.length){
-        return super.insert(_.extend(doc, {
-          prep_time: parseInt(doc.prep_time),
-          open: false,
-          featured: false,
-          clicks: 0,
-          DaaS: true,
-          backend_name: doc.company_name,
-          order: businessProfiles.find().count() + 1,
-          categories: [ 'none' ], //need to start w/ this or reassigning category won't work
-          transactionCount: 0,
-          employees: [],
-          weeklyHours: this.setHours(),
-          geometry: res.features[0].geometry,
-          backend_habitat: Habitats.findOne(doc.habitat[0]).name,
-          grubhubId: doc.grubhubId
-        }), (err, newBizId) => {
-          if(err) { throwError(err.message); }
-          const bp = businessProfiles.findOne(newBizId);
-            Meteor.call('createApiKey', bp.uid, (err, res) => {
-              if (err) {
-                console.log(err);
-              }
-            });
-        }, callback);
-      }
-    });
+    const _doc = _.extend(doc, {
+      prep_time: parseInt(doc.prep_time),
+      open: false,
+      featured: false,
+      clicks: 0,
+      DaaS: true,
+      backend_name: doc.company_name,
+      order: businessProfiles.find().count() + 1,
+      categories: [ 'none' ], //need to start w/ this or reassigning category won't work
+      transactionCount: 0,
+      employees: [],
+      weeklyHours: this.setHours(),
+      backend_habitat: Habitats.findOne(doc.habitat[0]).name,
+      grubhubId: doc.grubhubId
+    }); console.log(_doc);
+    super.insert(_doc, (err, newBizId) => {
+      if(err) { console.log('inside error'); throwError({reason: err.message}); }
+      const bp = businessProfiles.findOne(newBizId);
+        console.warn(`creating apikey for ${bp.uid}`);
+        Meteor.call('createApiKey', bp.uid, (err, res) => {
+          if (err) {
+            console.log(err);
+          }
+        });
+    }, callback);
   }
   remove(id, callback){
     return super.remove(id, (err, res) => {
@@ -131,7 +128,7 @@ class businessProfilesCollection extends Mongo.Collection {
     return transactions.findOne(doc._id).timeRequested + (60000 * bp.prep_time);
   }
   rates(txId){
-    if(!txId) { throwError('No txId passed in'); }
+    if(!txId) { throwError({reason: 'No txId passed in'}); }
     const tx = transactions.findOne(txId); if(!tx) { throwError('No transaction found'); }
     const bp = businessProfiles.findOne(tx.sellerId);
     const today = this.getToday(tx.sellerId);
@@ -158,8 +155,19 @@ class businessProfilesCollection extends Mongo.Collection {
     } : _.extend(rates,  {
       totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
       totalWithTax: totalWithTax,
-      vendorPayout: tx.DaaS ? - DaaSTotal : txPayout,
+      vendorPayout: this.getPayout(tx, txPayout, DaaSTotal),
     });
+  }
+  getPayout(tx, txPayout, DaaSTotal){
+    if(tx.DaaS){
+      if(tx.method === 'Pickup'){
+        return 0;
+      } else {
+        return - DaaSTotal;
+      }
+    } else {
+      return txPayout;
+    }
   }
   cateringPrice(bags) {
     const cat = Settings.findOne({name: 'cateringPrice'});
@@ -199,15 +207,6 @@ businessProfiles.allow({
   update(){ return Roles.userIsInRole(Meteor.userId(), ['admin']); }
 });
 
-businessProfiles.initEasySearch( ['company_name', 'company_type'], {
-  'limit': 5,
-  'use': 'mongo-db',
-  'convertNumbers': false,
-  'sort': function() {
-    return {open: -1}
-  }
-});
-
 businessProfiles.find({}).observeChanges((id, fields) => {
   if(fields.open && fields.open === false){
     const extVendorId = transactions.findOne({partnerName: Ontray.owner}).externalVendorId;
@@ -226,3 +225,9 @@ generateBizPass = function (company_name) {
           ("0" + Math.floor(Math.random() * (9999 - 0 + 1)))
           .substr(-4);
 };
+
+businessProfiles.initEasySearch(['company_name', 'company_email', 'company_address'], {
+  'limit': 20,
+  'use': 'mongo-db',
+  'convertNumbers': false
+});
