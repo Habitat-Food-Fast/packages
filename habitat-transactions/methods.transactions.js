@@ -1,6 +1,6 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
-import Phaxio from 'phaxio';
+
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
@@ -934,19 +934,23 @@ handleInitialVendorContact = (txId) => {
             headers: "",
           });
         } else {
-          console.log(`dynamic import ${module.dynamicImport}`);
-          phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
-          phaxio.sendFax({
-            to: Meteor.settings.devMode ?
-            '+18884732963' :
-            `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
-            string_data: res.content,
-            string_data_type: 'html'
-          }, (error, data) => {
-            if(error) { console.warn(`fax error`, error.message); } else {
-              console.log(`fax success`);
-            }
-          });
+          if(Meteor.isServer){
+            import('phaxio').then((Phaxio) => {
+              console.log(`dynamic import ${module.dynamicImport}`);
+              phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+              phaxio.sendFax({
+                to: Meteor.settings.devMode ?
+                '+18884732963' :
+                `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
+                string_data: res.content,
+                string_data_type: 'html'
+              }, (error, data) => {
+                if(error) { console.warn(`fax error`, error.message); } else {
+                  console.log(`fax success`);
+                }
+              });
+            });
+          }
         }
       });
 			break;
