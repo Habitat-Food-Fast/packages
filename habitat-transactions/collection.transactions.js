@@ -66,6 +66,9 @@ class transactionsCollection extends Mongo.Collection {
         }
         if(tx.status === 'pending_vendor' || tx.status === 'pending_runner'){
           transactions.request(txId, {});
+          if (tx.status === 'pending_runner' && Settings.findOne({name: 'pendingDispatch'}).is) {
+            transactions.update(txId, {$set: {status: 'pending_dispatch'}});
+          }
         }
         if (tx.scheduled && tx.status === 'queued') {
           transactions.update(tx._id, {$set: {deliveredAtEst: tx.deliverBy, vendorPayRef: businessProfiles.rates(tx._id)}});
@@ -222,7 +225,7 @@ class transactionsCollection extends Mongo.Collection {
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
-      status: 'pending_runner'
+      status: Settings.findOne({name: 'pendingDispatch'}).is ? 'pending_dispatch' : 'pending_runner'
     };
     return req;
   }
@@ -351,7 +354,7 @@ class transactionsCollection extends Mongo.Collection {
     return this.getComplete(habId, range).length + this.getIncomplete(habId, range).length;
   }
   completedAndArchived(){ return [ 'completed', 'archived' ]; }
-  active(){ return [ 'pending_vendor', 'pending_runner', 'in_progress' ]; }
+  active(){ return [ 'pending_vendor', 'pending_runner', 'in_progress', 'pending_dispatch' ]; }
   userVisible() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress', 'completed']; }
   userCart() { return ['created', 'pending_vendor', 'pending_runner', 'in_progress']; }
   closedAndDiscarded() { return ['completed', 'archived', 'discarded', 'cancelled']; }
