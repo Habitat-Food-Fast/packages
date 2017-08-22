@@ -938,11 +938,12 @@ getRatingSum = function(collection, key){
 };
 
 handleInitialVendorContact = (txId) => {
+  console.warn('inside vendor initial contact');
 	const transactionToSend = transactions.findOne(txId); check(transactionToSend._id, String);
 	const bizProfile = businessProfiles.findOne(transactionToSend.sellerId); check(bizProfile._id, String);
 	const pendingVendorAcceptCount = transactions.find({sellerId: transactionToSend.sellerId, status: 'pending_vendor'}).count();
   const pref = bizProfile.notificationPreference; check(pref, String);
-  console.warn('inside vendor initial contact');
+  console.log('acceptCount', pendingVendorAcceptCount, pref);
 	switch (pref) {
 		case 'sms':
 		// if theres more than one transaction dont send
