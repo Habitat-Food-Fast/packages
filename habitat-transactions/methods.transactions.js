@@ -934,10 +934,15 @@ handleInitialVendorContact = (txId) => {
             headers: "",
           });
         } else {
+          console.warn('about to send fax');
           if(Meteor.isServer){
-            import('phaxio').then((Phaxio) => {
-              console.log(`dynamic import ${module.dynamicImport}`);
+            import Phaxio from 'phaxio';
+
+            console.warn('isServer, importing module');
+              console.warn('inside import');
               phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+              console.warn(phaxio);
+              console.warn(phaxio.sendFax);
               phaxio.sendFax({
                 to: Meteor.settings.devMode ?
                 '+18884732963' :
@@ -949,7 +954,8 @@ handleInitialVendorContact = (txId) => {
                   console.log(`fax success`);
                 }
               });
-            });
+          } else {
+            console.warn('Meteor.isServer false');
           }
         }
       });
