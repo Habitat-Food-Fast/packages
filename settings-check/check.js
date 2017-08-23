@@ -1,10 +1,14 @@
 Meteor.startup(function(){
-  // var result = [Meteor.settings].map(getKeys);
-  if(!Meteor.settings.public.apiUrl){
-    throwError(`Missing apiUrl in settings file`);
-  }
-  if(!Meteor.settings.sentryKey){
-    throwError(`Missing sentryKey in settings file`);
+  if(Meteor.isServer){
+    if(!Meteor.settings.public.apiUrl){
+      throw new Meteor.Error(`Missing apiUrl in settings file`);
+    }
+    if(!Meteor.settings.sentryKey){
+      throw new Meteor.Error(`Missing server sentryKey in settings file`);
+    }
+    if(!Meteor.settings.public.sentryKey){
+      throw new Meteor.Error(`Missing client sentryKey in settings file`);
+    }
   }
 });
 
@@ -36,3 +40,5 @@ function checkObject(obj, all, seen) {
     checkValue(obj[key], all, seen);
   }
 }
+
+// var result = [Meteor.settings].map(getKeys);
