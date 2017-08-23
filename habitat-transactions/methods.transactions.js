@@ -903,60 +903,43 @@ getRatingSum = function(collection, key){
 };
 
 handleInitialVendorContact = (txId) => {
-  console.warn('inside vendor initial contact');
 	const tx = transactions.findOne(txId); check(tx._id, String);
 	const bp = businessProfiles.findOne(tx.sellerId); check(bp._id, String);
-	const pendingVendorAcceptCount = transactions.find({sellerId: tx.sellerId, status: 'pending_vendor'}).count();
-  const pref = bp.notificationPreference; check(pref, String);
-  console.log('acceptCount', pendingVendorAcceptCount, pref);
-	switch (pref) {
-		case 'sms':
-		// if theres more than one transaction dont send
-			if (pendingVendorAcceptCount === 1) {
-        console.log('sending receipt text');
-				Meteor.call('sendReceiptText', tx);
-			} else {
-        console.warn('MORE OR LESS THAN 1 TX WITH THE SAME SELLER ID, NOT SENDING TEXT');
-      }
-			break;
+	switch (bp.notificationPreference) {
 		case 'fax':
-      HTTP.call(`GET`, urls.vendor.single_receipt_fax(txId), (err, res) => {
-        if(err){ throwError({reason: err.message})}
-          if(Meteor.isServer){
-            import Phaxio from 'phaxio';
-            phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
-            phaxio.sendFax({
-              to: Meteor.settings.devMode ?
-              '+18884732963' :
-              `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
-              string_data: res.content,
-              string_data_type: 'html'
-            }, (error, data) => {
-              HTTP.post(`${Meteor.settings.public.apiUrl}api/v1/alerts/create`, {
-                data: {
-                  api_key: Meteor.users.findOne({roles: {$in: ['admin']}}).apiKey,
-                  alert: {
-                    type: 'success',
-                    message: `Faxed`,
-                    details: {
-                      text: `${textResponse}`
-                    }
-                  }
-                }
-              });
-            });
-          }
-      });
+      try {
+        const res = HTTP.call(`GET`, urls.vendor.single_receipt_fax(txId));
+        return sendFax(bp, res.content, 'html');
+      } catch (err) {
+          throwError({reason: err.message})
+      }
 			break;
 		case 'email': return Meteor.call('sendSingleVendorTxEmail', txId);
 		default: return Meteor.call('sendReceiptText', tx);
 		}
-    slm(`ORDER UP
+};
 
-    Vendor: ${bp.company_name}
-    Vendor Phone: ${bp.orderPhone}
-    Contact Type: ${bp.notificationPreference}
-
-    ${tx.textMessage}`);
-
+sendFax = (bp, data, type) => {
+  if(Meteor.isServer){
+    import Phaxio from 'phaxio';
+    phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+    phaxio.sendFax({
+      to: Meteor.settings.devMode ? '+18884732963' : `+1${bp.faxPhone.toString()}`,
+      string_data: data,
+      string_data_type: 'html'
+    }, Meteor.bindEnvironment((err, data) => {
+      HTTP.post(`${Meteor.settings.public.apiUrl}/api/v1/alerts/create`, {
+        data: {
+          api_key: Meteor.users.findOne({roles: {$in: ['admin']}}).apiKey,
+          alert: {
+            type: !err ? 'success' : 'warning',
+            message: !err ? `Fax sent to ${bp.company_name}` : `Error sending fax to ${bp.company_name}`,
+            details: {
+              text: `Fax # ${bp.faxPhone}`
+            }
+          }
+        }
+      });
+    }));
+  }
 };
