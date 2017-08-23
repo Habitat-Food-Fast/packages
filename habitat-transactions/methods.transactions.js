@@ -904,79 +904,59 @@ getRatingSum = function(collection, key){
 
 handleInitialVendorContact = (txId) => {
   console.warn('inside vendor initial contact');
-	const transactionToSend = transactions.findOne(txId); check(transactionToSend._id, String);
-	const bizProfile = businessProfiles.findOne(transactionToSend.sellerId); check(bizProfile._id, String);
-	const pendingVendorAcceptCount = transactions.find({sellerId: transactionToSend.sellerId, status: 'pending_vendor'}).count();
-  const pref = bizProfile.notificationPreference; check(pref, String);
+	const tx = transactions.findOne(txId); check(tx._id, String);
+	const bp = businessProfiles.findOne(tx.sellerId); check(bp._id, String);
+	const pendingVendorAcceptCount = transactions.find({sellerId: tx.sellerId, status: 'pending_vendor'}).count();
+  const pref = bp.notificationPreference; check(pref, String);
   console.log('acceptCount', pendingVendorAcceptCount, pref);
 	switch (pref) {
 		case 'sms':
 		// if theres more than one transaction dont send
 			if (pendingVendorAcceptCount === 1) {
         console.log('sending receipt text');
-				Meteor.call('sendReceiptText', transactionToSend);
+				Meteor.call('sendReceiptText', tx);
 			} else {
         console.warn('MORE OR LESS THAN 1 TX WITH THE SAME SELLER ID, NOT SENDING TEXT');
       }
 			break;
 		case 'fax':
       HTTP.call(`GET`, urls.vendor.single_receipt_fax(txId), (err, res) => {
-        if(err){
-          Email.send({
-            from: "sender@somewhere.net",
-            to: "mike@tryhabitat.com",
-            cc: "carboncopy@elsewhere.io",
-            bcc: "lurker@somewhere.io",
-            replyTo: "public@somewhere.net",
-            subject: "Missed Fax",
-            text: JSON.stringify(err, null, 2),
-            html: "",
-            headers: "",
-          });
-        } else {
-          console.warn('about to send fax');
+        if(err){ throwError({reason: err.message})}
           if(Meteor.isServer){
             import Phaxio from 'phaxio';
-
-            console.warn('isServer, importing module');
-              console.warn('inside import');
-              phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
-              console.warn(phaxio);
-              console.warn(phaxio.sendFax);
-              phaxio.sendFax({
-                to: Meteor.settings.devMode ?
-                '+18884732963' :
-                `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
-                string_data: res.content,
-                string_data_type: 'html'
-              }, (error, data) => {
-                if(error) { console.warn(`fax error`, error.message); } else {
-                  console.log(`fax success`);
+            phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+            phaxio.sendFax({
+              to: Meteor.settings.devMode ?
+              '+18884732963' :
+              `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
+              string_data: res.content,
+              string_data_type: 'html'
+            }, (error, data) => {
+              HTTP.post(`${Meteor.settings.public.apiUrl}api/v1/alerts/create`, {
+                data: {
+                  api_key: Meteor.users.findOne({roles: {$in: ['admin']}}).apiKey,
+                  alert: {
+                    type: 'success',
+                    message: `Faxed`,
+                    details: {
+                      text: `${textResponse}`
+                    }
+                  }
                 }
               });
-          } else {
-            console.warn('Meteor.isServer false');
+            });
           }
-        }
       });
 			break;
-		case 'email':
-			Meteor.call('sendSingleVendorTxEmail', txId);
-			break;
-		default:
-			if (pendingVendorAcceptCount === 1) {
-				Meteor.call('sendReceiptText', transactionToSend);
-			} else {
-        console.warn(`not sending receipt text`)
-      }
-			break;
+		case 'email': return Meteor.call('sendSingleVendorTxEmail', txId);
+		default: return Meteor.call('sendReceiptText', tx);
 		}
     slm(`ORDER UP
 
-    Vendor: ${bizProfile.company_name}
-    Vendor Phone: ${bizProfile.orderPhone}
-    Contact Type: ${bizProfile.notificationPreference}
+    Vendor: ${bp.company_name}
+    Vendor Phone: ${bp.orderPhone}
+    Contact Type: ${bp.notificationPreference}
 
-    ${transactionToSend.textMessage}`);
+    ${tx.textMessage}`);
 
 };
