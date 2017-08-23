@@ -945,9 +945,7 @@ handleInitialVendorContact = (txId) => {
                 string_data: res.content,
                 string_data_type: 'html'
               }, (error, data) => {
-                if(error) { console.warn(`fax error`, error.message); } else {
-                  console.log(`fax success`);
-                }
+
               });
             });
           }
