@@ -911,9 +911,8 @@ handleInitialVendorContact = (txId) => {
         const res = HTTP.call(`GET`, urls.vendor.single_receipt_fax(txId));
         return sendFax(bp, res.content, 'html');
       } catch (err) {
-          throwError({reason: err.message})
+        return throwError({reason: err.message})
       }
-			break;
 		case 'email': return Meteor.call('sendSingleVendorTxEmail', txId);
 		default: return Meteor.call('sendReceiptText', tx);
 		}
