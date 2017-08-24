@@ -38,6 +38,7 @@ class transactionsCollection extends Mongo.Collection {
       company_address: bizProf.company_address,
       company_name: bizProf.company_name,
       company_geometry: bizProf.geometry,
+      company_phone: bizProf.orderPhone,
       buyerId: !doc.DaaS ? doc.buyerId : doc.sellerId,
       customer: this.customerItems(usr, doc),
       sellerId: bizProf._id,

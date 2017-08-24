@@ -82,6 +82,7 @@ runner = {
                   newUrl = staffJoy._getUrl(`locations/${habitat.staffJoyId}/roles/${role}/users/${shift.user_id}`);
                   const userShift = HTTP.call(`GET`, newUrl, { auth: staffJoy._auth, params: {user_id: shift.user_id} });
                   const workerId = userShift.data.data.internal_id;
+                  shift.habitat = habitat.name;
                   const usr = Meteor.users.findOne(workerId ? workerId : {username: userShift.data.data.email});
                   return {
                     shift: shift,
