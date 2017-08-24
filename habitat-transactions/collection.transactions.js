@@ -278,8 +278,13 @@ class transactionsCollection extends Mongo.Collection {
       if (err) {
         throwError({reason: err.message});
       } else {
+        if (!trans.DaaS) {
+          console.log(`tx.request.handleInitialVendorContact`);
+          handleInitialVendorContact(id);
+        } else {
+          console.log(`tx.request.notSendingHandleInitial`);
+        }
         if(trans.method === 'Delivery'){ runner.updateDropoffInfo(id); }
-        if (!trans.DaaS) { handleInitialVendorContact(id); }
       }
     });
   }

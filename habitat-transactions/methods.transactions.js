@@ -1,5 +1,6 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
+
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
@@ -902,71 +903,42 @@ getRatingSum = function(collection, key){
 };
 
 handleInitialVendorContact = (txId) => {
-	const transactionToSend = transactions.findOne(txId); check(transactionToSend._id, String);
-	const bizProfile = businessProfiles.findOne(transactionToSend.sellerId); check(bizProfile._id, String);
-	const pendingVendorAcceptCount = transactions.find({sellerId: transactionToSend.sellerId, status: 'pending_vendor'}).count();
-  const pref = bizProfile.notificationPreference; check(pref, String);
-  console.warn('inside vendor initial contact');
-	switch (pref) {
-		case 'sms':
-		// if theres more than one transaction dont send
-			if (pendingVendorAcceptCount === 1) {
-        console.log('sending receipt text');
-				Meteor.call('sendReceiptText', transactionToSend);
-			} else {
-        console.warn('MORE OR LESS THAN 1 TX WITH THE SAME SELLER ID, NOT SENDING TEXT');
-      }
-			break;
+	const tx = transactions.findOne(txId); check(tx._id, String);
+	const bp = businessProfiles.findOne(tx.sellerId); check(bp._id, String);
+	switch (bp.notificationPreference) {
 		case 'fax':
-      HTTP.call(`GET`, urls.vendor.single_receipt_fax(txId), (err, res) => {
-        if(err){
-          Email.send({
-            from: "sender@somewhere.net",
-            to: "mike@tryhabitat.com",
-            cc: "carboncopy@elsewhere.io",
-            bcc: "lurker@somewhere.io",
-            replyTo: "public@somewhere.net",
-            subject: "Missed Fax",
-            text: JSON.stringify(err, null, 2),
-            html: "",
-            headers: "",
-          });
-        } else {
-          console.log('beyond the import');
-          import('phaxio').then((Phaxio) => {
-            console.log('inside of phaxio import');
-            phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
-            console.log(phaxio);
-            try {
-              phaxio.sendFax({
-                to: Meteor.settings.devMode ?
-                '+18884732963' :
-                `+1${businessProfiles.findOne(transactions.findOne(txId).sellerId).faxPhone.toString()}`,
-                string_data: res.content,
-                string_data_type: 'html'
-              });
-            } catch(e) {
-              console.log(e);
-            }
-          });
-          }
-      });
-			break;
-		case 'email':
-			Meteor.call('sendSingleVendorTxEmail', txId);
-			break;
-		default:
-			if (pendingVendorAcceptCount === 1) {
-				Meteor.call('sendReceiptText', transactionToSend);
-			}
-			break;
+      try {
+        const res = HTTP.call(`GET`, urls.vendor.single_receipt_fax(txId));
+        return sendFax(bp, res.content, 'html');
+      } catch (err) {
+        return throwError({reason: err.message})
+      }
+		case 'email': return Meteor.call('sendSingleVendorTxEmail', txId);
+		default: return Meteor.call('sendReceiptText', tx);
 		}
-    slm(`ORDER UP
+};
 
-    Vendor: ${bizProfile.company_name}
-    Vendor Phone: ${bizProfile.orderPhone}
-    Contact Type: ${bizProfile.notificationPreference}
-
-    ${transactionToSend.textMessage}`);
-
+sendFax = (bp, data, type) => {
+  if(Meteor.isServer){
+    import Phaxio from 'phaxio';
+    phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
+    phaxio.sendFax({
+      to: Meteor.settings.devMode ? '+18884732963' : `+1${bp.faxPhone.toString()}`,
+      string_data: data,
+      string_data_type: 'html'
+    }, Meteor.bindEnvironment((err, data) => {
+      HTTP.post(`${Meteor.settings.public.apiUrl}/api/v1/alerts/create`, {
+        data: {
+          api_key: Meteor.users.findOne({roles: {$in: ['admin']}}).apiKey,
+          alert: {
+            type: !err ? 'success' : 'warning',
+            message: !err ? `Fax sent to ${bp.company_name}` : `Error sending fax to ${bp.company_name}`,
+            details: {
+              text: `Fax # ${bp.faxPhone}`
+            }
+          }
+        }
+      });
+    }));
+  }
 };

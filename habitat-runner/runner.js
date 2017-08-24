@@ -28,7 +28,9 @@ runner = {
         status: {$in: ['pending_vendor', 'pending_runner', 'in_progress']},
         habitat: h._id}, {sort: {deliveredAtEst: -1}
       }).forEach((t) => {
-        if(typeof t.deliveredAtEst !== 'number') { console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); }
+        if(typeof t.deliveredAtEst !== 'number') {
+          // console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); 
+        }
           this.updateDropoffInfo(t._id, (err) => { if(err) { console.warn(err.message); }});
       });
     });
