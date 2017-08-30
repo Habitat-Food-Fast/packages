@@ -255,6 +255,7 @@ function times(tx, req){
     createdAt: tx.createdAt ? csv.transformTime(tx.createdAt) : '',
     dayRequested: tx.timeRequested ? csv.transformTime(tx.timeRequested, true) : '',
     timeRequested: getIncomplete ? '' : tx.timeRequested ? csv.transformTime(tx.timeRequested) : '',
+    timeRequestedDate: moment(new Date(tx.timeRequested)).subtract({hours: 4}).format(),
     dropoffVariation: getVariation(tx, getIncomplete),
   };
 }
