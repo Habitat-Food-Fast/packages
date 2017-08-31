@@ -304,6 +304,7 @@ function payRef(tx){
 }
 
 changeTimezone = () => {
-  const tx = masterTransactions.findOne('mP5NrjGrcLKaNqGdd').timeRequestedDate.includes('+00:00')
-  masterTransactions.update(tx._id, {$set: { timeRequestedDate: moment(tx.timeRequestedDate).subtract({hours: 4}).format()}})
+  console.log(moment(masterTransactions.findOne('JDkEAD3PkNWriJSzt').timeRequestedDate).subtract({hours: 4}).format());
+  // masterTransactions.update(tx._id, {$set: { timeRequestedDate: moment(tx.timeRequestedDate).subtract({hours: 4}).format()}})
+
 }
