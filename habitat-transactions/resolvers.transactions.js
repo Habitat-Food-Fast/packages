@@ -255,6 +255,7 @@ function times(tx, req){
     createdAt: tx.createdAt ? csv.transformTime(tx.createdAt) : '',
     dayRequested: tx.timeRequested ? csv.transformTime(tx.timeRequested, true) : '',
     timeRequested: getIncomplete ? '' : tx.timeRequested ? csv.transformTime(tx.timeRequested) : '',
+    timeRequestedDate: moment(new Date(tx.timeRequested)).subtract({hours: 4}).format(),
     dropoffVariation: getVariation(tx, getIncomplete),
   };
 }
@@ -300,4 +301,9 @@ function payRef(tx){
     customerCommission: tx.DaaS ? '' : calc._customerCommission(tx.payRef.platformRevenue) || 0,
     vendorCommission: calc._roundToTwo(vCom),
   };
+}
+
+changeTimezone = () => {
+  const tx = masterTransactions.findOne('mP5NrjGrcLKaNqGdd').timeRequestedDate.includes('+00:00')
+  masterTransactions.update(tx._id, {$set: { timeRequestedDate: moment(tx.timeRequestedDate).subtract({hours: 4}).format()}})
 }
