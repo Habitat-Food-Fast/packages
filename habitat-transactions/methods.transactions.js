@@ -255,7 +255,7 @@ sendReceiptImage: new ValidatedMethod({
     run({ txId, runId }) {
       const tx = transactions.findOne(txId);
       const previousRunnerPhone = Meteor.users.findOne(tx.runnerId).profile.phone;
-
+      const newObj = transactions.grabRunnerObj(runId);
       if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         if(tx && tx.declinedBy && tx.declinedBy.includes(runId)){
           transactions.update(txId, {$pull: {declinedBy: runId}});
@@ -263,7 +263,7 @@ sendReceiptImage: new ValidatedMethod({
         transactions.update(txId, {$set: {
           runnerId: runId,
           reassignCount: tx.reassignCount && tx.reassignCount.length ? tx.reassignCount.length : 1,
-          runnerObj: transactions.grabRunnerObj(runId)
+          runnerObj: newObj
         }}, (err) => {
           if(err) { throwError(err.message); } else {
             if(!this.isSimulation) {
@@ -273,6 +273,22 @@ sendReceiptImage: new ValidatedMethod({
                 body: `${tx.orderNumber} reassigned`,
               }, (err, responseData) => { } );
               DDPenv().call('sendRunnerPing', txId, runId);
+              HTTP.post(`${Meteor.absoluteUrl()}api/v1/alerts/create`, {
+                data: {
+                  api_key: Meteor.user().apiKey,
+                  alert: {
+                    type: 'warning',
+                    message: `${Meteor.user().profile.fn} reassigned ${tx.orderNumber}`,
+                    details: {
+                      text: `From ${tx.runnerObj.name} to ${newObj.name}`
+                    }
+                  }
+                }
+              }, (err, res) => {
+                if (err) {
+                  throwError(err.message);
+                }
+              });
             }
           }
         });
