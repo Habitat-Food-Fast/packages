@@ -232,16 +232,27 @@ transactions.csv = {
         if(send){
           const date = moment(week.endTime).format('MMM Do YYYY');
           const query ={
-            to: Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
-            subject: `Habitat Invoice - Week Ending ${date}`,
+            to:  'Mike <mike@tryhabitat.com>',
+            // Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
+            subject: `TEST Habitat Invoice - Week Ending ${date}`,
             template: 'emailVendorWeeklyPayout',
-            data: { bizId: bizId, week: weekNum },
+            data: {
+              bizId: bizId,
+              week: weekNum ,
+              fullWeek: calc.weeks.getWeek(bizId, weekNum),
+            },
             attachments,
           };
-
-          if(!Meteor.settings.devMode){
+          console.log(query);
+          // if(!Meteor.settings.devMode){
+          try {
+            console.log('sending mail')
             Mailer.send(query);
+          } catch (e) {
+            console.warn(e);
           }
+
+          // }
 
         }
       },
