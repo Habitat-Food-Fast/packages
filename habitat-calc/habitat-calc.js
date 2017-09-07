@@ -254,7 +254,6 @@ calc = {
         start: week.startTime,
         end: week.endTime,
       };
-      debugger;
       return response;
     },
   },
