@@ -1,6 +1,6 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
-
+import Random from 'meteor/random';
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
@@ -22,8 +22,8 @@ transactions.methods = {
       if(arguments[0].DaaS && Meteor.user() && !Meteor.user().roles.includes('vendor')) {
         throwError('Must be vendor to insert DaaS');
       } else {
-        console.log('heres the insert');
-        console.log(arguments[0]);
+        const doc = arguments[0];
+        doc._id = Random.id()
         return transactions.insert(arguments[0]);
       }
     }
