@@ -289,7 +289,6 @@ calc = {
     total(request, query){
       calc._checkQuery(query);
       week = request.fullWeek;
-      debugger;
       subtotal = week.subtotal.orders;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived')
