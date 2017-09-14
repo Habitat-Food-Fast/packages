@@ -199,7 +199,8 @@ calc = {
       //always filter what vendor sees by these
       const week = weeks.findOne({week: parseInt(weekNum)});
       const allComplete = this._completed(bizId, weekNum);
-      return {
+      const response = {
+        vendor: businessProfiles.findOne(bizId),
         transactions: !counts ? this._all(bizId, weekNum) : this._all(bizId, weekNum).length,
         potentialTransactions: !counts ? this._missed(bizId, weekNum) :
           this._missed(bizId, weekNum) ? this._missed(bizId, weekNum).length : 0,
@@ -253,6 +254,7 @@ calc = {
         start: week.startTime,
         end: week.endTime,
       };
+      return response;
     },
   },
   //parsing down different payouts from getWeek into what vendor needs
@@ -287,6 +289,7 @@ calc = {
     total(request, query){
       calc._checkQuery(query);
       week = request.fullWeek;
+      debugger;
       subtotal = week.subtotal.orders;
       switch (query) {
         case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived')

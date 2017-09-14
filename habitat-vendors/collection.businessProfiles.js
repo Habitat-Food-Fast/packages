@@ -128,35 +128,36 @@ class businessProfilesCollection extends Mongo.Collection {
     return transactions.findOne(doc._id).timeRequested + (60000 * bp.prep_time);
   }
   rates(txId){
-    if(!txId) { throwError({reason: 'No txId passed in'}); }
-    const tx = transactions.findOne(txId); if(!tx) { throwError('No transaction found'); }
-    const bp = businessProfiles.findOne(tx.sellerId);
-    const today = this.getToday(tx.sellerId);
-    //TODO: refactor into calc package
-    const meetsFreeDelCriteria = (
-      tx.method === 'Delivery' &&
-      today.vendorPremium &&
-      tx.payRef.tp >= today.vendorRates.freeDel.minimum
-    );
+    if(!txId) { return } else {
+      const tx = transactions.findOne(txId); if(!tx) { throwError('No transaction found'); }
+      const bp = businessProfiles.findOne(tx.sellerId);
+      const today = this.getToday(tx.sellerId);
+      //TODO: refactor into calc package
+      const meetsFreeDelCriteria = (
+        tx.method === 'Delivery' &&
+        today.vendorPremium &&
+        tx.payRef.tp >= today.vendorRates.freeDel.minimum
+      );
 
-    const rates = tx.DaaS ? today.vendorRates.DaaS :
-      today.vendorRates[
-        meetsFreeDelCriteria ?
-        'freeDel' :
-        tx.method ? tx.method.toLowerCase() : 'pickup'
-      ];
-    const totalWithTax = tx.payRef.tp + (tx.payRef.tp * calc.taxRate);
-    const txPayout = tx.payRef.tp - (tx.payRef.tp * rates.percent) - rates.flat;
-    const DaaSTotal = today.vendorRates.DaaS.flat;
+      const rates = tx.DaaS ? today.vendorRates.DaaS :
+        today.vendorRates[
+          meetsFreeDelCriteria ?
+          'freeDel' :
+          tx.method ? tx.method.toLowerCase() : 'pickup'
+        ];
+      const totalWithTax = tx.payRef.tp + (tx.payRef.tp * calc.taxRate);
+      const txPayout = tx.payRef.tp - (tx.payRef.tp * rates.percent) - rates.flat;
+      const DaaSTotal = today.vendorRates.DaaS.flat;
 
-    return tx.catering ? {
-      totalPrice: this.cateringPrice(tx.orderSize),
-      vendorPayout: - this.cateringPrice(tx.orderSize)
-    } : _.extend(rates,  {
-      totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
-      totalWithTax: totalWithTax,
-      vendorPayout: this.getPayout(tx, txPayout, DaaSTotal),
-    });
+      return tx.catering ? {
+        totalPrice: this.cateringPrice(tx.orderSize),
+        vendorPayout: - this.cateringPrice(tx.orderSize)
+      } : _.extend(rates,  {
+        totalPrice: tx.DaaS ? DaaSTotal : tx.payRef.tp,
+        totalWithTax: totalWithTax,
+        vendorPayout: this.getPayout(tx, txPayout, DaaSTotal),
+      });
+    }
   }
   getPayout(tx, txPayout, DaaSTotal){
     if(tx.DaaS){

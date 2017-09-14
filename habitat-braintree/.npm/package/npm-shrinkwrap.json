@@ -1,70 +1,69 @@
 {
-  "lockfileVersion": 1,
   "dependencies": {
     "amdefine": {
       "version": "1.0.1",
       "resolved": "https://registry.npmjs.org/amdefine/-/amdefine-1.0.1.tgz",
-      "integrity": "sha1-SlKCrBZHKek2Gbz9OtFR+BfOkfU="
+      "from": "amdefine@https://registry.npmjs.org/amdefine/-/amdefine-1.0.1.tgz"
     },
     "braintree": {
       "version": "1.32.0",
       "resolved": "https://registry.npmjs.org/braintree/-/braintree-1.32.0.tgz",
-      "integrity": "sha1-4i4TGu3Y/lqFoINmErkhAbpFOOs="
+      "from": "braintree@https://registry.npmjs.org/braintree/-/braintree-1.32.0.tgz"
     },
     "core-util-is": {
       "version": "1.0.2",
       "resolved": "https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz",
-      "integrity": "sha1-tf1UIgqivFq1eqtxQMlAdUUDwac="
+      "from": "core-util-is@https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz"
     },
     "dateformat": {
       "version": "1.0.1-1.2.3",
       "resolved": "https://registry.npmjs.org/dateformat/-/dateformat-1.0.1-1.2.3.tgz",
-      "integrity": "sha1-Ll0DA57KifnYeX+ZOJ3l+w9Kovw="
+      "from": "dateformat@https://registry.npmjs.org/dateformat/-/dateformat-1.0.1-1.2.3.tgz"
     },
     "debuglog": {
       "version": "0.0.2",
       "resolved": "https://registry.npmjs.org/debuglog/-/debuglog-0.0.2.tgz",
-      "integrity": "sha1-bA3PB+LD90UkYpt0Fmi9RsezYus="
+      "from": "debuglog@https://registry.npmjs.org/debuglog/-/debuglog-0.0.2.tgz"
     },
     "readable-stream": {
       "version": "1.1.10",
       "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-1.1.10.tgz",
-      "integrity": "sha1-1NwuUxnpyQ0eccaTkO9izZCCf2U="
+      "from": "readable-stream@https://registry.npmjs.org/readable-stream/-/readable-stream-1.1.10.tgz"
     },
     "sax": {
       "version": "1.2.2",
       "resolved": "https://registry.npmjs.org/sax/-/sax-1.2.2.tgz",
-      "integrity": "sha1-/YYxojvHgmvvXYcb24c3jJVkeCg="
+      "from": "sax@https://registry.npmjs.org/sax/-/sax-1.2.2.tgz"
     },
     "semver": {
       "version": "2.2.1",
       "resolved": "https://registry.npmjs.org/semver/-/semver-2.2.1.tgz",
-      "integrity": "sha1-eUEYKz/8xYC/8cF5QqzfeVHA0hM="
+      "from": "semver@https://registry.npmjs.org/semver/-/semver-2.2.1.tgz"
     },
     "source-map": {
       "version": "0.1.32",
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.1.32.tgz",
-      "integrity": "sha1-yLbBZ3l7pHQKjqMyUhYv8IWRsmY="
+      "from": "source-map@https://registry.npmjs.org/source-map/-/source-map-0.1.32.tgz"
     },
     "source-map-support": {
       "version": "0.2.9",
       "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.2.9.tgz",
-      "integrity": "sha1-C/s72uaA82tRgVFgu5UNCxf0okg="
+      "from": "source-map-support@https://registry.npmjs.org/source-map-support/-/source-map-support-0.2.9.tgz"
     },
     "string_decoder": {
       "version": "0.10.31",
       "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-0.10.31.tgz",
-      "integrity": "sha1-YuIDvEF2bGwoyfyEMB2rHFMQ+pQ="
+      "from": "string_decoder@https://registry.npmjs.org/string_decoder/-/string_decoder-0.10.31.tgz"
     },
     "underscore": {
       "version": "1.3.1",
       "resolved": "https://registry.npmjs.org/underscore/-/underscore-1.3.1.tgz",
-      "integrity": "sha1-bLiq0Od+tdu/tUsivNhpcwnPlkE="
+      "from": "underscore@https://registry.npmjs.org/underscore/-/underscore-1.3.1.tgz"
     },
     "xml2js": {
       "version": "0.1.13",
       "resolved": "https://registry.npmjs.org/xml2js/-/xml2js-0.1.13.tgz",
-      "integrity": "sha1-Q4/zsdhaUa1ln/wuvoNAPhDJhyI="
+      "from": "xml2js@https://registry.npmjs.org/xml2js/-/xml2js-0.1.13.tgz"
     }
   }
 }

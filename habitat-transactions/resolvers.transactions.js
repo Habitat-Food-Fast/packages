@@ -232,16 +232,27 @@ transactions.csv = {
         if(send){
           const date = moment(week.endTime).format('MMM Do YYYY');
           const query ={
-            to: Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
-            subject: `Habitat Invoice - Week Ending ${date}`,
+            to:  'Mike <mike@tryhabitat.com>',
+            // Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
+            subject: `TEST Habitat Invoice - Week Ending ${date}`,
             template: 'emailVendorWeeklyPayout',
-            data: { bizId: bizId, week: weekNum },
+            data: {
+              bizId: bizId,
+              week: weekNum ,
+              fullWeek: calc.weeks.getWeek(bizId, weekNum),
+            },
             attachments,
           };
-
-          if(!Meteor.settings.devMode){
+          console.log(query);
+          // if(!Meteor.settings.devMode){
+          try {
+            console.log('sending mail')
             Mailer.send(query);
+          } catch (e) {
+            console.warn(e);
           }
+
+          // }
 
         }
       },
@@ -255,6 +266,7 @@ function times(tx, req){
     createdAt: tx.createdAt ? csv.transformTime(tx.createdAt) : '',
     dayRequested: tx.timeRequested ? csv.transformTime(tx.timeRequested, true) : '',
     timeRequested: getIncomplete ? '' : tx.timeRequested ? csv.transformTime(tx.timeRequested) : '',
+    timeRequestedDate: moment(new Date(tx.timeRequested)).subtract({hours: 4}).format(),
     dropoffVariation: getVariation(tx, getIncomplete),
   };
 }
@@ -300,4 +312,10 @@ function payRef(tx){
     customerCommission: tx.DaaS ? '' : calc._customerCommission(tx.payRef.platformRevenue) || 0,
     vendorCommission: calc._roundToTwo(vCom),
   };
+}
+
+changeTimezone = () => {
+  console.log(moment(masterTransactions.findOne('JDkEAD3PkNWriJSzt').timeRequestedDate).subtract({hours: 4}).format());
+  // masterTransactions.update(tx._id, {$set: { timeRequestedDate: moment(tx.timeRequestedDate).subtract({hours: 4}).format()}})
+
 }

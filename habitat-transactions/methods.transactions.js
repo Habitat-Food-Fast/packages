@@ -1,6 +1,6 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
-
+import Random from 'meteor/random';
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
@@ -22,8 +22,8 @@ transactions.methods = {
       if(arguments[0].DaaS && Meteor.user() && !Meteor.user().roles.includes('vendor')) {
         throwError('Must be vendor to insert DaaS');
       } else {
-        console.log('heres the insert');
-        console.log(arguments[0]);
+        const doc = arguments[0];
+        doc._id = Random.id()
         return transactions.insert(arguments[0]);
       }
     }
@@ -142,7 +142,7 @@ transactions.methods = {
   }).validator(),
   run({ txId }) {
     const tx = transactions.findOne(txId);
-    let query = {status: 'pending_runner'};
+    let query = {status: Settings.findOne({name: 'pendingDispatch'}).is ? 'pending_dispatch' : 'pending_runner'};
     if (tx.DaaS) {
       query.timeRequested = Date.now();
       query.humanTimeRequested = new Date();
@@ -255,7 +255,7 @@ sendReceiptImage: new ValidatedMethod({
     run({ txId, runId }) {
       const tx = transactions.findOne(txId);
       const previousRunnerPhone = Meteor.users.findOne(tx.runnerId).profile.phone;
-
+      const newObj = transactions.grabRunnerObj(runId);
       if (Roles.userIsInRole(Meteor.userId(), ['admin'])) {
         if(tx && tx.declinedBy && tx.declinedBy.includes(runId)){
           transactions.update(txId, {$pull: {declinedBy: runId}});
@@ -263,7 +263,7 @@ sendReceiptImage: new ValidatedMethod({
         transactions.update(txId, {$set: {
           runnerId: runId,
           reassignCount: tx.reassignCount && tx.reassignCount.length ? tx.reassignCount.length : 1,
-          runnerObj: transactions.grabRunnerObj(runId)
+          runnerObj: newObj
         }}, (err) => {
           if(err) { throwError(err.message); } else {
             if(!this.isSimulation) {
@@ -273,6 +273,22 @@ sendReceiptImage: new ValidatedMethod({
                 body: `${tx.orderNumber} reassigned`,
               }, (err, responseData) => { } );
               DDPenv().call('sendRunnerPing', txId, runId);
+              HTTP.post(`${Meteor.absoluteUrl()}api/v1/alerts/create`, {
+                data: {
+                  api_key: Meteor.user().apiKey,
+                  alert: {
+                    type: 'warning',
+                    message: `${Meteor.user().profile.fn} reassigned ${tx.orderNumber}`,
+                    details: {
+                      text: `From ${tx.runnerObj.name} to ${newObj.name}`
+                    }
+                  }
+                }
+              }, (err, res) => {
+                if (err) {
+                  throwError(err.message);
+                }
+              });
             }
           }
         });

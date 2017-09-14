@@ -23,7 +23,7 @@ class transactionsCollection extends Mongo.Collection {
       payRef: doc.payRef || {},
       closed: false,
       DaaSType: doc.orderType || doc.DaaSType,
-      vendorPayRef: {},
+      vendorPayRef: businessProfiles.rates(tx._id),
       runnerPayRef: {},
       prepTime: doc.prepTime || doc.prep_time || bizProf.prep_time,
       order: (!doc.order || !doc.order.length) ? [] : this.formatOrder(doc.order, doc.thirdParty),
@@ -38,11 +38,12 @@ class transactionsCollection extends Mongo.Collection {
       company_address: bizProf.company_address,
       company_name: bizProf.company_name,
       company_geometry: bizProf.geometry,
+      company_phone: bizProf.orderPhone,
       buyerId: !doc.DaaS ? doc.buyerId : doc.sellerId,
       customer: this.customerItems(usr, doc),
       sellerId: bizProf._id,
       createdAt: Date.now(),
-      createdAtHuman: Date(),
+      createdAtHuman: new Date(),
       timeRequested: 0,
       humanTimeRequested: 0,
       vendorCallCount: 0,
@@ -225,7 +226,7 @@ class transactionsCollection extends Mongo.Collection {
       cancelledByVendor: false,
       missedByVendor: false,
       cancelledTime: false,
-      status: Settings.findOne({name: 'pendingDispatch'}).is ? 'pending_dispatch' : 'pending_runner'
+      status: 'pending_dispatch',
     };
     return req;
   }
