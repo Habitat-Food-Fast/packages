@@ -53,18 +53,18 @@ export default class instancesCollection extends Mongo.Collection {
     const my = Instances.findOne({name: PROMO });
     if (!my) {
       throwError(`Sorry, ${PROMO} is invalid or can't be found.`);
-    } else if(_.contains(my.owners, Meteor.id())){
+    } else if(_.contains(my.owners, Meteor.userId())){
       throwError(`Sorry, ${PROMO} is already added or in use.`);
-    } else if (_.contains(my.redeemedBy, Meteor.id())){
+    } else if (_.contains(my.redeemedBy, Meteor.userId())){
       throwError(`Sorry, you've already redeemed ${PROMO}.`);
-    } else if (my.ownedBy === Meteor.id()){
+    } else if (my.ownedBy === Meteor.userId()){
       throwError(`Nice try, but promo ${PROMO} belongs to you.`);
     } else if (my.expired) {
       throwError(`Sorry, ${PROMO} is no longer valid.`);
     } else if (this.hasRedeemedAcquisition() && my.acquisition) {
       throwError(`Sorry, referral codes like ${PROMO} can only be used once.`);
     } else {
-      return super.update(my._id, {$push: {owners: Meteor.id()}}, (err) => {
+      return super.update(my._id, {$push: {owners: Meteor.userId()}}, (err) => {
         if(err) { throwError(`Sorry, an unexpected error has occured.`); } else {
           if(Meteor.isServer){
             slm(`Successful insert of ${PROMO}`);
@@ -121,11 +121,11 @@ export default class instancesCollection extends Mongo.Collection {
   }
   //all promos user has redeemed or owns
   getUsersAcquisitionInstance(id){
-    return Instances.find({ownedBy: id || Meteor.id()}, {sort: {dateIssued: 1}}).fetch()[0];
+    return Instances.find({ownedBy: id || Meteor.userId()}, {sort: {dateIssued: 1}}).fetch()[0];
   }
 
   getSignupCodeUsed(userId){
-    const id = userId ? userId : Meteor.id();
+    const id = userId ? userId : Meteor.userId();
     return Instances.findOne({
       acquisition: true,
       ownedBy: {$ne: userId},
@@ -137,11 +137,11 @@ export default class instancesCollection extends Mongo.Collection {
   }
 
   getPromoHistory(userId){
-    const id = userId ? userId : Meteor.id();
+    const id = userId ? userId : Meteor.userId();
     return Instances.find({$or: [{owners: {$in: [id]}}, {redeemedBy: {$in: [id]}}]}).fetch();
   }
   hasRedeemedAcquisition(userId){
-    const id = userId ? userId : Meteor.id();
+    const id = userId ? userId : Meteor.userId();
     const userAcqPromo = _.findWhere(this.getPromoHistory(), {
       acquisition: true,
     });
@@ -157,7 +157,7 @@ export default class instancesCollection extends Mongo.Collection {
     );
     //filter usable by promos attached to in progress transactions
     const redeemedAndPendingPromoIds = transactions.find({
-      buyerId: Meteor.id(),
+      buyerId: Meteor.userId(),
       status: { $nin: ['created'] },
       promoId: { $exists: true }
     }).map(t => t.promoId);
