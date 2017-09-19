@@ -1,6 +1,5 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
-import Random from 'meteor/random';
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',

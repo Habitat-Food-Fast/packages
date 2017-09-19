@@ -234,7 +234,7 @@ transactions.csv = {
           const query ={
             to:  'Mike <mike@tryhabitat.com>',
             // Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
-            subject: `TEST Habitat Invoice - Week Ending ${date}`,
+            subject: `Habitat Invoice - Week Ending ${date}`,
             template: 'emailVendorWeeklyPayout',
             data: {
               bizId: bizId,
