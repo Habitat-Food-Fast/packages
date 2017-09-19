@@ -106,25 +106,6 @@ createCustomer (customerDetails) {
     return result;
   },
 
-/////
-//2. Find methods
-
-    // Find a transaction
-    findTransaction (transactionId) {
-      if(!Roles.userIsInRole(this.userId, 'admin')){
-        throw new Meteor.Error('Not authorized');
-      }
-        var findTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.find, gateway.transaction),
-            transaction;
-
-        try {
-            transaction = findTransactionSynchronously(transactionId);
-        } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-        return transaction;
-    },
-
     // Lookup a customer in the braintree vault
     findCustomer (customerId) {
         check(customerId, String);
