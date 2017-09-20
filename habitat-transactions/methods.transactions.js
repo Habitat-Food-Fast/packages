@@ -141,7 +141,7 @@ transactions.methods = {
   }).validator(),
   run({ txId }) {
     const tx = transactions.findOne(txId);
-    let query = {status: Settings.findOne({name: 'pendingDispatch'}).is ? 'pending_dispatch' : 'pending_runner'};
+    let query = {status: Settings.findOne({name: 'pendingDispatch'}) ? (Settings.findOne({name: 'pendingDispatch'}).is ? 'pending_dispatch' : 'pending_runner') : 'pending_runner'};
     if (tx.DaaS) {
       query.timeRequested = Date.now();
       query.humanTimeRequested = new Date();

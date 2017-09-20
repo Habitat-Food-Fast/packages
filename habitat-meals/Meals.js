@@ -94,30 +94,3 @@ Invoices.find({}).observe({
     JSON.stringify(Invoices.findOne(id), null, 2);
   }
 });
-
-Meteor.methods({
-  giveUserMeals(userId, mealNum) {
-    if(Roles.userIsInRole(this.userId, 'admin')){
-      mealPlan = {
-        uid: userId,
-        meals: mealNum
-      };
-      res = {
-        transaction: {
-          amount: 0
-        }
-      };
-    return Invoices.insert(mealPlan, res, 'reissue');
-    }
-  },
-  incMealCount(userId, mealAmount){
-    if(Roles.userIsInRole(Meteor.userId(), ['admin'])){
-      return Meteor.users.update(userId, {$inc: {'profile.mealCount': mealAmount}}, (err) => {
-        if(err) { throw new Meteor.Error(err.message); }
-      });
-    } else {
-      throw new Meteor.Error('Unauthorized');
-    }
-
-  }
-});
