@@ -11,17 +11,19 @@ FeaturedMeals.methods = {
     validate: new SimpleSchema({
       'uid': { type: String},
       'title': { type: String },
-      'tag': { type: String },
-      'description': { type: String },
+      'tag': { type: String, optional: true },
+      'description': { type: String, optional: true },
       'saleItem': { type: String },
       'image': { type: String },
       'featured': { type: Boolean },
       'deals': {
-        type: Array ,
-        optional: true,
+        type: Array,
+        optional: true
+      },
+      'deals.$': {
+        type: String,
         allowedValues: ['free delivery', 'free drink', 'free side']
       },
-      'deals.$': { type: String },
     }).validator(),
     run() {
       if(!this.isSimulation){
