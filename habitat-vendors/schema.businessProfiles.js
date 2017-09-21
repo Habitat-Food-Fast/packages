@@ -19,7 +19,7 @@ businessProfiles.schema = new SimpleSchema({
   prep_time: { type: Number, min: 0, max: 45, defaultValue: 15 },
   method: { type: String, trim: true, allowedValues: ['pickup', 'delivery', 'none'] },
   notificationPreference: { type: String, trim: true, optional: false, allowedValues: ['sms', 'email', 'fax', 'app', 'receipt printer'] },
-  production: { type: Boolean, autoValue(){ return this.isInsert && !Meteor.settings.devMode; } },
+  production: { type: Boolean, autoValue(){ return this.isInsert && !Meteor.isDevelopment; } },
   uid: { type: String, regEx: SimpleSchema.RegEx.Id, optional: true },
   open: { type: Boolean },
   merchantId: { type: String, optional: true },

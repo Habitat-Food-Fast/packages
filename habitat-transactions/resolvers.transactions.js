@@ -154,7 +154,7 @@ transactions.csv = {
         if(!resolver.length){ console.warn(`No DaaS orders for ${bp.company_name}`); } else {
           const orders = resolver.map((t, index) => {
             progress = index / resolver.length;
-            console.log(`DaaS Payout ${calc._roundToTwo(progress * 100)}% completed`);
+            console.log(`DaaS Payout ${round(progress * 100)}% completed`);
             this._progress(token, progress);
             return EJSON.toJSONValue(transactions.csv.vendor.resolvers.DaaS(week, bp, t));
           });
@@ -183,7 +183,7 @@ transactions.csv = {
         const resolver = businessProfiles.getWeeklyOrders(bp, week, isDaaS=false);
         if(!resolver.length){ console.warn(`No habitat orders for ${bp.company_name}`); } else {
           const orders = resolver.map((t, index) => {
-            console.log(`Habitat Payout ${calc._roundToTwo((index / resolver.length) * 100)}% completed`);
+            console.log(`Habitat Payout ${round((index / resolver.length) * 100)}% completed`);
             this._progress(token, (index / resolver.length));
             return EJSON.toJSONValue(transactions.csv.vendor.resolvers.habitat(week, bp, t));
           });
@@ -233,7 +233,6 @@ transactions.csv = {
           const date = moment(week.endTime).format('MMM Do YYYY');
           const query ={
             to:  'Mike <mike@tryhabitat.com>',
-            // Meteor.settings.devMode ?  'mike@tryhabitat.com' : `${bp.company_name} <${Meteor.users.findOne(bp.uid).username}>`,
             subject: `Habitat Invoice - Week Ending ${date}`,
             template: 'emailVendorWeeklyPayout',
             data: {
@@ -243,17 +242,12 @@ transactions.csv = {
             },
             attachments,
           };
-          console.log(query);
-          // if(!Meteor.settings.devMode){
           try {
             console.log('sending mail')
             Mailer.send(query);
           } catch (e) {
             console.warn(e);
           }
-
-          // }
-
         }
       },
     },
@@ -275,7 +269,7 @@ function getVariation(tx, getIncomplete){
     return '';
   } else if(tx.dropoffVariationMin){
      if(tx.dropoffVariationMin < 120){
-       return calc._roundToTwo(tx.dropoffVariationMin);
+       return round(tx.dropoffVariationMin);
      } else {
        return '';
      }
@@ -291,12 +285,12 @@ function vendorCommission(tx) {
     tx.DaaS ?
       tx.vendorPayRef.flat :
       tx.vendorPayRef.totalPrice - tx.vendorPayRef.vendorPayout;
-  return calc._roundToTwo(vCom);
+  return round(vCom);
 }
 
 function payRef(tx){
   const bp = businessProfiles.findOne(tx.sellerId);
-  const backupRate = !businessProfiles.rates(tx._id)? 'NO RATE' : calc._roundToTwo(businessProfiles.rates(tx._id).totalPrice -businessProfiles.rates(tx._id).vendorPayout);
+  const backupRate = !businessProfiles.rates(tx._id)? 'NO RATE' : round(businessProfiles.rates(tx._id).totalPrice -businessProfiles.rates(tx._id).vendorPayout);
   const vCom = !tx.vendorPayRef.totalPrice ? backupRate :
     tx.DaaS ?
       tx.vendorPayRef.flat :
@@ -310,7 +304,7 @@ function payRef(tx){
     chargeFee: tx.method === 'Pickup' ? tx.payRef.chargeFee : 0,
     platformRevenue: tx.payRef.platformRevenue || 0,
     customerCommission: tx.DaaS ? '' : calc._customerCommission(tx.payRef.platformRevenue) || 0,
-    vendorCommission: calc._roundToTwo(vCom),
+    vendorCommission: round(vCom),
   };
 }
 

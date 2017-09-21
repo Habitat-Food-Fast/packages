@@ -171,7 +171,7 @@ BT = {
     generateParams(txId, paymentMethodNonce) {
       const tx = transactions.findOne({_id: txId});
       const bizProf = businessProfiles.findOne(tx.sellerId);
-      const btAmount = calc._roundToTwo(tx.payRef.platformRevenue).toString(); check(btAmount, String);
+      const btAmount = round(tx.payRef.platformRevenue).toString(); check(btAmount, String);
       if(calc._checkDecimalPlace(btAmount) > 2) { throw new Meteor.Error(404, 'params.btAmount.btPriceParamInvalid'); }
       return {
         amount: btAmount,

@@ -29,7 +29,7 @@ runner = {
         habitat: h._id}, {sort: {deliveredAtEst: -1}
       }).forEach((t) => {
         if(typeof t.deliveredAtEst !== 'number') {
-          // console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); 
+          // console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`);
         }
           this.updateDropoffInfo(t._id, (err) => { if(err) { console.warn(err.message); }});
       });
@@ -37,8 +37,8 @@ runner = {
   },
   getRole(role, habitat){ return role === 'runner' ? habitat.staffJoyRunnerRole : habitat.staffJoyDispatchRole; },
   getHours(start, end, habitat) {
-    start = moment(Habitats.openedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || start;
-    end = moment(Habitats.closedAtToday(habitat._id)) .subtract(Meteor.settings.devMode ? 4 : 0, 'hours') .toISOString() || end;
+    start = moment(Habitats.openedAtToday(habitat._id)) .subtract(Meteor.isDevelopment ? 4 : 0, 'hours') .toISOString() || start;
+    end = moment(Habitats.closedAtToday(habitat._id)) .subtract(Meteor.isDevelopment ? 4 : 0, 'hours') .toISOString() || end;
     return { start, end };
   },
   _shifts(start, end, habitat, role){
@@ -108,9 +108,9 @@ runner = {
     habitats = !habitats ? staffJoy.allHabitats().map(h => h._id) : habitats;
       return this.getShifts(start, end, habitats, roleName).filter((shift) => {
         return !shift || !shift.shift ? {} :
-          moment(Date.now()).subtract(Meteor.settings.devMode ? 4 : 0, 'hours').isBetween(
-            moment(new Date(shift.shift.start)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours'),
-            moment(new Date(shift.shift.stop)).subtract(Meteor.settings.devMode ? 4 : 0, 'hours')
+          moment(Date.now()).subtract(Meteor.isDevelopment ? 4 : 0, 'hours').isBetween(
+            moment(new Date(shift.shift.start)).subtract(Meteor.isDevelopment ? 4 : 0, 'hours'),
+            moment(new Date(shift.shift.stop)).subtract(Meteor.isDevelopment ? 4 : 0, 'hours')
         );
       });
   },
@@ -233,7 +233,7 @@ sendRunnerPing(txId, runnerId){
     const tx = transactions.findOne(txId);
     return twilio.messages.create({
         to: Meteor.users.findOne(runnerId).profile.phone,
-        from: Meteor.settings.twilio.twilioPhone,
+        from: Meteor.settings.twilio.phone,
         body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
       }, (err, responseData) => {
           if (err) {

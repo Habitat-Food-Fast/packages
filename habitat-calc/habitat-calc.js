@@ -1,16 +1,8 @@
 import { _ } from 'underscore';
 //init submodule
 calc = {
-  _checkDecimalPlace (num) {
-    //http://stackoverflow.com/questions/10454518/javascript-how-to-retrieve-the-number-of-decimals-of-a-string-number
-    const match = (''+num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
-    return Math.max( 0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0));
-  },
   _roundToTwo(amt) {
-    // http://stackoverflow.com/questions/11832914/round-to-at-most-2-decimal-places-in-javascript
-    const rounded = (Math.round(amt * 100) / 100);
-    if(this._checkDecimalPlace(rounded) > 2) { throw new Meteor.Error(503, '_roundToTwo.gtTwo'); }
-    return rounded;
+    return (Math.round(amt * 100) / 100);
   },
   _totalPrice(tp){
     return calc._roundToTwo(tp);
@@ -66,7 +58,7 @@ calc = {
   platformRevenue: {
     pickup(tp){
       return calc._roundToTwo(
-        calc._totalPrice(tp) +
+        tp +
         calc.tax(tp) +
         calc.serviceCharge.pickup
       );
