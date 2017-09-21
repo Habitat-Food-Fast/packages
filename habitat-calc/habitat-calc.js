@@ -1,5 +1,13 @@
 import { _ } from 'underscore';
 //init submodule
+recalcOrderTotal = (order) => {
+  return round(order.map((order) => {
+    return order.itemPrice +
+      Modifiers.find({_id: {$in: _.flatten(order.modifiers)}}).fetch().reduce((sum, id) => {
+        return sum + Modifiers.findOne(id).price;
+      }, 0);
+    }).reduce((num, sum) => { return num + sum; }, 0));
+}
 calc = {
   _roundToTwo(amt) {
     return (Math.round(amt * 100) / 100);
@@ -38,11 +46,11 @@ calc = {
     }
   },
   serviceCharge: { pickup: 0.50, },
-  tax(tp){ return tp * this.taxRate; },
+  tax(tp){ return tp * 0.08; },
   getPayRef(txId){
     check(txId, String);
     const tx = transactions.findOne(txId);
-      const totalPrice = this.orderTotal(tx.order);
+      const totalPrice = recalcOrderTotal(tx.order);
       switch (tx.method) {
         case 'Pickup':
           const pickupMealAmount = this.calcMealAmount(this.platformRevenue.pickup(totalPrice), tx);

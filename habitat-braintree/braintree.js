@@ -19,7 +19,7 @@ Meteor.startup(function () {
       throw new Meteor.Error(bt.err.mismatch.name, bt.err.mismatch.msg);
     }
     gateway = braintree.connect({
-        environment: Meteor.settings.devMode ? braintree.Environment.Sandbox : braintree.Environment.Production,
+        environment: Meteor.isDevelopment ? braintree.Environment.Sandbox : braintree.Environment.Production,
         merchantId: Meteor.settings.braintree.BT_MERCHANT_ID,
         publicKey: Meteor.settings.braintree.BT_PUBLIC_KEY,
         privateKey: Meteor.settings.braintree.BT_PRIVATE_KEY
