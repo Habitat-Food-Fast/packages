@@ -29,7 +29,7 @@ runner = {
         habitat: h._id}, {sort: {deliveredAtEst: -1}
       }).forEach((t) => {
         if(typeof t.deliveredAtEst !== 'number') {
-          // console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`); 
+          // console.warn(`order # ${t.orderNumber} deliveredAtEst is ${t.deliveredAtEst}`);
         }
           this.updateDropoffInfo(t._id, (err) => { if(err) { console.warn(err.message); }});
       });
@@ -233,7 +233,7 @@ sendRunnerPing(txId, runnerId){
     const tx = transactions.findOne(txId);
     return twilio.messages.create({
         to: Meteor.users.findOne(runnerId).profile.phone,
-        from: Meteor.settings.twilio.twilioPhone,
+        from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone,
         body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
       }, (err, responseData) => {
           if (err) {

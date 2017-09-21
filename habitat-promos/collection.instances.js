@@ -111,7 +111,7 @@ export default class instancesCollection extends Mongo.Collection {
         const body = `Order up ${owner.profile.fn}! You have ${owner.profile.mealCount * 8} in FREE food on Habitat`;
         twilio.messages.create({
           to:'+1' + owner.profile.phone,
-          from: Meteor.settings.twilio.twilioPhone,
+          from: Meteor.settings.twilio.twilioPhone ||  Meteor.settings.twilio.phone,
           body: body
         }, (err, responseData) => {
           console.log(`just ${redeem ? 'given' : 'taken'} ${calc.creditsForAcquisition} from ${owner.profile.fn} after ${tx.company_name} ${redeem ? 'accepted' : 'declined'} order ${tx.orderNumber}`);
