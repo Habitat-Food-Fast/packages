@@ -269,11 +269,7 @@ sendReceiptImage: new ValidatedMethod({
             if(!this.isSimulation) {
               twilio.messages.create({
                 to: previousRunnerPhone, // Any number Twilio can deliver to
-<<<<<<< HEAD
                 from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
-=======
-                from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
                 body: `${tx.orderNumber} reassigned`,
               }, (err, responseData) => { } );
               DDPenv().call('sendRunnerPing', txId, runId);
@@ -613,11 +609,7 @@ New on-demand order #${tx.orderNumber} in ${hab.name} for ${tx.company_name}. Re
     numbers.forEach((phoneNumber) => {
       twilio.messages.create({
         to: '+1' + phoneNumber,
-<<<<<<< HEAD
         from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone,
-=======
-        from: Meteor.settings.twilio.phone,
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
         body: msg,
       }, (err, res) => {});
     });
@@ -728,11 +720,7 @@ Meteor.methods({
       else{
         twilio.messages.create({
           to:'+1' + phone , // Any number Twilio can deliver to
-<<<<<<< HEAD
           from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
-=======
-          from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
           body: msg // body of the SMS message
         }, (err, responseData) => {
             if (!err) { }
@@ -748,11 +736,7 @@ Meteor.methods({
 
       twilio.messages.create({
         to: phoneNumber, // Any number Twilio can deliver to
-<<<<<<< HEAD
         from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
-=======
-        from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
         body: `Thanks for ordering Habitat!
     Your order from ${tx.company_name} will be ready in about ${biz.prep_time} minutes.
     Order #: ${tx.orderNumber}
@@ -772,11 +756,7 @@ Meteor.methods({
 
       twilio.messages.create({
         to: Meteor.users.findOne(tx.buyerId).profile.phone, // Any number Twilio can deliver to
-<<<<<<< HEAD
         from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
-=======
-        from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
         body: body
       }, (err, responseData) => {
           var textObj = responseData;
@@ -799,11 +779,7 @@ Meteor.methods({
           const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
           const result = sendMessageSync({
             to: Meteor.users.findOne(buyerId).profile.phone, // Any number Twilio can deliver to
-<<<<<<< HEAD
             from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
-=======
-            from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
             body: customerMessage
           });
         }
@@ -828,11 +804,7 @@ Meteor.methods({
           const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
           var result = sendMessageSync({
             to: businessProfiles.findOne(tx.sellerId).orderPhone, // Any number Twilio can deliver to
-<<<<<<< HEAD
             from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
-=======
-            from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
             body: `Order # ${tx.orderNumber} cancelled.`
           });
 
@@ -873,11 +845,7 @@ Meteor.methods({
     console.log(`sending text to`, bp.company_name);
     twilio.messages.create({
       to: bp.orderPhone, // Any number Twilio can deliver to
-<<<<<<< HEAD
       from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
-=======
-      from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
       body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
     }, (err, responseData) => {
         res = responseData;

@@ -233,11 +233,7 @@ sendRunnerPing(txId, runnerId){
     const tx = transactions.findOne(txId);
     return twilio.messages.create({
         to: Meteor.users.findOne(runnerId).profile.phone,
-<<<<<<< HEAD
         from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone,
-=======
-        from: Meteor.settings.twilio.phone,
->>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
         body: runner.generateOrderInfo(tx, Meteor.users.findOne(runnerId)),
       }, (err, responseData) => {
           if (err) {
