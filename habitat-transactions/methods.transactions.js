@@ -1,5 +1,6 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
+const CANCEL_CREDITS = 0.1;
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
@@ -141,7 +142,7 @@ transactions.methods = {
   }).validator(),
   run({ txId }) {
     const tx = transactions.findOne(txId);
-    let query = {status: Settings.findOne({name: 'pendingDispatch'}).is ? 'pending_dispatch' : 'pending_runner'};
+    let query = {status: Settings.findOne({name: 'pendingDispatch'}) ? (Settings.findOne({name: 'pendingDispatch'}).is ? 'pending_dispatch' : 'pending_runner') : 'pending_runner'};
     if (tx.DaaS) {
       query.timeRequested = Date.now();
       query.humanTimeRequested = new Date();
@@ -174,7 +175,7 @@ confirmDropoff: new ValidatedMethod({
     transactions.update(txId, {$set: {
       status: 'completed',
       dropoffTime: now,
-      dropoffVariationMin: calc._roundToTwo(
+      dropoffVariationMin: round(
         (now - transactions.findOne(txId).deliveredAtEst) / 60000
       ),
       settledByAdmin: isAdmin,
@@ -268,7 +269,11 @@ sendReceiptImage: new ValidatedMethod({
             if(!this.isSimulation) {
               twilio.messages.create({
                 to: previousRunnerPhone, // Any number Twilio can deliver to
+<<<<<<< HEAD
                 from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+=======
+                from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+>>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
                 body: `${tx.orderNumber} reassigned`,
               }, (err, responseData) => { } );
               DDPenv().call('sendRunnerPing', txId, runId);
@@ -475,7 +480,7 @@ sendReceiptImage: new ValidatedMethod({
       const tx = transactions.findOne(txId); check(tx, Object);
       const usr = Meteor.user();
       if((tx.buyerId === usr._id && tx.status === 'created') || Meteor.user().roles.includes('admin')) {
-        return transactions.update(tx._id, { $set: { 'payRef.tip': calc._roundToTwo(tip) } }, (err) => {
+        return transactions.update(tx._id, { $set: { 'payRef.tip': round(tip) } }, (err) => {
           if(err) { throw new Meteor.Error(err.message); } else {
             Meteor.call('recalcPayRef', tx._id);
             return tx._id;
@@ -608,7 +613,11 @@ New on-demand order #${tx.orderNumber} in ${hab.name} for ${tx.company_name}. Re
     numbers.forEach((phoneNumber) => {
       twilio.messages.create({
         to: '+1' + phoneNumber,
+<<<<<<< HEAD
         from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone,
+=======
+        from: Meteor.settings.twilio.phone,
+>>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
         body: msg,
       }, (err, res) => {});
     });
@@ -713,13 +722,17 @@ Meteor.methods({
       if(isAdmin){
         const result = HTTP.post(
           `https://slack.com/api/chat.postMessage?token=${Meteor.settings.slackToken}&channel=${
-            Meteor.settings.devMode ? "dev-operations" : "orderup"
+            Meteor.isDevelopment ? "dev-operations" : "orderup"
           }&text=${msg}&pretty=1`);
       }
       else{
         twilio.messages.create({
           to:'+1' + phone , // Any number Twilio can deliver to
+<<<<<<< HEAD
           from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+=======
+          from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+>>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
           body: msg // body of the SMS message
         }, (err, responseData) => {
             if (!err) { }
@@ -735,7 +748,11 @@ Meteor.methods({
 
       twilio.messages.create({
         to: phoneNumber, // Any number Twilio can deliver to
+<<<<<<< HEAD
         from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+=======
+        from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+>>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
         body: `Thanks for ordering Habitat!
     Your order from ${tx.company_name} will be ready in about ${biz.prep_time} minutes.
     Order #: ${tx.orderNumber}
@@ -755,7 +772,11 @@ Meteor.methods({
 
       twilio.messages.create({
         to: Meteor.users.findOne(tx.buyerId).profile.phone, // Any number Twilio can deliver to
+<<<<<<< HEAD
         from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+=======
+        from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+>>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
         body: body
       }, (err, responseData) => {
           var textObj = responseData;
@@ -770,7 +791,7 @@ Meteor.methods({
     },
 
     orderDeclinedBuyerText(buyerId, sellerId) {
-      Meteor.users.update(buyerId, {$inc: {'profile.mealCount': calc.cancelCredits}}, (err) => {
+      Meteor.users.update(buyerId, {$inc: {'profile.mealCount': CANCEL_CREDITS}}, (err) => {
         if(err) { throw new Meteor.Error(err.message); } else {
           var bizProf = businessProfiles.findOne(sellerId);
           var userProf = Meteor.users.findOne(buyerId);
@@ -778,7 +799,11 @@ Meteor.methods({
           const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
           const result = sendMessageSync({
             to: Meteor.users.findOne(buyerId).profile.phone, // Any number Twilio can deliver to
+<<<<<<< HEAD
             from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+=======
+            from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+>>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
             body: customerMessage
           });
         }
@@ -803,7 +828,11 @@ Meteor.methods({
           const sendMessageSync = Meteor.wrapAsync(twilio.messages.create, twilio.messages);
           var result = sendMessageSync({
             to: businessProfiles.findOne(tx.sellerId).orderPhone, // Any number Twilio can deliver to
+<<<<<<< HEAD
             from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+=======
+            from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+>>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
             body: `Order # ${tx.orderNumber} cancelled.`
           });
 
@@ -844,7 +873,11 @@ Meteor.methods({
     console.log(`sending text to`, bp.company_name);
     twilio.messages.create({
       to: bp.orderPhone, // Any number Twilio can deliver to
+<<<<<<< HEAD
       from: Meteor.settings.twilio.twilioPhone || Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+=======
+      from: Meteor.settings.twilio.phone, // A number you bought from Twilio and can use for outbound communication
+>>>>>>> 54d397f9e467998f7707eb84658758ad17f34c44
       body: transactions.findOne(txObj._id ).textMessage +  "Respond 1 to accept, 0 to decline",
     }, (err, responseData) => {
         res = responseData;
@@ -858,7 +891,7 @@ Meteor.methods({
   },
   //TODO: API key settings for contact and specific partners? Not sure how we want to handle this
   declineTransaction(tx, from, missed){
-    if(!Meteor.settings.devMode && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
+    if(!Meteor.isDevelopment && from !== 'god' && !tx.DaaS){ Meteor.call('closeBusinessForToday', tx.sellerId); }
     if (!tx.DaaS) {
       Meteor.call('orderDeclinedVendorText', tx._id, from, missed, (err, res) => {
         console.log(JSON.stringify(err, null, 2));
@@ -938,7 +971,7 @@ sendFax = (bp, data, type) => {
     import Phaxio from 'phaxio';
     phaxio = new Phaxio(Meteor.settings.phaxio.pub, Meteor.settings.phaxio.priv);
     phaxio.sendFax({
-      to: Meteor.settings.devMode ? '+18884732963' : `+1${bp.faxPhone.toString()}`,
+      to: Meteor.isDevelopment ? '+18884732963' : `+1${bp.faxPhone.toString()}`,
       string_data: data,
       string_data_type: 'html'
     }, Meteor.bindEnvironment((err, data) => {

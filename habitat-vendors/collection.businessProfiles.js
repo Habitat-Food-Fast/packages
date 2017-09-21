@@ -1,5 +1,5 @@
 import { _ } from 'underscore';
-
+const TAX_RATE = 0.08
 class businessProfilesCollection extends Mongo.Collection {
   insert(doc, callback) {
     const _doc = _.extend(doc, {
@@ -145,7 +145,7 @@ class businessProfilesCollection extends Mongo.Collection {
           'freeDel' :
           tx.method ? tx.method.toLowerCase() : 'pickup'
         ];
-      const totalWithTax = tx.payRef.tp + (tx.payRef.tp * calc.taxRate);
+      const totalWithTax = tx.payRef.tp + (tx.payRef.tp * TAX_RATE);
       const txPayout = tx.payRef.tp - (tx.payRef.tp * rates.percent) - rates.flat;
       const DaaSTotal = today.vendorRates.DaaS.flat;
 

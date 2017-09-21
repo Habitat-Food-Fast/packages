@@ -1,10 +1,9 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
 tx = txId => transactions.findOne(txId);
-Deliveries = new Meteor.Collection("deliveries");
-longCall = Meteor.settings.devMode ? 40000 : 120000;
-shortCall = Meteor.settings.devMode ? 40000 : 90000;
-finalDelay = Meteor.settings.devMode ? 40000 : 90000;
+longCall = Meteor.isDevelopment ? 40000 : 120000;
+shortCall = Meteor.isDevelopment ? 40000 : 90000;
+finalDelay = Meteor.isDevelopment ? 40000 : 90000;
 
 class transactionsCollection extends Mongo.Collection {
   insert(doc) {
@@ -75,8 +74,6 @@ class transactionsCollection extends Mongo.Collection {
           transactions.update(tx._id, {$set: {deliveredAtEst: tx.deliverBy, vendorPayRef: businessProfiles.rates(tx._id)}});
           Alerts.methods.warnScheduled(tx, true); }
         if(doc.buyerId){ Meteor.users.update(doc.buyerId, { $push:{ "profile.transactions": txId } }); }
-        if(!doc.thirdParty && !tx.DaaS){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
-
         return txId;
       }
     });

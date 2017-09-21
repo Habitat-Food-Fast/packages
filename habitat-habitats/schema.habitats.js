@@ -3,7 +3,7 @@ Meteor.startup(function(){
     console.warn('WARNING: RESETTING HABITAT TO SCHEMA STATE');
     Habitats.remove({}, {multi: true});
     Habitats.defaults.forEach(h => Habitats.insert(h));
-    if(Meteor.settings.devMode && !Meteor.settings.inspectorMode){
+    if(Meteor.isDevelopment && !Meteor.settings.public.inspectorMode){
       Habitats.update({name: 'Test Habitat'}, {$set: {
         featured: true
       }}, (err) => { if(err) { console.warn(err.message); }});

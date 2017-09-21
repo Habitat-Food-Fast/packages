@@ -19,7 +19,7 @@ Meteor.startup(function () {
       throw new Meteor.Error(bt.err.mismatch.name, bt.err.mismatch.msg);
     }
     gateway = braintree.connect({
-        environment: Meteor.settings.devMode ? braintree.Environment.Sandbox : braintree.Environment.Production,
+        environment: Meteor.isDevelopment ? braintree.Environment.Sandbox : braintree.Environment.Production,
         merchantId: Meteor.settings.braintree.BT_MERCHANT_ID,
         publicKey: Meteor.settings.braintree.BT_PUBLIC_KEY,
         privateKey: Meteor.settings.braintree.BT_PRIVATE_KEY
@@ -106,25 +106,6 @@ createCustomer (customerDetails) {
     return result;
   },
 
-/////
-//2. Find methods
-
-    // Find a transaction
-    findTransaction (transactionId) {
-      if(!Roles.userIsInRole(this.userId, 'admin')){
-        throw new Meteor.Error('Not authorized');
-      }
-        var findTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.find, gateway.transaction),
-            transaction;
-
-        try {
-            transaction = findTransactionSynchronously(transactionId);
-        } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-        return transaction;
-    },
-
     // Lookup a customer in the braintree vault
     findCustomer (customerId) {
         check(customerId, String);
@@ -153,39 +134,10 @@ createCustomer (customerDetails) {
         return result.clientToken;
     },
 
-//4. Unused Methods
-    // Release from escrow
-    releaseFromEscrow (transactionId) {
-        var releaseFromEscrowSynchronously = Meteor.wrapAsync(gateway.transaction.releaseFromEscrow, gateway.transaction),
-            result;
-
-        try {
-            result = releaseFromEscrowSynchronously(transactionId);
-        } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-        return result;
-    },
-
-    // Delete a customer from the braintree vault
-    deleteCustomer (customerId) {
-
-        check(customerId, String);
-        var deleteSynchronously = Meteor.wrapAsync(gateway.customer.delete, gateway.customer),
-            result = null;
-
-        try {
-            result = deleteSynchronously(customerId);
-        } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-        return;
-    },
-
     submitMealForSettlement(mealPlan, nonce){
       var createMealTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
       var result = createMealTransactionSynchronously({
-        amount: calc.meal.platformRevenue(mealPlan.meals, mealPlan.deliveries),
+        amount: meal.platformRevenue(mealPlan.meals, mealPlan.deliveries),
         paymentMethodNonce: nonce,
         options: { submitForSettlement: true },
         customFields: { tip: false, meal: true }
@@ -211,42 +163,6 @@ createCustomer (customerDetails) {
       }
      // transaction details are in result.transaction
 
-    },
-
-    submitDeliveriesForSettlement(deliveryCount, nonce) {
-      var createDeliveryTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
-
-      var price = deliveryCount * 4;
-
-      var result =  createDeliveryTransactionSynchronously({
-        amount: price,
-        paymentMethodNonce: nonce,
-        options: {
-          submitForSettlement: true
-        }
-      });
-
-      if (!result.success) {
-        var potentialErrors = result.errors.deepErrors();
-        if (potentialErrors.length > 0) {
-          throw new Meteor.Error('bt-transaction-error', potentialErrors[0].message);
-        } else {
-          switch (result.transaction.status) {
-            case 'processor_declined':
-              throw new Meteor.Error('bt-transaction-error', result.transaction.processorResponseText);
-            case 'settlement_declined':
-              throw new Meteor.Error('bt-transaction-error', result.transaction.processorSettlementResponseText);
-            case 'gateway_rejected':
-              throw new Meteor.Error('bt-transaction-error', 'Gateway Rejected: ' + result.transaction.gatewayRejectionReason);
-          }
-        }
-      } else {
-        Invoices.insertDeliveryInvoice(
-          deliveryCount, result, 'delivery_credits', (err, res) => {
-          if(err) { throw new Meteor.Error(err.message); }
-        });
-        return result;
-      }
     }
 });
 
@@ -255,8 +171,7 @@ BT = {
     generateParams(txId, paymentMethodNonce) {
       const tx = transactions.findOne({_id: txId});
       const bizProf = businessProfiles.findOne(tx.sellerId);
-      const btAmount = calc._roundToTwo(tx.payRef.platformRevenue).toString(); check(btAmount, String);
-      if(calc._checkDecimalPlace(btAmount) > 2) { throw new Meteor.Error(404, 'params.btAmount.btPriceParamInvalid'); }
+      const btAmount = round(tx.payRef.platformRevenue).toString(); check(btAmount, String);
       return {
         amount: btAmount,
         orderId: tx._id,
@@ -282,18 +197,6 @@ BT = {
       };
 
     },
-  },
-  admin: {
-    emails: {
-      disbursement (merchAcct){
-        Email.send({
-          from: 'info@tryhabitat.com',
-          to: 'info@tryhabitat.com', //props.company_email
-          subject: 'Disbursement Occured',
-          text: JSON.stringify(merchAcct, null, 2),
-        });
-      },
-    }
   }
 };
 }

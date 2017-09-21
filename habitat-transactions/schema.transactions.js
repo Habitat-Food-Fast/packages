@@ -32,7 +32,7 @@ _baseSchema = new SimpleSchema({
   method: { type: String, allowedValues: ['Pickup', 'Delivery']},
   orderSize: { type: Number, optional: true },
   externalId: {type: SimpleSchema.oneOf(Boolean, String), optional: true},
-  externalVendorId: {type: SimpleSchema.oneOf(Boolean, String), optional: true},
+  externalVendorId: {type: String, optional: true},
   company_name: {type: String, optional: true},
   _orderNumber: {type: String, optional: true},
   orderNumber: {type: Number, optional: true},
