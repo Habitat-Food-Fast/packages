@@ -137,7 +137,7 @@ createCustomer (customerDetails) {
     submitMealForSettlement(mealPlan, nonce){
       var createMealTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
       var result = createMealTransactionSynchronously({
-        amount: calc.meal.platformRevenue(mealPlan.meals, mealPlan.deliveries),
+        amount: meal.platformRevenue(mealPlan.meals, mealPlan.deliveries),
         paymentMethodNonce: nonce,
         options: { submitForSettlement: true },
         customFields: { tip: false, meal: true }
@@ -172,7 +172,6 @@ BT = {
       const tx = transactions.findOne({_id: txId});
       const bizProf = businessProfiles.findOne(tx.sellerId);
       const btAmount = round(tx.payRef.platformRevenue).toString(); check(btAmount, String);
-      if(calc._checkDecimalPlace(btAmount) > 2) { throw new Meteor.Error(404, 'params.btAmount.btPriceParamInvalid'); }
       return {
         amount: btAmount,
         orderId: tx._id,

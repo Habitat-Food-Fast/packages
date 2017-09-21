@@ -4,23 +4,6 @@ calc = {
   _roundToTwo(amt) {
     return (Math.round(amt * 100) / 100);
   },
-  _totalPrice(tp){
-    return calc._roundToTwo(tp);
-  },
-  _checkQuery(query, DaaS=false){
-    if(!_.contains(['count', 'pretax', 'pretip', 'rate', 'tips', 'tax', 'total', 'payout'], query)){
-      throwError(`query ${query} is not allowed`);
-    }
-  },
-  orderTotal(order) {
-    return this._roundToTwo(order.map((order) => {
-      return order.itemPrice +
-        Modifiers.find({_id: {$in: _.flatten(order.modifiers)}}).fetch().reduce((sum, id) => {
-          return sum + Modifiers.findOne(id).price;
-        }, 0);
-      }).reduce((num, sum) => { return num + sum; }, 0));
-  },
-  _customerCommission(tp){ return this._roundToTwo(tp * 0.05); },
   _mealServiceCharge(tp){ return this._roundToTwo((tp * 0.029) + 0.30); },
   _tip(tx){
     if(tx && tx.method === 'Pickup'){
@@ -36,23 +19,6 @@ calc = {
       const deliveryFee = today.deliveryFeeMinimumFallback; //it's premium, so deliveryFee for today is 0. need to look at the day's minimumFallbackFee
       const diff = today.vendorRates.freeDel.minimum - tx.payRef.tp; //get the difference between the free delivery minimum and totalPrice
       return diff <= 0 ? 0 : deliveryFee;
-    }
-  },
-  meal: {
-    mealCountDefault: 1,
-    deliveryCountDefault: 1,
-    mealPrice: 8,
-    mealTotal(meal_count) { return (this.mealPrice * meal_count); },
-    subtotal(meal_count){ return this.mealTotal(meal_count); },
-    serviceCharge(meal_count){ return calc._mealServiceCharge(this.subtotal(meal_count)); },
-    platformRevenue(meal_count){ return calc._roundToTwo( this.subtotal(meal_count) + this.serviceCharge(meal_count) ); },
-    getPayRef(meal_count){
-      return {
-        mealCount: meal_count,
-        subtotal: this.subtotal(meal_count),
-        serviceCharge: this.serviceCharge(meal_count),
-        platformRevenue: this.platformRevenue(meal_count),
-      };
     }
   },
   platformRevenue: {
@@ -74,22 +40,6 @@ calc = {
   },
   serviceCharge: { pickup: 0.50, },
   tax(tp){ return tp * this.taxRate; },
-  needToRecalculate(diff){
-    return diff.order || diff.method || diff.promoId ||
-      ( diff.payRef && diff.payRef.tip ||
-        diff.payRef && diff.payRef.tip === 0
-      );
-  },
-  recalculateOpenTxs(id, diff) {
-    if(this.needToRecalculate(diff)) {
-      const tx = transactions.findOne(id); if(!tx) { throw new Meteor.Error(id + 'Sorry, tx god deleted or is being updated and not there'); }
-      if(!tx.DaaS && !tx.thirdParty) {
-        Meteor.call('recalcPayRef', id, (err) => {
-          if(err) { throw new Meteor.Error(err.message); }
-        });
-      }
-    }
-  },
   getPayRef(txId){
     check(txId, String);
     const tx = transactions.findOne(txId);
@@ -249,62 +199,4 @@ calc = {
       return response;
     },
   },
-  //parsing down different payouts from getWeek into what vendor needs
-  //we are abstracting this 4 levels up, i don't think there's further need for refactoring
-  payouts: {
-    delivery(request, query, fullWeek) {
-      calc._checkQuery(query);
-      week = request.fullWeek;
-      subtotal = week.subtotal.deliveryOrders;
-      switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived')
-          .filter(tx => tx.method === 'Delivery') .filter(tx => !tx.DaaS).length;
-        case 'pretax': return subtotal;
-        case 'tax': return subtotal * calc.taxRate;
-        case 'total': return subtotal * calc.taxRate + subtotal;
-        case 'payout': return  week.payout.deliveryOrders + subtotal * calc.taxRate;
-      }
-    },
-    pickup(request, query) {
-      calc._checkQuery(query);
-      week = request.fullWeek;
-      subtotal = week.subtotal.pickupOrders;
-      switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived')
-          .filter(tx => tx.method === 'Pickup').filter(tx => !tx.DaaS).length;
-        case 'pretax': return subtotal;
-        case 'tax': return subtotal * calc.taxRate;
-        case 'total': return subtotal * calc.taxRate + subtotal;
-        case 'payout': return week.payout.pickupOrders + subtotal * calc.taxRate;
-      }
-    },
-    total(request, query){
-      calc._checkQuery(query);
-      week = request.fullWeek;
-      subtotal = week.subtotal.orders;
-      switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived')
-          .filter(tx => !tx.DaaS).length;
-        case 'pretax': return subtotal;
-        case 'tax': return subtotal * calc.taxRate;
-        case 'total': return subtotal + subtotal * calc.taxRate;
-        case 'payout': return  week.payout.orders + subtotal * calc.taxRate ;
-      }
-    },
-    DaaS(request, query){
-      calc._checkQuery(query);
-      week = request.fullWeek;
-      switch (query) {
-        case 'count': return week.transactions.filter(tx => tx.status === 'completed' || tx.status === 'archived' )
-          .filter(tx => tx.DaaS && tx.method === 'Delivery').length;
-        case 'pretip': return Math.abs(week.payout.DaaSPreTip);
-        case 'rate': return businessProfiles.getToday(request.bizId).vendorRates.DaaS.flat;
-        case 'tips': return week.payout.DaaSTips;
-        case 'payout': return Math.abs(week.payout.DaaS);
-      }
-    },
-  },
-  creditsForAcquisition: 0.625,
-  cancelCredits: 0.125,
-  taxRate: 0.08,
 };

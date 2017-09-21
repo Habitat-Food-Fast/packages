@@ -1,5 +1,6 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
+const CANCEL_CREDITS = 0.1;
 transactions.methods = {
   insert: new ValidatedMethod({
     name: 'transactions.methods.insert',
@@ -770,7 +771,7 @@ Meteor.methods({
     },
 
     orderDeclinedBuyerText(buyerId, sellerId) {
-      Meteor.users.update(buyerId, {$inc: {'profile.mealCount': calc.cancelCredits}}, (err) => {
+      Meteor.users.update(buyerId, {$inc: {'profile.mealCount': CANCEL_CREDITS}}, (err) => {
         if(err) { throw new Meteor.Error(err.message); } else {
           var bizProf = businessProfiles.findOne(sellerId);
           var userProf = Meteor.users.findOne(buyerId);

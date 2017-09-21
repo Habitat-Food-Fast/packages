@@ -74,8 +74,6 @@ class transactionsCollection extends Mongo.Collection {
           transactions.update(tx._id, {$set: {deliveredAtEst: tx.deliverBy, vendorPayRef: businessProfiles.rates(tx._id)}});
           Alerts.methods.warnScheduled(tx, true); }
         if(doc.buyerId){ Meteor.users.update(doc.buyerId, { $push:{ "profile.transactions": txId } }); }
-        if(!doc.thirdParty && !tx.DaaS){ calc.recalculateOpenTxs(txId, transactions.findOne(txId)); }
-
         return txId;
       }
     });
