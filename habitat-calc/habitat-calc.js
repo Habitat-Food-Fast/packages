@@ -4,7 +4,6 @@ calc = {
   _roundToTwo(amt) {
     return (Math.round(amt * 100) / 100);
   },
-  _mealServiceCharge(tp){ return this._roundToTwo((tp * 0.029) + 0.30); },
   _tip(tx){
     if(tx && tx.method === 'Pickup'){
       return 0;
