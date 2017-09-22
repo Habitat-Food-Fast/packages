@@ -34,7 +34,7 @@ class habitatsCollection extends Mongo.Collection {
       hr = moment((openHr), ["h:mm"]).format("HH");
       min = moment(openHr, ["h:mm"]).format("mm");
       return moment().day(moment(Date.now())  .subtract(
-                    Meteor.settings.devMode ? 0 :
+                    Meteor.isDevelopment ? 0 :
                     5, 'hours').day()).hour(hr).minute(min).format();
   }
   closedAtToday (habId)  {
@@ -42,7 +42,7 @@ class habitatsCollection extends Mongo.Collection {
       hr = moment((closeHr), ["h:mm"]).format("HH");
       min = moment(closeHr, ["h:mm"]).format("mm");
       return moment().day(moment(Date.now())  .subtract(
-                    Meteor.settings.devMode ? 0 :
+                    Meteor.isDevelopment ? 0 :
                     5, 'hours').day()).hour(hr).minute(min).format();
   }
   parseTo24Hour(hr) {

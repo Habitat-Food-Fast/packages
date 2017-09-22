@@ -11,6 +11,7 @@ var gateway,
     id,
     roundedAmount;
 
+//Can stay as a meteor package
 Meteor.startup(function () {
   import('braintree').then((braintree) => {
     if(!braintree){
@@ -19,7 +20,7 @@ Meteor.startup(function () {
       throw new Meteor.Error(bt.err.mismatch.name, bt.err.mismatch.msg);
     }
     gateway = braintree.connect({
-        environment: Meteor.settings.devMode ? braintree.Environment.Sandbox : braintree.Environment.Production,
+        environment: Meteor.isDevelopment ? braintree.Environment.Sandbox : braintree.Environment.Production,
         merchantId: Meteor.settings.braintree.BT_MERCHANT_ID,
         publicKey: Meteor.settings.braintree.BT_PUBLIC_KEY,
         privateKey: Meteor.settings.braintree.BT_PRIVATE_KEY
@@ -28,6 +29,7 @@ Meteor.startup(function () {
 });
 
 Meteor.methods({
+  //@MARKET
   createSaleTransaction(paymentMethodNonce, txId) {
     if (Meteor.isServer) {
       const tx = transactions.findOne(txId);
@@ -59,111 +61,96 @@ Meteor.methods({
       }
     }
   },
-  // Submit a transaction for processing
+  //@DISPATCH, API, VENDOR
+  //acceptOrder
   submitForSettlement (braintreeId) {
     if (Meteor.isServer) {
-      let tx = transactions.findOne({braintreeId: braintreeId});
-      let submitForSettlementSynchronously = Meteor.wrapAsync(gateway.transaction.submitForSettlement, gateway.transaction);
       try {
-        result = submitForSettlementSynchronously(braintreeId, tx.payRef.platformRevenue);
-        transactions.update({braintreeId: braintreeId}, {$set: {
-          amount_settled: tx.payRef.platformRevenue
-        }}, (err) => { if(err) { throw new Meteor.Error(err.message); }});
+        const tx = transactions.findOne({braintreeId: braintreeId});
+        const settleSync = Meteor.wrapAsync(gateway.transaction.submitForSettlement, gateway.transaction);
+        transactions.update({braintreeId: braintreeId}, {$set: { amount_settled: tx.payRef.platformRevenue }});
+        return settleSync(braintreeId, tx.payRef.platformRevenue);
       } catch (e) {
-          throw new Meteor.Error(e.name, e.message);
+        throw new Meteor.Error(e.name, e.message);
       }
-      return result; // transaction details are in result.transaction
     }
   },
 
-  // Cancel a transaction
+  //@DISPATCH
+  //declineOrder
   voidTransaction (transactionId) {
     if(Meteor.isServer) {
-        var voidTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.void, gateway.transaction),
-            result;
-
-        try {
-            result = voidTransactionSynchronously(transactionId);
-        } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-        return result;
+      try {
+        const voidSync = Meteor.wrapAsync(gateway.transaction.void, gateway.transaction);
+        return voidSync(transactionId);
+      } catch (e) {
+        throw new Error(e.name, e.message);
+      }
     }
   },
 
   // Add a new customer to the braintree vault
-createCustomer (customerDetails) {
-    check(customerDetails, Match.ObjectIncluding({ 'firstName': String }));
-
-    var createSynchronously = Meteor.wrapAsync(gateway.customer.create, gateway.customer),
-        result = null;
-
+  createCustomer (customerDetails) {
     try {
-        result = createSynchronously(customerDetails);
+      const createCustomerSync = Meteor.wrapAsync(gateway.customer.create, gateway.customer);
+      return createCustomerSync(customerDetails);
     } catch (e) {
-        throw new Meteor.Error(e.name, e.message);
+      throw new Meteor.Error(e.name, e.message);
     }
-    return result;
   },
 
-    // Lookup a customer in the braintree vault
-    findCustomer (customerId) {
-        check(customerId, String);
-        var findSynchronously = Meteor.wrapAsync(gateway.customer.find, gateway.customer);
-
-        try { customer = findSynchronously(customerId); } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-
-        return customer;
-    },
-
-    getClientToken (tokenOptions) {
-        var generateTokenSynchronously = Meteor.wrapAsync(gateway.clientToken.generate, gateway.clientToken),
-            options = {},
-            result = null;
-
-        if (tokenOptions && tokenOptions.customerId)
-            options.customerId = tokenOptions.customerId;
-
-        try {
-            result = generateTokenSynchronously(options);
-        } catch (e) {
-            throw new Meteor.Error(e.name, e.message);
-        }
-        return result.clientToken;
-    },
-
-    submitMealForSettlement(mealPlan, nonce){
-      var createMealTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
-      var result = createMealTransactionSynchronously({
-        amount: calc.meal.platformRevenue(mealPlan.meals, mealPlan.deliveries),
-        paymentMethodNonce: nonce,
-        options: { submitForSettlement: true },
-        customFields: { tip: false, meal: true }
-      });
-
-      if (!result.success) {
-        var potentialErrors = result.errors.deepErrors();
-        if (potentialErrors.length > 0) {
-          throw new Meteor.Error('bt-transaction-error', potentialErrors[0].message);
-        } else {
-          switch (result.transaction.status) {
-            case 'processor_declined':
-              throw new Meteor.Error('bt-transaction-error', result.transaction.processorResponseText);
-            case 'settlement_declined':
-              throw new Meteor.Error('bt-transaction-error', result.transaction.processorSettlementResponseText);
-            case 'gateway_rejected':
-              throw new Meteor.Error('bt-transaction-error', 'Gateway Rejected: ' + result.transaction.gatewayRejectionReason);
-          }
-        }
-      } else {
-        Invoices.insert(_.extend(mealPlan, {uid: Meteor.userId()}), result, 'meal_plan_custom');
-        return result;
-      }
-     // transaction details are in result.transaction
-
+  // Lookup a customer in the braintree vault
+  findCustomer (customerId) {
+    var findCustomerSync = Meteor.wrapAsync(gateway.customer.find, gateway.customer);
+    try {
+      return findCustomerSync(customerId);
+    } catch (e) {
+      throw new Meteor.Error(e.name, e.message);
     }
+  },
+
+  getClientToken (tokenOptions) {
+    let options = {};
+    if (tokenOptions && tokenOptions.customerId){
+      options.customerId = tokenOptions.customerId;
+    }
+    try {
+      const generateTokenSync = Meteor.wrapAsync(gateway.clientToken.generate, gateway.clientToken);
+      const result = generateTokenSync(options);
+      return result.clientToken;
+    } catch (e) {
+      throw new Meteor.Error(e.name, e.message);
+    }
+  },
+
+  submitMealForSettlement(mealPlan, nonce){
+    const createMealTransactionSynchronously = Meteor.wrapAsync(gateway.transaction.sale, gateway.transaction);
+    var result = createMealTransactionSynchronously({
+      amount: meal.platformRevenue(mealPlan.meals, mealPlan.deliveries),
+      paymentMethodNonce: nonce,
+      options: { submitForSettlement: true },
+      customFields: { tip: false, meal: true }
+    });
+
+    if (!result.success) {
+      var potentialErrors = result.errors.deepErrors();
+      if (potentialErrors.length > 0) {
+        throw new Meteor.Error('bt-transaction-error', potentialErrors[0].message);
+      } else {
+        switch (result.transaction.status) {
+          case 'processor_declined':
+            throw new Meteor.Error('bt-transaction-error', result.transaction.processorResponseText);
+          case 'settlement_declined':
+            throw new Meteor.Error('bt-transaction-error', result.transaction.processorSettlementResponseText);
+          case 'gateway_rejected':
+            throw new Meteor.Error('bt-transaction-error', 'Gateway Rejected: ' + result.transaction.gatewayRejectionReason);
+        }
+      }
+    } else {
+      Invoices.insert(_.extend(mealPlan, {uid: Meteor.userId()}), result, 'meal_plan_custom');
+      return result;
+    }
+  }
 });
 
 BT = {
@@ -171,8 +158,7 @@ BT = {
     generateParams(txId, paymentMethodNonce) {
       const tx = transactions.findOne({_id: txId});
       const bizProf = businessProfiles.findOne(tx.sellerId);
-      const btAmount = calc._roundToTwo(tx.payRef.platformRevenue).toString(); check(btAmount, String);
-      if(calc._checkDecimalPlace(btAmount) > 2) { throw new Meteor.Error(404, 'params.btAmount.btPriceParamInvalid'); }
+      const btAmount = round(tx.payRef.platformRevenue).toString(); check(btAmount, String);
       return {
         amount: btAmount,
         orderId: tx._id,

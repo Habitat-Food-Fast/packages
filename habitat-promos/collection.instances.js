@@ -1,5 +1,7 @@
 import { _ } from 'underscore';
 import SimpleSchema from 'simpl-schema';
+const creditsForAcquisition = 0.625;
+
 export default class instancesCollection extends Mongo.Collection {
   //easy methods for querying around deeply nested properties in Instances.types
   parentType(channelName){ return this.types.filter(obj => _.where(obj.channels, {name: channelName}).length > 0)[0]; }
@@ -105,16 +107,16 @@ export default class instancesCollection extends Mongo.Collection {
   notify(ownerId, redeem){
     const owner = Meteor.users.findOne(ownerId);
     Meteor.users.update(owner._id, {$inc: {
-      'profile.mealCount': redeem ? calc.creditsForAcquisition : - calc.creditsForAcquisition
+      'profile.mealCount': redeem ? creditsForAcquisition : - creditsForAcquisition
     }}, (err) => { if(err) { throwError(err.message); } else {
       if(Meteor.isServer && redeem){
         const body = `Order up ${owner.profile.fn}! You have ${owner.profile.mealCount * 8} in FREE food on Habitat`;
         twilio.messages.create({
           to:'+1' + owner.profile.phone,
-          from: Meteor.settings.twilio.twilioPhone,
+          from: Meteor.settings.twilio.twilioPhone ||  Meteor.settings.twilio.phone,
           body: body
         }, (err, responseData) => {
-          console.log(`just ${redeem ? 'given' : 'taken'} ${calc.creditsForAcquisition} from ${owner.profile.fn} after ${tx.company_name} ${redeem ? 'accepted' : 'declined'} order ${tx.orderNumber}`);
+          console.log(`just ${redeem ? 'given' : 'taken'} ${creditsForAcquisition} from ${owner.profile.fn} after ${tx.company_name} ${redeem ? 'accepted' : 'declined'} order ${tx.orderNumber}`);
         });
       }
     }});

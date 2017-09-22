@@ -13,4 +13,5 @@ Package.onUse(function(api) {
   api.use('check');
   api.use('underscore');
   api.addFiles('check.js');
+  api.export('round');
 });
